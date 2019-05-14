@@ -1,2 +1,2 @@
 # Atc
-Atcoder
+For Atcoder
