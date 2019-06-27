@@ -29,7 +29,7 @@ void list_prime(int n){
 vector<int> prime_fac(int n){
 	int lmt=0;
 	while(1){
-		if(n<=pri[lmt]) break;
+		if(n<=pri[lmt]*pri[lmt]) break;
 		lmt++;
 		//if(pri.size()<=lmt) list_prime(n);
 		//cout<< lmt << " " << pri[lmt] << endl;
@@ -49,6 +49,16 @@ vector<int> prime_fac(int n){
 
 }
 
+int defac(vector<int> v){
+	int ans=1;
+
+	for(int i=0;i<v.size();i++){
+		if(v[i]!=0) ans*=pow(pri[i], v[i]);
+	}
+
+	return ans;
+}
+
 int main(){
 
 	int n, m;
@@ -57,8 +67,10 @@ int main(){
 	cin>> n >> m;
 
 	list_prime(n);
-	//for(int i=0;i<pri.size();i++) cout<< pri[i] << endl;
+	for(int i=0;i<pri.size();i++) cout<< pri[i] << endl;
 	v=prime_fac(m);
-	//for(int i=0;i<v.size();i++) cout<< v[i] << endl;
+	for(int i=0;i<v.size();i++) cout<< v[i] << endl;
+	cout<< "m:" << defac(v) << endl;
 
 }
+

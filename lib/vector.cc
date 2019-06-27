@@ -12,6 +12,7 @@ int main(){
 	//初期化
 	vector<int> v(10, 5);//要素数10、全ての要素の値5 で初期化
 	v.assign(3, 1);//vの内容は {1, 1, 1} になる
+        fill( vec_a.begin(), vec_a.end(), 71 );//71で埋める
 
 	//入力
 	cin>> n;
