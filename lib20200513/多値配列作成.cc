@@ -9,7 +9,7 @@ vector<int> bi;
 void bitgen(int len){
 
 	//生成完了時の処理
-	if(n==0){
+	if(len==0){
 		for(int i=0;i<bi.size();i++) cout<< bi[i] << " ";
 		cout<< endl;
 

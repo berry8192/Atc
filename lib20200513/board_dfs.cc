@@ -4,6 +4,11 @@ using namespace std;
 int a, b, ans=0;
 vector< vector<char> > board;
 vector< vector<int> > seen;
+//テンキー配列方向
+vector<int> dih4={1, 0, 0, -1};
+vector<int> diw4={0, -1, 1, 0};
+vector<int> dih8={1, 1, 1, 0, 0, 0, -1, -1, -1};
+vector<int> diw8={-1, 0, 1, -1, 0, 1, -1, 0, 1};
 
 void dfs(int h, int w){
 	//移動してきた時の処理

@@ -81,6 +81,7 @@ int main(){
 	cout<< stoi(s) <<endl;//int型へ
 	cout<< stoll(s) <<endl;//long long int型へ?
 	cout<< stod(s) <<endl;//double型へ
+	cout<< to_string(n) <<endl;
 
 
 
@@ -114,19 +115,20 @@ int main(){
 	}
 	cout<< endl;
 
-	//小文字を大文字に
-	cout<< (char)(c-('a'-'A')) <<endl;
-	//大文字を小文字に
-	cout<< (char)(c+('a'-'A')) <<endl;;
-
 	//大小判定
-	if('A'<c && c<'Z'){
+	if('A'<=c && c<='Z'){
 		//大文字
 		cout<< "large" <<endl;
+
+		//大文字を小文字に
+		cout<< (char)(c+('a'-'A')) <<endl;;
 	}
-	if('a'<c && c<'z'){
+	if('a'<=c && c<='z'){
 		//小文字
 		cout<< "small" <<endl;
+
+		//小文字を大文字に
+		cout<< (char)(c-('a'-'A')) <<endl;
 	}
 
 	//整数を1桁ずつ

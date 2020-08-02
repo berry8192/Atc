@@ -8,9 +8,16 @@
 using namespace std;
 
 LLi mod=1000000007;
+vector<LLi> fac(1), facin(1), ten(1);
 
 void PV(vector<int> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
+	cout << endl;
+}
+
+//vector<LLi>を出力
+void PVL(vector<LLi> pvv) {
+	rep(i, (int)pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
  
@@ -36,75 +43,69 @@ LLi modpow(LLi a, LLi n) {
     return res;
 }
 
+LLi modabs(LLi x){
+	if(x>=0) return (x%mod);
+
+	LLi tmp=abs(x);
+	LLi di=(tmp+mod-1)/mod;
+	return mod*di+x;
+}
+
 //xCyを計算
 LLi conb(LLi x, LLi y){
 	if(x<y) cout<< "conb x<y" << x SP << y <<endl;
-	LLi tmp=1;
-	//y=min(y, x-y); 8C2==8C6なので
-	
-	for(int i=1;i<=y;i++){
-		tmp*=x+1-i;
-		tmp=tmp%mod;
-		tmp*=modinv(i);
-		tmp=tmp%mod;
-	}
-
-	return tmp;
+	return ((fac[x]*facin[y])%mod*facin[x-y])%mod;
 }
 
 //xPyを計算
 LLi perm(LLi x, LLi y){
-	if(x<y) cout<< "conb x<y" << x SP << y <<endl;
-	LLi tmp=1;
-	
-	for(int i=1;i<=y;i++){
-		tmp*=x+1-i;
-		tmp=tmp%mod;
-	}
-
-	return tmp;
+	if(x<y) cout<< "perm x<y" << x SP << y <<endl;
+	return (fac[x]*facin[x-y])%mod;
 }
 
 int main(){
 
 	int n;
 	LLi tmp, ans=1;
-	vector<LLi> con(1), par(1), fra(1);
 	cin>> n;
 
-	//nCxをメモ化
-	con[0]=1;
+	//fac, facinをメモ化
+	fac[0]=1;
+	facin[0]=1;
 	for(int i=1;i<=n;i++){
-		tmp=con[i-1];
-		tmp*=n+1-i;
-		tmp=tmp%mod;
-		tmp*=modinv(i, mod);
-		tmp=tmp%mod;
-		con.push_back(tmp);
-		//cout<< con[i] <<endl;
-	}
-
-	//nPxをメモ化
-	par[0]=1;
-	for(int i=1;i<=n;i++){
-		tmp=par[i-1];
-		tmp*=n+1-i;
-		tmp=tmp%mod;
-		par.push_back(tmp);
-		//cout<< par[i] <<endl;
-	}
-
-	//x!をメモ化
-	fra[0]=1;
-	for(int i=1;i<=n;i++){
-		tmp=fra[i-1];
+		tmp=fac[i-1];
 		tmp*=i;
 		tmp=tmp%mod;
-		fra.push_back(tmp);
-		//cout<< fra[i] <<endl;
+		fac.push_back(tmp);
+		facin.push_back(modinv(tmp));
+		//cout<< fac[i] << " " << facin[i] << " " << (fac[i]*facin[i])%mod <<endl;
 	}
 
+	//10^xのmodをメモ化
+    ten[0]=1;
+  	rep(i, n-1) ten.push_back((ten[i]*10)%mod);
+
+	//modinvテスト
+	//rep(i, n) cout<< -i << " " << modabs(-i) <<endl;
+
+	//conbテスト
+	/*rep(i, n){
+		for(int j=0;j<=i;j++){
+			cout<< i << "C" << j << "=" << conb(i, j) <<endl;
+		}
+	}*/
+
+	//permテスト
+	/*rep(i, n){
+		for(int j=0;j<=i;j++){
+			cout<< i << "P" << j << "=" << perm(i, j) <<endl;
+		}
+	}*/
+
+	
+
 	/*
+	//四則演算と余り
 	ans+=x;
 	ans+=mod-x;
 	ans*=x;
@@ -115,3 +116,5 @@ int main(){
 
 	return 0;
 }
+
+//0と1のコーナーケースに気をつける

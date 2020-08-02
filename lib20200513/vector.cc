@@ -9,7 +9,10 @@ int main(){
 	//初期化
 	vector<int> v(10, 5);//要素数10、全ての要素の値5 で初期化
 	v.assign(3, 1);//vの内容は {1, 1, 1} になる
-        fill( vec_a.begin(), vec_a.end(), 71 );//71で埋める
+    fill( vec_a.begin(), vec_a.end(), 71 );//71で埋める
+
+	//dp配列を-1か0で初期化
+	memset(dp, -1, sizeof(dp));
 
 	//入力
 	cin>> n;
@@ -19,6 +22,9 @@ int main(){
 	//ソート
 	sort(v.begin(), v.end());
 	sort(v.begin(), v.end(), greater<int>());
+
+	//逆順
+	reverse(v.begin(), v.end());
 
 	//コピー
         vdash.resize(v.size());
@@ -42,6 +48,9 @@ int main(){
 	//std::vector<int> v{3, 1, 4, 2, 5};
 	v.erase(v.begin() + 1, v.begin() + 3);       // 1, 4 を削除
 
+	//全消去
+	v.clear();
+
 	//空か判定
 	if(!v.empty()) cout<< "not empty, size:" << v.size() << endl;
 
@@ -49,16 +58,22 @@ int main(){
 	vector<int> v{3, 1, 4, 1, 5, 9, 2, 6, 5, 3, 5};
 	cout << count(v.begin(), v.end(), 5) << "\n";    //  要素5の個数を返す
 
+	//vectorを線形探索して初めて100が出てきた場所を返す
+	auto itr = find(all(v), 100);
+	ans+=itr-v.begin();
+
 	//O(log(v.size))で100の個数を数える
-	auto lb = lower_bound(v.begin(), v.end(), 100);
-	auto ub = upper_bound(v.begin(), v.end(), 100);
+	auto lb = lower_bound(all(v), 100);
+	auto ub = upper_bound(all(v), 100);
 	ans+=ub-lb;
+	//O(log(v.size))で100があるかみる
+	cout<< binary_search(all(v), 100) <<endl;
+
+	//0~9からなる文字列sをvに格納
+  	rep(i, n) v[i]=(int)(s[i]-'0');
 
 	//出力
 	for(int i=0;i<v.size();i++) cout<< v[i] << endl;
-
-	cout<< n << endl;
-	cout<< x[0] << " " << x[1] << endl;
 
 	return 0;
 }

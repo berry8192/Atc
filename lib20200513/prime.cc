@@ -7,7 +7,7 @@
 
 using namespace std;
 
-vector<int> pri={1};
+vector<LLi> pri={1, 2, 3};
 
 void PV(vector<int> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
@@ -26,28 +26,34 @@ bool VV(vector<int> vv1, vector<int> vv2) {
 	return true;
 }
 
-bool VVL(vector<LL1> vv1, vector<LLi> vv2) {
+bool VVL(vector<LLi> vv1, vector<LLi> vv2) {
 	if(vv1.size()!=vv2.size()) return false;
 	rep(i, vv1.size()) if(vv1[i]!=vv2[i]) return false;
 
 	return true;
 }
 
+//vecotr<LLi>の総和
+LLi SML(vector<LLi> smv) {
+	LLi tmp=0;
+	rep(i, smv.size()) tmp+=smv[i];
+
+	return tmp;
+}
+
 //n以下の素数を配列に{1, 2, 3, 5, 7, ...} make_prime_list
 //i, j, flag, sqx, xを使用
 void mplist(LLi x){
-	int flag, sqx;
-	pri.emplace_back(2);
+	int flag;
 
-	for(int i=3;i<=x;i+=2){
+	for(int i=5;i<=x;i+=2){
 		flag=0;
-		sqx=(int)sqrt(x)+1;
 		for(int j=1;j<(int)pri.size();j++){
 			if(i%pri[j]==0){
 				flag=1;
 				break;
 			}
-			if(sqx<pri[j]) break;
+			if(x<pri[j]*pri[j]) break;
 		}
 		if(flag==0) pri.emplace_back(i);
 	}
@@ -58,11 +64,11 @@ void mplist(LLi x){
 map<LLi, int> rpfac(LLi x){
 	int sqx=ceil(sqrt(x));
 	//cout<< "sqx=" << sqx SP << sqx*sqx << endl;//
-	auto bin = lower_bound(pri.begin(), pri.end(), sqx);
+	auto bin = lower_bound(all(pri), sqx);
 	int lmt=bin-pri.begin()+1;
 	map<LLi, int> tmp;
 	//cout<< "lmt=" << lmt SP << pri[lmt] SP << pri[lmt]*pri[lmt] <<endl;//
-	if(pri.size()<lmt) cout<< "rpfac: pri size is small" <<endl;
+	if((int)pri.size()<lmt) cout<< "rpfac: pri size is small" <<endl;
 
 	for(int i=1;i<lmt;i++){
 		while(x%pri[i]==0){
@@ -75,6 +81,25 @@ map<LLi, int> rpfac(LLi x){
 	}
 
 	//if(x!=1) cout<< "prime_fac x=" << x <<endl;
+	return tmp;
+}
+
+//階乗を素因数分解
+map<LLi, int> facfac(LLi x){
+	map<LLi, int> tmp;
+	auto bin = lower_bound(all(pri), x);
+	int lmt=bin-pri.begin()+1;
+  	//cout<< "lmt=" << lmt SP << pri[lmt] SP << pri[lmt]*pri[lmt] <<endl;//
+
+	for(LLi i=1;i<lmt;i++){
+		int lp=0, di=0;
+		while(pow(pri[i], lp)<x){
+			lp++;
+			di+=x/pow(pri[i], lp);
+		}
+		if(di>0) tmp[pri[i]]=di;
+	}
+	
 	return tmp;
 }
 
@@ -147,7 +172,13 @@ bool isp(LLi x){
 			if(x%pri[i]==0) return false;
 			if(x<pri[i]*pri[i]) return true;
 		}
-		cout<< "isp: pri size is small" <<endl;
+		//cout<< "isp: pri size is small" <<endl;
+
+		//priのサイズが足りないときは地道にチェックする
+		for(LLi i=pri[pri.size()-1]+2;i*i<=x;i+=2){
+			if(x%i==0) return false;
+		}
+		return true;
 	}
 
 	return ub!=lb;
@@ -162,14 +193,14 @@ int main(){
 	cin>> n >> m;
 
 	mplist(n);//nまでの素数列挙
-	//PV(pri);//
-
+	//PVL(pri);//
 	mp=rpfac(m);//mを√mまで素因数分解
-
 	ml=defac(mp);//mlにmpの総積を代入
 	//cout<< "m/ml=" << m/ml SP << isp(m/ml) <<endl;//
 	if(m!=ml) mp[m/ml]++;//mpにm/mlを追加(√m以上の素数が約数の場合に必要な処理)
 	//mの約数で√m以上の素数は1つしかないのでこれでOK
+
+	//mp=facfac(n);
 
 	for (auto p : mp) {
   		auto key = p.first;
@@ -177,8 +208,10 @@ int main(){
 		cout<< key << "^" << value SP;//mpの内訳を表示
 	}
 	cout<< endl;//
+	//cout<< defac(mp) <<endl;//
 
-	//cout<< isp(m) <<endl;//素数判定
+	if(isp(m)) cout<< "Yes" <<endl;
+    else cout<< "No" <<endl;
 	
 	v=getfac(mp);//素因数分解から約数を列挙
 	PVL(v);
@@ -192,14 +225,15 @@ int main(){
 	//O(√m)で約数を判定
 	int fsz;
 	vector<LLi> f;
-	for(LLi i=1;i<=ceil(sqrt(m));i++){
+	for(LLi i=1;i*i<m;i++){
 		if(m%i==0) f.push_back(i);
 	}
 	fsz=f.size();
-	reverse(all(f));
-	rep(i, fsz) f.push_back(m/f[i]);
-	sort(all(f));
+	if((int)sqrt(m)*(int)sqrt(m)==m) f.push_back((int)sqrt(m));//平方根が約数の場合
+	rep(i, fsz) f.push_back(m/f[fsz-1-i]);
 	PVL(f);
 
 	return 0;
 }
+
+//0と1のコーナーケースに気をつける

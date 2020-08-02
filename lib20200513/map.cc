@@ -14,6 +14,8 @@ int main(){
 		m[tmp]=i+1;
 	}
 
+	cout<< m.size() <<endl;//mのサイズ:要素の種類数を出力
+
 	cout<< m["cat"] <<endl;//catがない時はintの初期値0が出る
 	cout<< m.at("cat") <<endl;//catがない時はエラーになる
 
