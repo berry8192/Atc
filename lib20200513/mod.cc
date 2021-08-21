@@ -48,7 +48,7 @@ LLi modabs(LLi x){
 
 	LLi tmp=abs(x);
 	LLi di=(tmp+mod-1)/mod;
-	return mod*di+x;
+	return (mod*di+x)%mod;
 }
 
 //xCyを計算

@@ -45,5 +45,6 @@ int main() {
     for (int i = 1; i <= N; i++){
 		if(dist[i]==imax) cout<< "-1" <<endl;
 		else cout<< dist[i] <<endl;
+    }
     return 0;
 }

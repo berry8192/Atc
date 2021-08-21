@@ -1,6 +1,25 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+#define rep(i, n) for (int i = 0; i < (int)(n); i++)
+#define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
+#define repr(i, n) for (int i = n-1; i >= 0; i--)
+#define all(v) v.begin(), v.end()
+#define SP << " " 
+#define LLi long long int
+
+vector<LLi> ruiseki(vector<int> vv){
+//vector<int> ruiseki(vector<int>){
+	vector<LLi> xx;
+	//vector<int> xx;
+  	xx.resize(vv.size()+1);
+	xx[0]=0;
+	for(int i=0;i<(int)vv.size();i++){
+		xx[i+1]=xx[i]+vv[i];
+	}
+	return xx;
+}
+
 int main(){
 
 	int n;
