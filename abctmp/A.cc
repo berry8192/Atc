@@ -13,11 +13,6 @@ int imax=2147483647;
 LLi llimax=9223372036854775807;
 LLi mod=1000000007;
 
-void ac(string s){
-	cout<< s <<endl;
-	exit(0);
-}
-
 int main(){
 
 	int a, b, c;
@@ -25,7 +20,7 @@ int main(){
 	string s;
 	cin>> s;
 
-	if(n==0) cout<< "Yes" << endl;
+	if(a==0) cout<< "Yes" << endl;
 	else cout<< "No" << endl;
  
 	return 0;
