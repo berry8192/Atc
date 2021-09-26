@@ -8,6 +8,8 @@
         "list": "cpp",
         "string": "cpp",
         "vector": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "sstream": "cpp",
+        "regex": "cpp"
     }
 }
