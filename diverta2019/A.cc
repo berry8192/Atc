@@ -1,0 +1,14 @@
+#include <bits/stdc++.h>
+#include <cmath>
+
+using namespace std;
+
+int main(){
+
+	int n, k;
+
+	cin>> n >> k;
+
+	cout<< n-k+1 << endl;
+
+}
