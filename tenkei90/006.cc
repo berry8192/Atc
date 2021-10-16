@@ -43,7 +43,7 @@ int main(){
 	//rep(i, 26) PV(v[i]);
 
 	rep(i, k){
-		if(n-1-pos==k-cnt){
+		if(n-pos==k-cnt){
 			//cout<< "syuryou" <<endl;
 			ans+=s.substr(n-(k-cnt));
 			break;
