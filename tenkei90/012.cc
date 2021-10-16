@@ -10,18 +10,6 @@ using namespace std;
 int imax=2147483647;
 long long int llimax=9223372036854775807;
 
-//int型vectorを出力
-void PV(vector<int> pvv) {
-	rep(i, pvv.size()) cout << pvv[i] SP;
-	cout << endl;
-}
-
-//LLi型vectorを出力
-void PVL(vector<LLi> pvv) {
-	rep(i, pvv.size()) cout << pvv[i] SP;
-	cout << endl;
-}
-
 struct UnionFind {
     vector<int> par; // par[i]:iの親の番号　(例) par[3] = 2 : 3の親が2
 	vector<int> siz; // siz[i]:iの属する木に含まれる点の数
@@ -53,33 +41,47 @@ struct UnionFind {
 
 int main(){
 
-	int h, w, q, tmp, sh, sw, gh, gw;
+	int h, w, q, t, sh, sw, gh, gw;
 	vector< vector<int> > v;
 
-	cin>> h >> w >> q;
+	cin>> h >> w;
+	cin>> q;
 	v.resize(h);
 	rep(i, h) v[i].resize(w);
-	
+
 	UnionFind uf(h*w);
 
 	rep(i, q){
-		cin>> tmp;
+		cin>> t;
 		cin>> sh >> sw;
-		sh--;
-		sw--;
-		if(tmp==1){
+		sh=sh-1;
+		sw=sw-1;
+		//cout<< "tmp=" << t SP << sh SP << sw <<endl;
+		//cout<< "index=" << sh*w+sw <<endl;
+		if(t==1){
+			//cout<< "v";
 			v[sh][sw]=1;
-			if(sw<w && v[sh][sw+1]) uf.unite(sh*w+sw, sh*w+sw+1);
+			//cout<< "#1";
+			if(sw<w-1 && v[sh][sw+1]) uf.unite(sh*w+sw, sh*w+sw+1);
+			//cout<< "#2";
 			if(sw>0 && v[sh][sw-1]) uf.unite(sh*w+sw, sh*w+sw-1);
-			if(sh<h && v[sh+1][sw]) uf.unite(sh*w+sw, (sh+1)*w+sw);
+			//cout<< "#3";
+			if(sh<h-1 && v[sh+1][sw]) uf.unite(sh*w+sw, (sh+1)*w+sw);
+			//cout<< "#4";
 			if(sh>0 && v[sh-1][sw]) uf.unite(sh*w+sw, (sh-1)*w+sw);
+			//cout<< "#" <<endl;
 		}else{
 			cin>> gh >> gw;
-			gh--;
-			gw--;
-			if(uf.root(sh*w+sw)==uf.root(gh*w+gw)) cout<< "Yes" << endl;
-			else cout<< "No" << endl;
+			gh=gh-1;
+			gw=gw-1;
+			//cout<< gh SP << gw <<endl;
+			if(v[gh][gw] && uf.root(sh*w+sw)==uf.root(gh*w+gw)){
+				cout<< "Yes" << endl;
+			}else{
+				cout<< "No" << endl;
+			}
 		}
+	}
  
 	return 0;
 }

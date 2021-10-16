@@ -8,7 +8,7 @@
 using namespace std;
 
 int imax=2147483647;
-long long int llimax=9223372036854775807;
+long long int llimax=9123372036854775807;
 
 //int型vectorを出力
 void PV(vector<int> pvv) {
@@ -25,14 +25,15 @@ void PVL(vector<LLi> pvv) {
 int main(){
 
 	int n, q, b, l, r;
-	vector<int> v, ans;
+	vector<LLi> v, ans;
 
 	cin>> n;
 	v.resize(n);
 	rep(i, n) cin >> v[i];
+	v.push_back(-llimax);
 	sort(all(v));
-	v.push_back(imax);
-	//PV(v);
+	v.push_back(llimax);
+	//PVL(v);
 	
 	cin>> q;
 	ans.resize(q);
