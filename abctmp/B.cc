@@ -15,10 +15,18 @@ LLi mod=1000000007;
 
 int main(){
 
-	int a, b, c;
-	cin>> a >> b >> c;
+	int a;
+	cin>> a;
+	int b;
+	cin>> b;
+	int c;
+	cin>> c;
+	int d;
+	cin>> d;
 	string s;
 	cin>> s;
+	string t;
+	cin>> t;
 
 	if(a==0) cout<< "Yes" << endl;
 	else cout<< "No" << endl;

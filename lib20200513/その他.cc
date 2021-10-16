@@ -67,7 +67,7 @@ int main(){
 	rep(i, n) cin>> v[i];
 
 	//小数点桁数指定
-	cout << fixed << setprecision(桁数);
+	cout << fixed << setprecision(12);
 
 	//順列全探索
 	//巡回セールスマン https://qiita.com/e869120/items/702ca1c1ed6ff6770257

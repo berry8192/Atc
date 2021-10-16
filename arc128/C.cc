@@ -32,22 +32,49 @@ template <class T>void PVV(T pvv) {
 
 int main(){
 
-	int n, ans=0;
+	LLi n, m, s;
+	double tmp, ans=0;
 	vector<int> v;
+	
+	cout << fixed << setprecision(12);
 
-	cin>> n;
+	cin>> n >> m >> s;
 	v.resize(n);
 
 	rep(i, n) cin >> v[i];
-	sort(all(v));
-	PV(v);
 
 	rep(i, n) {
-		if (v[i]) ans++;
+		//iから本気出す
+		//cout<< "i=" << i SP << "m=" << 1.0*s/(n-i) <<endl;
+		if(s>(n-i)*m) continue;
+		tmp=0.0;
+		rep(j, n){
+			if(i<=j){
+				tmp+=1.0*s/(n-i)*v[j];
+			}
+		}
+		//cout<< tmp <<endl;
+		ans=max(ans, tmp);
 	}
+	tmp=0.0;
+	repr(i, n){
+		tmp+=1.0*min(s, m)*v[i];
+		s=max(s-m, 0LL);
+		//cout SP << s <<endl;
+	}
+	ans=max(ans, tmp);
 
-	if(n==0) cout<< "Yes" << endl;
-	else cout<< "No" << endl;
+	cout<< ans << endl;
  
 	return 0;
 }
+// blue 639th
+// cyan 1053rd
+// now 1195th
+
+// 3ac fast 111st 2497
+// 3ac last 489th 1784
+// 2ac fast 518th 1747
+// 2ac last 1187th 1091
+// 1ac fast 1192nd 1087
+

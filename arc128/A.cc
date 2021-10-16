@@ -32,22 +32,33 @@ template <class T>void PVV(T pvv) {
 
 int main(){
 
-	int n, ans=0;
-	vector<int> v;
+	int n, aum=-1, aui, agm=imax, agi, flag=1;
+	//flag1で銀を買う必要がある
+	vector<int> v, ans;
 
 	cin>> n;
 	v.resize(n);
+	ans.resize(n);
 
 	rep(i, n) cin >> v[i];
-	sort(all(v));
-	PV(v);
+	v.push_back(imax);
 
 	rep(i, n) {
-		if (v[i]) ans++;
+		if(flag){
+			if(v[i]>v[i+1]){
+				aui=i;
+				flag=0;
+			}
+		}else{
+			if(v[i]<v[i+1]){
+				ans[aui]=1;
+				ans[i]=1;
+				flag=1;
+			}
+		}
 	}
 
-	if(n==0) cout<< "Yes" << endl;
-	else cout<< "No" << endl;
- 
+	PV(ans);
+
 	return 0;
 }
