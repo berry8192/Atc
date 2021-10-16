@@ -24,20 +24,24 @@ void PVL(vector<LLi> pvv) {
 
 int main(){
 
-	int n, ans=0;
-	vector<int> v;
+	LLi n, ans=0;
+	vector<int> v, w;
 
 	cin>> n;
 	v.resize(n);
+	w.resize(n);
 
 	rep(i, n) cin >> v[i];
+	rep(i, n) cin >> w[i];
+
+	sort(all(v));
+	sort(all(w));
 
 	rep(i, n) {
-		if (v[i]) ans++;
+		ans+=abs(v[i]-w[i]);
 	}
 
-	if(n==0) cout<< "Yes" << endl;
-	else cout<< "No" << endl;
+	cout<< ans <<endl;
  
 	return 0;
 }

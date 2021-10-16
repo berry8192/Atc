@@ -28,22 +28,27 @@ int main(){
 
 	cin>> n;
 
+	x.resize(n);
+	y.resize(n);
+
 	rep(i, n) cin >> x[i] >> y[i];
 
 	//i番目の頂点から走査する
 	rep(i, n) {
 		//ang列を作成
-		v.clear();
-		rep(j, n){
-			if(j==i) continue;
-			tmp.val=atan2(y[j]-y[i], x[j]-x[i]);
+		for(int j=i+1;j<n;j++){
+			//if(j==i) continue;
+			//cout<< x[j]-x[i] SP << y[j]-y[i] <<endl;
+			tmp.val=atan2(y[j]-y[i], x[j]-x[i])*180.0/M_PI;
 			tmp.num=j;
 			v.push_back(tmp);
+			cout<< i SP << j SP << tmp.val <<endl;
 		}
-		sort(all(v));
-		rep(j, n-2){
-			
-		}
+	}
+
+	sort(all(v));
+	rep(i, v.size()){
+		cout<< v[i].val <<endl;
 	}
 
 	if(n==0) cout<< "Yes" << endl;

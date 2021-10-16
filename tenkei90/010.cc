@@ -49,8 +49,8 @@ int main(){
 		p2[i+1]+=p2[i];
 	}
 
-	PV(p1);
-	PV(p2);
+	//PV(p1);
+	//PV(p2);
 
 	rep(i, q) cout<< p1[r[i]-1]-p1[l[i]-2] SP << p2[r[i]-1]-p2[l[i]-2] <<endl;
  
