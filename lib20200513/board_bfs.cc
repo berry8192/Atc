@@ -1,6 +1,8 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+int imax=2147483647;
+
 int a, b, ans=0;
 vector< vector<char> > board;
 //vector< vector<int> > seen;
