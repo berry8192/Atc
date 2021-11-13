@@ -11,43 +11,52 @@ using namespace std;
 
 int imax=2147483647;
 long long int llimax=9223372036854775807;
-LLi mod=1000000007;
-//LLi mod=998244353;
+LLi mod=998244353;
+vector<LLi> two(1), ten(1);
 
-//int型vectorを出力
 template <class T> void PV(T pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
 
-//LLi型vectorを出力
-template <class T>void PVV(T pvv) {
-	rep(i, pvv.size()){
-		rep(j, pvv[i].size()){
-			cout << pvv[i][j] SP;
-		}
-		cout << endl;
-	}
-}
-
 int main(){
 
-	int n, ans=0;
+	int n;
+	LLi tmp, ans=0;
+	string s;
 	vector<int> v;
 
-	cin>> n;
-	v.resize(n);
+	cin>> s;
+	reverse(all(s));
+	n=s.size();
+	rep(i, n) v.push_back(int(s[i]-'0'));
+	//PV(v);
 
-	rep(i, n) cin >> v[i];
-	sort(all(v));
-	PV(v);
+    two[0]=1;
+    ten[0]=1;
+  	rep(i, n+1) two.push_back((two[i]*2)%mod);
+  	rep(i, n+1) ten.push_back((ten[i]*10)%mod);
+	//PV(ten);
+	//PV(ten);
+
+	tmp=two[n-1];
 
 	rep(i, n) {
-		if (v[i]) ans++;
+		//cout<< tmp SP << ans <<endl;
+		ans+=tmp*v[i];
+		ans=ans%mod;
+		tmp+=(ten[i+1]*two[n-i-2])%mod;
+		tmp-=(ten[i]*two[n-i-2])%mod;
+		tmp=(tmp+mod)%mod;
 	}
 
-	if(n==0) cout<< "Yes" << endl;
-	else cout<< "No" << endl;
+	cout<< ans << endl;
  
 	return 0;
 }
+/*
+8
+4 4
+4 2 2
+4 2 1 1
+*/
