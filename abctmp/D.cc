@@ -16,8 +16,9 @@ LLi mod=1000000007;
 
 //int型vectorを出力
 template <class T> void PV(T pvv) {
-	rep(i, pvv.size()) cout << pvv[i] SP;
-	cout << endl;
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) cout << pvv[i] SP;
+	cout<< pvv[pvv.size()-1] <<endl;
 }
 
 //LLi型vectorを出力
