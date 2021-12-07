@@ -13,6 +13,7 @@ int imax=2147483647;
 LLi llimax=9223372036854775807;
 LLi mod=1000000007;
 
+//10->2
 string tob(LLi n)
 {
     string r;
