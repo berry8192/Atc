@@ -57,6 +57,18 @@ LLi SML(vector<LLi> smv) {
 	return tmp;
 }
 
+//進数変換10->2 桁指定 10進->2進
+string tob(LLi n, int lng, string fil)
+{
+    string r, rtn="";
+    while (n != 0){
+        r += ( n % 2 == 0 ? "0" : "1" );
+        n /= 2;
+    }
+	while(lng>r.size()) r+=fil;
+    return r;
+}
+
 int main(){
 
 	int n;
