@@ -8,14 +8,14 @@ using namespace std;
 #define SP << " " 
 #define LLi long long int
 
-vector<LLi> ruiseki(vector<int> vv){
-//vector<int> ruiseki(vector<int>){
+// 累積和
+template <class T> vector<LLi> ruiseki(T vv){
 	vector<LLi> xx;
-	//vector<int> xx;
   	xx.resize(vv.size()+1);
 	xx[0]=0;
 	for(int i=0;i<(int)vv.size();i++){
 		xx[i+1]=xx[i]+vv[i];
+		// xx[i+1]=xx[i+1]%mod;
 	}
 	return xx;
 }
