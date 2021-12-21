@@ -63,6 +63,18 @@ LLi perm(LLi x, LLi y){
 	return (fac[x]*facin[x-y])%mod;
 }
 
+//modの各桁を配列で出す
+// aは2とか10、lenが長さ
+vector<LLi> modvec(LLi a, int len){
+	vector<LLi> rtn(len);
+	rtn[0]=a;
+	for(int i=1;i<len;i++){
+		rtn[i]=(rtn[i-1]*a)%mod;
+		//rtn[i]=(rtn[i-1]*10)%mod;
+	}
+	return rtn;
+}
+
 int main(){
 
 	int n;
