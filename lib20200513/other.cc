@@ -58,7 +58,7 @@ LLi SML(vector<LLi> smv) {
 }
 
 //進数変換10->2 桁指定 10進->2進
-string tob(LLi n, int lng, string fil)
+string tob(LLi n, int lng=0, string fil="0")
 {
     string r, rtn="";
     while (n != 0){
