@@ -34,9 +34,9 @@ int main(){
 	// Keyの値が小さい順にループ
 	for (auto p : m) {
   		auto key = p.first;
-  		auto value = p.second;
-  		// key, valueを使う
-		cout<< key << " " << value <<endl;
+  		auto val = p.second;
+  		// key, valを使う
+		cout<< key << " " << val <<endl;
 	}
 
 	return 0;
