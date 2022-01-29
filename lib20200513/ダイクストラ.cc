@@ -19,6 +19,7 @@ int main() {
     scanf("%d%d", &N, &M);
     for (int i = 1; i <= M; i++) {
         scanf("%d%d%d", &A[i], &B[i], &C[i]);
+        //scanf("%d%d", &A[i], &B[i]);
         G[A[i]].push_back(make_pair(B[i], C[i]));
         G[B[i]].push_back(make_pair(A[i], C[i]));
     }
