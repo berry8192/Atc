@@ -85,9 +85,11 @@ int main(){
 	//順列全探索
 	//巡回セールスマン https://qiita.com/e869120/items/702ca1c1ed6ff6770257
 	//sort(v.begin(), v.end());
+	vector<int> p;
+	rep(i, n) p.push_back(i);
 	do {
-		PV(v);
-	} while (next_permutation(all(v)));
+		PV(p);
+	} while (next_permutation(all(p)));
 
 	//2進数表記にしたときの1の数
 	__builtin_popcount(n);
