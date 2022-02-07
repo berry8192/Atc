@@ -32,6 +32,21 @@ struct xxxx{
 	};
 };
 
+// 区間型
+struct itv{
+	int le, ri;
+
+	// 区間スケジュール的な、終わるのが早い順で始まるのが遅い順のソート用
+	bool operator<(const itv &in) const{
+		return ri!=in.ri ? ri<in.ri : le>in.le;
+	};
+
+	// 区間が重なっているかどうか（端点を含ませたい場合は<=を使う）
+	bool cover(itv x, itv y){
+		return max(x.le, y.le)<min(x.ri, y.ri);
+	}
+};
+
 int main(){
 
 	int n;
