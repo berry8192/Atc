@@ -94,6 +94,14 @@ int main(){
 	//2進数表記にしたときの1の数
 	__builtin_popcount(n);
 
+	// 区間の交差判定、(a, b)と(c, d)
+	int a, b, c, d;
+	if(max(a, c)<min(b, d)){
+		cout<< "交差" <<endl;
+	}else{
+		cout<< "交差しない" <<endl;
+	}
+
 	return 0;
 }
 
