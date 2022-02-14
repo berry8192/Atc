@@ -34,7 +34,7 @@ template <class T>void PVV(T pvv) {
 LLi modpow(LLi a, LLi n) {
     LLi res = 1;
     while (n > 0) {
-        if (n & 1) res = res * a % mod;
+        if (n & 1LL) res = res * a % mod;
         a = a * a % mod;
         n >>= 1;
     }
@@ -51,14 +51,7 @@ int main(){
 
 	rep(i, 100){
         flag=1LL;
-        // rep(j, v[i].size()){
-        //     if(v[i][j]>4){
-        //         v[i+1].push_back(v[i][j]/2);
-        //         v[i+1].push_back((v[i][j]+1)/2);
-        //         flag=0;
-        //     }
-        // }
-        //cout<< i <<endl;
+        //cout<< "i=" << i <<endl;
         for (auto p : v[i]) {
             LLi key = p.first;
             LLi val = p.second;
@@ -70,31 +63,29 @@ int main(){
                 // v[i+1][key/2LL]=v[i+1][key/2LL]%(mod-1);
                 // v[i+1][(key+1LL)/2LL]=v[i+1][(key+1LL)/2LL]%(mod-1);
                 flag=0LL;
+            }else{
+                v[i+1][key]+=val;
             }
 	    }
         if(flag){
             for (auto p : v[i]) {
                 LLi key = p.first;
                 LLi val = p.second;
-                while(val!=1LL){
-                    if(val%2LL){
-                        ans*=key;
-                        ans%=mod;
-                        val--;
-                    }else{
-                        key=(key*key)%mod;
-                        val/=2LL;
-                    }
-                }
+                // while(val!=1LL){
+                //     if(val%2LL){
+                //         ans*=key;
+                //         ans%=mod;
+                //         val--;
+                //     }else{
+                //         key=(key*key)%mod;
+                //         val/=2LL;
+                //     }
+                // }
                 // key, valを使う
                 //cout<< key << " " << val <<endl;
-                ans*=key;
+                ans*=modpow(key, val)%mod;
                 ans%=mod;
             }
-            // rep(j, v[i].size()){
-            //     ans*=v[i][j];
-            //     ans%=mod;
-            // }
             break;
         }
     }
