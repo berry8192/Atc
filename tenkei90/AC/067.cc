@@ -46,19 +46,22 @@ public:
   }
 };
 
-int main() {
-    Radix r;
-    // 10 進数を n 進文字列に
-    std::cout << r.to(255, 10) << std::endl; // => "255"
-    std::cout << r.to(255, 12) << std::endl; // => "193"
-    std::cout << r.to(255, 16) << std::endl; // => "FF"
+int main(){
 
-    // n 進文字列を 10 進数に
-    std::cout << r.to("255", 10) << std::endl; // => 255
-    std::cout << r.to("255", 14) << std::endl; // => 467
+	Radix r;
+	string n;
+	int k;
 
-    // n 進文字列を m 進文字列に
-    std::cout << r.to("255", 7, 11) << std::endl; // => "116"
-    std::cout << r.to("255", 11, 7) << std::endl; // => "611"
-    return 0;
+	cin>> n >> k;
+
+	rep(i, k) {
+		n=r.to(n, 8, 9);
+		rep(i, n.size()){
+			if(n[i]=='8') n[i]='5';
+		}
+	}
+
+	cout<< stoll(n) << endl;
+ 
+	return 0;
 }
