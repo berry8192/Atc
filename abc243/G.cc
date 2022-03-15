@@ -54,7 +54,7 @@ int main(){
 		cin>> x;
 		ans=0;
 
-		x=sqrt(x);
+		x=sqrt((long double)(x));
 		for(LLi j=1;j*j<=x;j++){
 			ans+=v[j]*(max(0ULL, x-j*j+1));
 		}
