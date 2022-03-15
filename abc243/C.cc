@@ -44,7 +44,7 @@ int main(){
 
 	rep(i, n){
 		cin >> x[i] >> y[i];
-		x[i]+=10;
+		//x[i]+=10;
 	}
 	cin>> s;
 
@@ -52,7 +52,7 @@ int main(){
 		if(s[i]=='L'){
 			l[y[i]]=max(l[y[i]], x[i]);
 		}else{
-			if(r[y[i]]!=0){
+			if(r.find(y[i])!=r.end()){
 				r[y[i]]=min(r[y[i]], x[i]);
 			}else{
 				r[y[i]]=x[i];
@@ -77,7 +77,7 @@ int main(){
   		auto key = p.first;
   		auto val = p.second;
   		// key, valを使う
-		if(val>r[key]){
+		if(r.find(key)!=r.end() && val>r[key]){
 			cout<< "Yes" <<endl;
 			return 0;
 		}
