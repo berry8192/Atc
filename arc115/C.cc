@@ -24,20 +24,29 @@ void PVL(vector<LLi> pvv) {
 
 int main(){
 
-	int n, ans=0;
-	vector<int> v;
+	int n, tmp;
+	vector<int> v={1};
 
 	cin>> n;
-	v.resize(n);
 
-	rep(i, n) cin >> v[i];
-
-	rep(i, n) {
-		if (v[i]) ans++;
+	rep(i, n-1){
+		tmp=i+2;
+		int fsz;
+		vector<LLi> f;
+		set<int> st;
+		for(LLi j=1;j*j<tmp;j++){
+			if(tmp%j==0){
+				f.push_back(j);
+			}
+		}
+		fsz=f.size();
+		if((int)sqrt(tmp)*(int)sqrt(tmp)==tmp) f.push_back((int)sqrt(tmp));//平方根が約数の場合
+		rep(j, fsz) f.push_back(tmp/f[fsz-1-j]);
+		rep(j, f.size()-1) st.insert(v[f[j]-1]);
+		v.push_back(*st.rbegin()+1);
 	}
 
-	if(n==0) cout<< "Yes" << endl;
-	else cout<< "No" << endl;
+	PV(v);
  
 	return 0;
 }
