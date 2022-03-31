@@ -39,3 +39,15 @@ for (int y = 0; y < H; y++) {
     }
   }
 }
+//5000*5000で1辺kの正方形領域をとったときにどこで最大になるか
+	rep3(i, 5001-k, 0) {
+		rep3(j, 5001-k, 0){
+			ans=max(ans, bo[i+k+1][j+k+1]+bo[i][j]-bo[i+k+1][j]-bo[i][j+k+1]);
+		}
+	}
+
+// (h1, w1)から(h2, w2)の長方形領域の和は包除原理より
+// tile[h1][w1]-tile[h1][w2+1]-tile[h2+1][w1]+tile[h2+1][w2+1]
+
+// (h, w)からhに+x, wに+yの長方形領域の和は
+// tile[h][w]-tile[h+x+1][w]-tile[h][w+y+1]+tile[h+x+1][w+y+1]
