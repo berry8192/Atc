@@ -1,4 +1,5 @@
 #include <bits/stdc++.h>
+#include <atcoder/all>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
@@ -8,11 +9,12 @@
 #define LLi long long int
 
 using namespace std;
+using namespace atcoder;
 
 int imax=2147483647;
 long long int llimax=9223372036854775807;
-LLi mod=1000000007;
-//LLi mod=998244353;
+using mint = modint1000000007;
+//using mint = modint=998244353;
 
 //int型vectorを出力
 template <class T> void PV(T pvv) {
