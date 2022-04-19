@@ -80,7 +80,7 @@ int main(){
 
 	//小数点桁数指定
 	cout << fixed << setprecision(12);
-	printf("%.15lf\n", ans);
+	printf("%.15lf\n", n);
 
 	//順列全探索
 	//巡回セールスマン https://qiita.com/e869120/items/702ca1c1ed6ff6770257
