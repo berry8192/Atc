@@ -1,19 +1,19 @@
 #include <bits/stdc++.h>
-#include <atcoder/all>
+//#include <atcoder/all>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
 #define repr(i, n) for (int i = n-1; i >= 0; i--)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
-using namespace atcoder;
+//using namespace atcoder;
 
 int imax=2147483647;
-long long int llimax=9223372036854775807;
-using mint = modint1000000007;
+ll lmax=9223372036854775807;
+//using mint = modint1000000007;
 //using mint = modint=998244353;
 
 //int型vectorを出力
