@@ -5,273 +5,79 @@
 #define repr(i, n) for (int i = n-1; i >= 0; i--)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long
 
 using namespace std;
 
+//定数周り
 int imax=2147483647;
-long long int llimax=9223372036854775807;
-LLi mod=1000000007;
-//LLi mod=998244353;
+ll lmax=9223372036854775807;
 
-int si, sj, ti, tj;
-int dis[20][20], dis2[20][20], oma[20][20];
-vector<string> h(20), v(19);
-queue<int> qh, qw;
-vector<char> ad;
-vector<int> al;
+//焼きなましの定数
+double TIME_LIMIT=1.9;
+double start_temp=50.0;
+double end_temp=10.0;
 
-void dfso(int y, int x){
-	//移動してきた時の処理
-    //cout<< y SP << x SP << dpt <<endl;
+//入力など
+int n;
+int ansi;
+vector<int> ans1, ans2;
+ll sco1=0, sco2=0;
 
-	//移動する処理
-	// U
-    int mv=0;
-    while(0<y-mv && v[y-mv-1][x]=='0'){
-        mv++;
-        oma[y-mv][x]=1;
-    }
+//スコアの計算
+ll calc_score(int idx){
+    ll rtn=0;
+    if(idx==1){
 
-	// D
-    mv=0;
-    while(y+mv<19 && v[y+mv][x]=='0'){
-        mv++;
-        oma[y+mv][x]=1;
-    }
+    }else{
 
-	// L
-    mv=0;
-    while(0<x-mv && h[y][x-mv-1]=='0'){
-        mv++;
-        oma[y][x-mv]=1;
     }
-
-	// R
-    mv=0;
-    while(x+mv<19 && h[y][x+mv]=='0'){
-        mv++;
-        oma[y][x+mv]=1;
-    }
-}
-
-void dfsr(int y, int x, int dpt){
-	//移動してきた時の処理
-    //cout<< y SP << x SP << dpt <<endl;
-    if(dpt==0) return;
-
-	//移動する処理
-	// U
-    int mv=0;
-    while(0<y-mv && v[y-mv-1][x]=='0'){
-        mv++;
-        if(dis[y-mv][x]==dpt-1){
-            ad.push_back('D');
-            al.push_back(mv);
-            if(dpt) dfsr(y-mv, x, dpt-1);
-            return;
-        }
-    }
-
-	// D
-    mv=0;
-    while(y+mv<19 && v[y+mv][x]=='0'){
-        mv++;
-        if(dis[y+mv][x]==dpt-1){
-            ad.push_back('U');
-            al.push_back(mv);
-            if(dpt) dfsr(y+mv, x, dpt-1);
-            return;
-        }
-    }
-
-	// L
-    mv=0;
-    while(0<x-mv && h[y][x-mv-1]=='0'){
-        mv++;
-        if(dis[y][x-mv]==dpt-1){
-            ad.push_back('R');
-            al.push_back(mv);
-            if(dpt) dfsr(y, x-mv, dpt-1);
-            return;
-        }
-    }
-
-	// R
-    mv=0;
-    while(x+mv<19 && h[y][x+mv]=='0'){
-        mv++;
-        if(dis[y][x+mv]==dpt-1){
-            ad.push_back('L');
-            al.push_back(mv);
-            if(dpt) dfsr(y, x+mv, dpt-1);
-            return;
-        }
-    }
-}
-
-void bfs(int y, int x){
-	//移動してきた時の処理
-    //cout<< y SP << x <<endl;
-
-	//移動する処理
-	// U
-    int mv=0;
-    while(0<y-mv && v[y-mv-1][x]=='0'){
-        mv++;
-        if(y-mv==ti && x==tj){
-            if(dis[y][x]+1<dis[y-mv][x]){
-                dis[y-mv][x]=dis[y][x]+1;
-                mv=0;
-                break;
-            }
-        }
-    }
-    //cout<< "  U " << y-mv SP << x <<endl;
-    if(mv && dis[y][x]+1<dis[y-mv][x]){
-        qh.push(y-mv);
-        qw.push(x);
-        dis[y-mv][x]=dis[y][x]+1;
-    }
-
-	// D
-    mv=0;
-    while(y+mv<19 && v[y+mv][x]=='0'){
-        mv++;
-        if(y+mv==ti && x==tj){
-            if(dis[y][x]+1<dis[y+mv][x]){
-                dis[y+mv][x]=dis[y][x]+1;
-                mv=0;
-                break;
-            }
-        }
-    }
-    //cout<< "  D " << y+mv SP << x <<endl;
-    if(mv && dis[y][x]+1<dis[y+mv][x]){
-        qh.push(y+mv);
-        qw.push(x);
-        dis[y+mv][x]=dis[y][x]+1;
-    }
-
-	// L
-    mv=0;
-    while(0<x-mv && h[y][x-mv-1]=='0'){
-        mv++;
-        if(y==ti && x-mv==tj){
-            if(dis[y][x]+1<dis[y][x-mv]){
-                dis[y][x-mv]=dis[y][x]+1;
-                mv=0;
-                break;
-            }
-        }
-    }
-    //cout<< "  L " << y SP << x-mv <<endl;
-    if(mv && dis[y][x]+1<dis[y][x-mv]){
-        qh.push(y);
-        qw.push(x-mv);
-        dis[y][x-mv]=dis[y][x]+1;
-    }
-
-	// R
-    mv=0;
-    while(x+mv<19 && h[y][x+mv]=='0'){
-        mv++;
-        if(y==ti && x+mv==tj){
-            if(dis[y][x]+1<dis[y][x+mv]){
-                dis[y][x+mv]=dis[y][x]+1;
-                mv=0;
-                break;
-            }
-        }
-    }
-    //cout<< "  R " << y SP << x+mv <<endl;
-    if(mv && dis[y][x]+1<dis[y][x+mv]){
-        qh.push(y);
-        qw.push(x+mv);
-        dis[y][x+mv]=dis[y][x]+1;
-    }
+    return rtn;
 }
 
 int main(){
 
-    string ans="";
-    double p;
+    //開始時間の計測
+    double start_time;
 
-    cin>> si >> sj >> ti >> tj >> p;
+    //乱数の準備
+    int seed=10000;
+    mt19937 mt(seed);
+    rep(i, 10) cout<< mt() <<endl;
 
-    rep(i, 20){
-        cin>> h[i];
-    }
-    rep(i, 19){
-        cin>> v[i];
-    }
-    rep(i, 20){
-        rep(j, 20){
-            dis[i][j]=999;
-            dis2[i][j]=999;
+    //入力
+    cin>> n;
+
+    //初期状態の計算（貪欲やらランダムやら）
+
+    //焼きなまし
+    while (true) { // 時間の許す限り回す
+        double now_time; // 現在時刻
+        if (now_time - start_time > TIME_LIMIT) break;
+
+        if(ansi){
+
+        }else{
+
+        }
+        int new_score = calc_score(2);
+        int pre_score = calc_score(1);
+
+        // 温度関数
+        double temp = start_temp + (end_temp - start_temp) * (now_time-start_time) / TIME_LIMIT;
+        // 遷移確率関数(最大化の場合)
+        double prob = exp((new_score-pre_score)/temp);
+
+        if (prob > (mt()%lmax)/(double)lmax) { // 確率probで遷移する
+            ansi=2-ansi;
         }
     }
-    rep(i, 20){
-        rep(j, 20) oma[i][j]=0;
-    }
-    
-	qh.push(si);
-	qw.push(sj);
-	dis[si][sj]=0;
-  	while (!qh.empty()) {
-    	bfs(qh.front(), qw.front());
-    	qh.pop();
-    	qw.pop();
-  	}
 
-    // rep(i, 20){
-	// 	rep(j, 20){
-	// 		if(dis[i][j]!=999) cout << dis[i][j] SP;
-    //         else cout<< -1 SP;
-	// 	}
-	// 	cout << endl;
-	// }
-
-    if(dis[ti][tj]!=999){
-        dfsr(ti, tj, dis[ti][tj]);
-        reverse(all(ad));
-        reverse(all(al));
-
-        vector<int> len;
-        int su=0;
-        rep(i, al.size()){
-            len.push_back(al[i]*(2+int(p*9.0))/2+6);
-            su+=len[i];
-        }
-        if(200<su){
-            //cout<< "edit" <<endl;
-            rep(i, len.size()){
-                len[i]=len[i]*200/su;
-            }
-        }
-
-        rep(i, ad.size()){
-            //cout<< ad[i] SP << al[i] <<endl;
-            rep(j, len[i]){
-                if(ans.size()==200) break;
-                ans+=ad[i];
-            }
-        }
-        char tmp=ans[ans.size()-1];
-        while(ans.size()<200) ans+=tmp;
-    }else{
-        ans="DRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDR";
-    }
-
-    int flag=1;
+    //答え出力
     rep(i, 200){
-        if(ans[i]!='U' && ans[i]!='D' && ans[i]!='L'&& ans[i]!='R'){
-            flag=0;
-        }
+        if(ansi==1) cout<< ans1[i] <<endl;
+        else cout<< ans1[i] <<endl;
     }
-
-    if(flag) cout<< ans <<endl;
-    else cout<<"DRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDRDR"<<endl;
 
 	return 0;
 }
