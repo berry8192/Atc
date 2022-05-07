@@ -20,39 +20,41 @@ template <class T> void PV(T pvv) {
 	rep(i, pvv.size()-1) cout << pvv[i] SP;
 	cout<< pvv[pvv.size()-1] <<endl;
 }
- 
-ll modinv(ll a) {
-    ll b = mod, u = 1, v = 0;
-    while (b) {
-        ll t = a / b;
-        a -= t * b; swap(a, b);
-        u -= t * v; swap(u, v);
-    }
-    u %= mod;
-    if (u < 0) u += mod;
-    return u;
-}
 
 int main(){
 
     int N;
-    vector<int> P;
+    vector<ll> P, l, r;
     cin>> N;
     P.resize(N);
+    l.resize(N+1);
+    r.resize(N+1);
     rep(i, N) cin>> P[i];
 
     assert(1<=N && N<=100000);
     rep(i, N) assert(1<=P[i] && P[i]<=1000000000);
 
-    ll ans=0;
-    ll prod=1;
+    l[0]=1;
+    r[0]=1;
+
     rep(i, N){
-        prod*=P[i];
-        prod%=mod;
+        l[i+1]=l[i]*P[i];
+        l[i+1]%=mod;
     }
+    reverse(all(P));
     rep(i, N){
-        ll cases=(prod*modinv(P[i]))%mod;
-        ll psum=(1LL*P[i]*(P[i]+1)/2LL)%mod;
+        r[i+1]=r[i]*P[i];
+        r[i+1]%=mod;
+    }
+    reverse(all(P));
+    // PV(l);
+    // PV(r);
+
+    ll ans=0;
+    rep(i, N){
+        ll cases=(l[i]*r[N-i-1])%mod;
+        ll psum=(P[i]*(P[i]+1)/2LL)%mod;
+        //cout<< l[i] SP << r[N-i] SP << psum <<endl;
         ans+=(cases*psum)%mod;
         ans%=mod;
     }
