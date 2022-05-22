@@ -3,18 +3,18 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
-vector<LLi> pri={1, 2, 3};
+vector<ll> pri={1, 2, 3};
 
 void PV(vector<int> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
 
-void PVL(vector<LLi> pvv) {
+void PVL(vector<ll> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
@@ -26,16 +26,16 @@ bool VV(vector<int> vv1, vector<int> vv2) {
 	return true;
 }
 
-bool VVL(vector<LLi> vv1, vector<LLi> vv2) {
+bool VVL(vector<ll> vv1, vector<ll> vv2) {
 	if(vv1.size()!=vv2.size()) return false;
 	rep(i, vv1.size()) if(vv1[i]!=vv2[i]) return false;
 
 	return true;
 }
 
-//vecotr<LLi>の総和
-LLi SML(vector<LLi> smv) {
-	LLi tmp=0;
+//vecotr<ll>の総和
+ll SML(vector<ll> smv) {
+	ll tmp=0;
 	rep(i, smv.size()) tmp+=smv[i];
 
 	return tmp;
@@ -43,7 +43,7 @@ LLi SML(vector<LLi> smv) {
 
 //n以下の素数を配列に{1, 2, 3, 5, 7, ...} make_prime_list
 //i, j, flag, sqx, xを使用
-void mplist(LLi x){
+void mplist(ll x){
 	int flag;
 
 	for(int i=5;i<=x;i+=2){
@@ -61,12 +61,12 @@ void mplist(LLi x){
 
 //nを素因数分解 root_prime_fac
 //i, tmp, bin, lmt, xを使用
-map<LLi, int> rpfac(LLi x){
+map<ll, int> rpfac(ll x){
 	int sqx=ceil(sqrt(x));
 	//cout<< "sqx=" << sqx SP << sqx*sqx << endl;//
 	auto bin = lower_bound(all(pri), sqx);
 	int lmt=bin-pri.begin()+1;
-	map<LLi, int> tmp;
+	map<ll, int> tmp;
 	//cout<< "lmt=" << lmt SP << pri[lmt] SP << pri[lmt]*pri[lmt] <<endl;//
 	if((int)pri.size()<lmt) cout<< "rpfac: pri size is small" <<endl;
 
@@ -85,13 +85,13 @@ map<LLi, int> rpfac(LLi x){
 }
 
 //階乗を素因数分解
-map<LLi, int> facfac(LLi x){
-	map<LLi, int> tmp;
+map<ll, int> facfac(ll x){
+	map<ll, int> tmp;
 	auto bin = lower_bound(all(pri), x);
 	int lmt=bin-pri.begin()+1;
   	//cout<< "lmt=" << lmt SP << pri[lmt] SP << pri[lmt]*pri[lmt] <<endl;//
 
-	for(LLi i=1;i<lmt;i++){
+	for(ll i=1;i<lmt;i++){
 		int lp=0, di=0;
 		while(pow(pri[i], lp)<x){
 			lp++;
@@ -105,14 +105,14 @@ map<LLi, int> facfac(LLi x){
 
 //約数列挙
 //i, j, k, tmp, mul, mを使用
-vector<LLi> getfac(map<LLi, int> mp){
-	vector<LLi> tmp={1}, ad;
-	LLi mul;
+vector<ll> getfac(map<ll, int> mp){
+	vector<ll> tmp={1}, ad;
+	ll mul;
 	
 	for (auto p : mp) {
 		mul=1;
 		ad.clear();
-  		LLi key = p.first;
+  		ll key = p.first;
   		int value = p.second;
 		  
 		rep(j, value){
@@ -143,15 +143,15 @@ vector<LLi> getfac(map<LLi, int> mp){
 
 //素因数の積を計算
 //i, tmp, vを使用
-LLi defac(map<LLi, int> mp){
-	LLi tmp=1;
+ll defac(map<ll, int> mp){
+	ll tmp=1;
 
 	/*for(int i=1;i<v.size();i++){
 		if(v[i]!=0) tmp*=pow(pri[i], v[i]);
 	}*/
 
 	for (auto p : mp) {
-  		LLi key = p.first;
+  		ll key = p.first;
   		int value = p.second;
 		tmp*=pow(key, value);
 	}
@@ -161,7 +161,7 @@ LLi defac(map<LLi, int> mp){
 
 //素数判定 is_prime
 //ub, lb, x, iを使用
-bool isp(LLi x){
+bool isp(ll x){
 	//if(x==1) return false;//1を素数としないなら有効化
 	auto ub = upper_bound(all(pri), x);
 	auto lb = lower_bound(all(pri), x);
@@ -175,7 +175,7 @@ bool isp(LLi x){
 		//cout<< "isp: pri size is small" <<endl;
 
 		//priのサイズが足りないときは地道にチェックする
-		for(LLi i=pri[pri.size()-1]+2;i*i<=x;i+=2){
+		for(ll i=pri[pri.size()-1]+2;i*i<=x;i+=2){
 			if(x%i==0) return false;
 		}
 		return true;
@@ -186,9 +186,9 @@ bool isp(LLi x){
 
 int main(){
 
-	LLi n, m, ml;
-	vector<LLi> v;
-	map<LLi, int> mp;
+	ll n, m, ml;
+	vector<ll> v;
+	map<ll, int> mp;
 
 	cin>> n >> m;
 
@@ -224,8 +224,8 @@ int main(){
 
 	//O(√m)で約数を判定
 	int fsz;
-	vector<LLi> f;
-	for(LLi i=1;i*i<m;i++){
+	vector<ll> f;
+	for(ll i=1;i*i<m;i++){
 		if(m%i==0) f.push_back(i);
 	}
 	fsz=f.size();

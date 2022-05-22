@@ -3,13 +3,13 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
-//vecotr<LLi>の総和
-LLi SML(vector<LLi> smv) {
-	LLi tmp=0;
+//vecotr<ll>の総和
+ll SML(vector<ll> smv) {
+	ll tmp=0;
 	rep(i, smv.size()) tmp+=smv[i];
 
 	return tmp;

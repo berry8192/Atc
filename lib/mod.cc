@@ -3,28 +3,28 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
-LLi mod=1000000007;
-vector<LLi> fac(1), facin(1), ten(1);
+ll mod=1000000007;
+vector<ll> fac(1), facin(1), ten(1);
 
 void PV(vector<int> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
 
-//vector<LLi>を出力
-void PVL(vector<LLi> pvv) {
+//vector<ll>を出力
+void PVL(vector<ll> pvv) {
 	rep(i, (int)pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
  
-LLi modinv(LLi a) {
-    LLi b = mod, u = 1, v = 0;
+ll modinv(ll a) {
+    ll b = mod, u = 1, v = 0;
     while (b) {
-        LLi t = a / b;
+        ll t = a / b;
         a -= t * b; swap(a, b);
         u -= t * v; swap(u, v);
     }
@@ -33,8 +33,8 @@ LLi modinv(LLi a) {
     return u;
 }
  
-LLi modpow(LLi a, LLi n) {
-    LLi res = 1;
+ll modpow(ll a, ll n) {
+    ll res = 1;
     while (n > 0) {
         if (n & 1) res = res * a % mod;
         a = a * a % mod;
@@ -43,30 +43,30 @@ LLi modpow(LLi a, LLi n) {
     return res;
 }
 
-LLi modabs(LLi x){
+ll modabs(ll x){
 	if(x>=0) return (x%mod);
 
-	LLi tmp=abs(x);
-	LLi di=(tmp+mod-1)/mod;
+	ll tmp=abs(x);
+	ll di=(tmp+mod-1)/mod;
 	return (mod*di+x)%mod;
 }
 
 //xCyを計算
-LLi conb(LLi x, LLi y){
+ll conb(ll x, ll y){
 	if(x<y) cout<< "conb x<y" << x SP << y <<endl;
 	return ((fac[x]*facin[y])%mod*facin[x-y])%mod;
 }
 
 //xPyを計算
-LLi perm(LLi x, LLi y){
+ll perm(ll x, ll y){
 	if(x<y) cout<< "perm x<y" << x SP << y <<endl;
 	return (fac[x]*facin[x-y])%mod;
 }
 
 //modの各桁を配列で出す
 // aは2とか10、lenが長さ
-vector<LLi> modvec(LLi a, int len){
-	vector<LLi> rtn(len);
+vector<ll> modvec(ll a, int len){
+	vector<ll> rtn(len);
 	rtn[0]=a;
 	for(int i=1;i<len;i++){
 		rtn[i]=(rtn[i-1]*a)%mod;
@@ -78,7 +78,7 @@ vector<LLi> modvec(LLi a, int len){
 int main(){
 
 	int n;
-	LLi tmp, ans=1;
+	ll tmp, ans=1;
 	cin>> n;
 
 	//fac, facinをメモ化

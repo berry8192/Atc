@@ -6,11 +6,11 @@ using namespace std;
 #define repr(i, n) for (int i = n-1; i >= 0; i--)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 // 累積和
-template <class T> vector<LLi> ruiseki(T vv){
-	vector<LLi> xx;
+template <class T> vector<ll> ruiseki(T vv){
+	vector<ll> xx;
   	xx.resize(vv.size()+1);
 	xx[0]=0;
 	for(int i=0;i<(int)vv.size();i++){

@@ -3,7 +3,7 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
@@ -30,26 +30,26 @@ int lcmv(vector<int> gv){
 	return tmp;
 }
 
-LLi gcdi(LLi a, LLi b) {
+ll gcdi(ll a, ll b) {
 	if(a<0) a=b;
 	if(b<0) b=a;
     if (b == 0) return a;
     return gcdi(b, a%b);
 }
 
-LLi lcmi(LLi a, LLi b) {
+ll lcmi(ll a, ll b) {
     return a/gcdi(a, b)*b;
 }
 
-LLi gcdv(vector<LLi> gv){
-	LLi tmp=gv[0];
+ll gcdv(vector<ll> gv){
+	ll tmp=gv[0];
 	for(int i=1;i<(int)gv.size();i++) tmp=gcdi(tmp, gv[i]);
 	return tmp;
 }
 
-LLi lcmv(vector<LLi> gv){
-	LLi tmp=gv[0];
-	for(LLi i=1;i<(int)gv.size();i++) tmp=lcmi(tmp, gv[i]);
+ll lcmv(vector<ll> gv){
+	ll tmp=gv[0];
+	for(ll i=1;i<(int)gv.size();i++) tmp=lcmi(tmp, gv[i]);
 	return tmp;
 }
 

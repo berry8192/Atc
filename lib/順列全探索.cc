@@ -4,7 +4,7 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
@@ -17,8 +17,8 @@ void PV(vector<int> pvv) {
 	cout << endl;
 }
 
-//LLi型vectorを出力
-void PVL(vector<LLi> pvv) {
+//ll型vectorを出力
+void PVL(vector<ll> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }

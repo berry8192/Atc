@@ -6,7 +6,7 @@
 #define repr(i, n) for (int i = n-1; i >= 0; i--)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define ll long long int
+#define ll long long
 
 using namespace std;
 //using namespace atcoder;
