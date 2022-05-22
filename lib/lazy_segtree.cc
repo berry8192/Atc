@@ -22,7 +22,7 @@ template <class T> void PV(T pvv) {
 	cout << endl;
 }
 
-//LLi型vectorを出力
+//ll型vectorを出力
 template <class T>void PVV(T pvv) {
 	rep(i, pvv.size()){
 		rep(j, pvv[i].size()){

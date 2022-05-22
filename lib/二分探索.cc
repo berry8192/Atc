@@ -3,7 +3,7 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
@@ -12,7 +12,7 @@ int main(){
 	int n;
 	cin>> n;
 
-	LLi ri, le, mi;
+	ll ri, le, mi;
 	ri=1000000000000000001;
 	le=-1;
 	while(ri-le>1){

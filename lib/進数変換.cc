@@ -5,13 +5,13 @@
 #define repr(i, n) for (int i = n-1; i >= 0; i--)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
 int imax=2147483647;
-LLi llimax=9223372036854775807;
-LLi mod=1000000007;
+ll llimax=9223372036854775807;
+ll mod=1000000007;
 
 class Radix {
 private:

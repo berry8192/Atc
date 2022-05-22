@@ -3,7 +3,7 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
@@ -14,7 +14,7 @@ int main(){
 
 	//182-c 各桁に0を含まない数:nの桁をいくつか消して3の倍数にする。最小で何個消せばよいか
 	int tmp, sz, mi=imax;
-	LLi n;
+	ll n;
 	string s;
 
 	cin>> n;

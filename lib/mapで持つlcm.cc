@@ -4,22 +4,22 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
-vector<LLi> pri={1, 2, 3};
-LLi mod=1000000007;
+vector<ll> pri={1, 2, 3};
+ll mod=1000000007;
 
 void PV(vector<int> pvv) {
 	rep(i, pvv.size()) cout << pvv[i] SP;
 	cout << endl;
 }
  
-LLi modinv(LLi a) {
-    LLi b = mod, u = 1, v = 0;
+ll modinv(ll a) {
+    ll b = mod, u = 1, v = 0;
     while (b) {
-        LLi t = a / b;
+        ll t = a / b;
         a -= t * b; swap(a, b);
         u -= t * v; swap(u, v);
     }
@@ -28,14 +28,14 @@ LLi modinv(LLi a) {
     return u;
 }
 
-LLi gcd(LLi a, LLi b) {
+ll gcd(ll a, ll b) {
 	if(a<0) a=b;
 	if(b<0) b=a;
     if (b == 0) return a;
     return gcd(b, a%b);
 }
 
-void mplist(LLi x){
+void mplist(ll x){
 	int flag;
 
 	for(int i=5;i<=x;i+=2){
@@ -51,12 +51,12 @@ void mplist(LLi x){
 	}
 }
 
-map<LLi, int> rpfac(LLi x){
+map<ll, int> rpfac(ll x){
 	int sqx=ceil(sqrt(x));
 	//cout<< "sqx=" << sqx SP << sqx*sqx << endl;//
 	auto bin = lower_bound(all(pri), sqx);
 	int lmt=bin-pri.begin()+1;
-	map<LLi, int> tmp;
+	map<ll, int> tmp;
 	//cout<< "lmt=" << lmt SP << pri[lmt] SP << pri[lmt]*pri[lmt] <<endl;//
 	if((int)pri.size()<lmt) cout<< "rpfac: pri size is small" <<endl;
 
@@ -74,15 +74,15 @@ map<LLi, int> rpfac(LLi x){
 	return tmp;
 }
 
-LLi defac(map<LLi, int> mp){
-	LLi tmp=1;
+ll defac(map<ll, int> mp){
+	ll tmp=1;
 
 	/*for(int i=1;i<v.size();i++){
 		if(v[i]!=0) tmp*=pow(pri[i], v[i]);
 	}*/
 
 	for (auto p : mp) {
-  		LLi key = p.first;
+  		ll key = p.first;
   		int value = p.second;
 		tmp*=pow(key, value);
       	tmp=tmp%mod;//mod算
@@ -97,9 +97,9 @@ int main(){
 	//mlは素因数分解に使う
 	//mpに各数字の素因数分解を保持
 	//lcmpが最小公倍数の素因数分解を表すmap
-	LLi n, lc, ml, ans=0;
-  	vector<LLi> v;
-	map<LLi, int> mp, lcmp;
+	ll n, lc, ml, ans=0;
+  	vector<ll> v;
+	map<ll, int> mp, lcmp;
   
   	cin>> n;
   	v.resize(n);

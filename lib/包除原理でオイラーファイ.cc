@@ -3,13 +3,13 @@
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define all(v) v.begin(), v.end()
 #define SP << " " 
-#define LLi long long int
+#define ll long long int
 
 using namespace std;
 
-vector<LLi> pri={1, 2, 3};
+vector<ll> pri={1, 2, 3};
 
-void mplist(LLi x){
+void mplist(ll x){
 	int flag;
 
 	for(int i=5;i<=x;i+=2){
@@ -25,12 +25,12 @@ void mplist(LLi x){
 	}
 }
 
-map<LLi, int> rpfac(LLi x){
+map<ll, int> rpfac(ll x){
 	int sqx=ceil(sqrt(x));
 	//cout<< "sqx=" << sqx SP << sqx*sqx << endl;//
 	auto bin = lower_bound(all(pri), sqx);
 	int lmt=bin-pri.begin()+1;
-	map<LLi, int> tmp;
+	map<ll, int> tmp;
 	//cout<< "lmt=" << lmt SP << pri[lmt] SP << pri[lmt]*pri[lmt] <<endl;//
 	if((int)pri.size()<lmt) cout<< "rpfac: pri size is small" <<endl;
 
@@ -48,15 +48,15 @@ map<LLi, int> rpfac(LLi x){
 	return tmp;
 }
 
-LLi defac(map<LLi, int> mp){
-	LLi tmp=1;
+ll defac(map<ll, int> mp){
+	ll tmp=1;
 
 	/*for(int i=1;i<v.size();i++){
 		if(v[i]!=0) tmp*=pow(pri[i], v[i]);
 	}*/
 
 	for (auto p : mp) {
-  		LLi key = p.first;
+  		ll key = p.first;
   		int value = p.second;
 		tmp*=pow(key, value);
 	}
@@ -65,12 +65,12 @@ LLi defac(map<LLi, int> mp){
 }
 
 //オイラーのファイ関数
-int eufai(LLi x){
-	LLi ml, ans=0;
-	map<LLi, int> mp;
-	vector<LLi> vx;
+int eufai(ll x){
+	ll ml, ans=0;
+	map<ll, int> mp;
+	vector<ll> vx;
 	
-	mplist((LLi)sqrt(x)+1000);//nまでの素数列挙何度も使うならmain内へ
+	mplist((ll)sqrt(x)+1000);//nまでの素数列挙何度も使うならmain内へ
 	mp=rpfac(x);//xを√xまで素因数分解
 	ml=defac(mp);
 	if(x!=ml) mp[x/ml]++;
@@ -83,7 +83,7 @@ int eufai(LLi x){
 	int M=vx.size();
 	for(int bit=1;bit<(1<<M);bit++){
 		int popcnt=__builtin_popcount(bit);
-		LLi mul=1;
+		ll mul=1;
 		for(int i=0;i<M;i++){
 			if(bit>>i&1) mul*=vx[i];
 		}
