@@ -36,7 +36,10 @@ int main() {
     Q.push(make_pair(0, S));
     dist[S] = 0;
     while (!Q.empty()) {
-        ll pos = Q.top().second; Q.pop();
+        ll pos = Q.top().second;
+        ll d=Q.top().first;
+        Q.pop();
+        if(dist[pos]!=d) continue;
         for (ll i = 0; i < G[pos].size(); i++) {
             ll to = G[pos][i].first, cost = G[pos][i].second;
             if (dist[to] > dist[pos] + cost) {
