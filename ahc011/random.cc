@@ -13,7 +13,7 @@ using namespace std;
 
 int imax=2147483647;
 ll lmax=9223372036854775807;
-int n, cone, detected_cycle;
+int n, cone, detected_cycle, land=-1;
 vector<int> dh={0, -1, 0, 1}, dw={-1, 0, 1, 0};
 string ds="LURD";
 vector< vector<int> > seen, bo, fbo;
@@ -72,7 +72,10 @@ int score(){
 				//cout<< "dfs start " << i SP << j <<endl;
 				dfs(i, j, i*n+j+1, -10);
 			}
-			if(!detected_cycle) ma=max(ma, cone);
+			if(!detected_cycle && ma<=cone){
+				ma=cone;
+				land=seen[i][j];
+			}
 		}
 	}
 	//PVV(seen);
@@ -83,12 +86,12 @@ int main(){
 	std::chrono::system_clock::time_point start, current;
     start = chrono::system_clock::now();
 
-	int t, fh, fw, h, w, pdir, sco, msco=0;
+	int t, fh, fw, h, w, pdir, sco, msco=0, cnt=0;
 	char tmp;
 	string ans, mans;
 	
     //乱数の準備
-    int seed=100001;
+    int seed=100002;
     mt19937 mt(seed);
 
 	cin>> n >> t;
@@ -118,6 +121,7 @@ int main(){
 	sco=score();
 
 	while (true) {
+		cnt++;
         current = chrono::system_clock::now();
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) {
             break;
@@ -149,8 +153,18 @@ int main(){
 				int idx=mt()%nd.size();
 				pdir=nd[idx];
 				swap(bo[h][w], bo[h+dh[pdir]][w+dw[pdir]]);
-				int tmp=score();
-				if(sco<tmp || nd.size()==1){
+				int tmp, flag=0;
+				rep(j, 4){
+					if(h+dh[j]<0 || n<=h+dh[j] || w+dw[j]<0 || n<=w+dw[j]) continue;
+					if(seen[h+dh[j]][w+dw[j]]==land) flag=1;
+				}
+				rep(j, 4){
+					if(h+dh[pdir]+dh[j]<0 || n<=h+dh[pdir]+dh[j] || w+dw[pdir]+dw[j]<0 || n<=w+dw[pdir]+dw[j]) continue;
+					if(seen[h+dh[pdir]+dh[j]][w+dw[pdir]+dw[j]]==land) flag=1;
+				}
+				if(flag) tmp=score();
+				else tmp=sco;
+				if(sco<=tmp || nd.size()==1){
 					h+=dh[pdir];
 					w+=dw[pdir];
 					sco=tmp;
@@ -169,6 +183,7 @@ int main(){
 		}
     }
 
+	//cout<< cnt <<endl;
 	cout<< mans << endl;
  
 	return 0;
