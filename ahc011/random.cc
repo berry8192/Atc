@@ -17,7 +17,7 @@ int n, cone, detected_cycle;
 vector<int> dh={0, -1, 0, 1}, dw={-1, 0, 1, 0};
 string ds="LURD";
 vector< vector<int> > seen, bo, fbo;
-const double TIME_LIMIT = 2800.0;
+const double TIME_LIMIT = 2900.0;
 
 //int型vectorを出力
 template <class T> void PV(T pvv) {
@@ -88,7 +88,7 @@ int main(){
 	string ans, mans;
 	
     //乱数の準備
-    int seed=100000;
+    int seed=100001;
     mt19937 mt(seed);
 
 	cin>> n >> t;
@@ -150,7 +150,7 @@ int main(){
 				pdir=nd[idx];
 				swap(bo[h][w], bo[h+dh[pdir]][w+dw[pdir]]);
 				int tmp=score();
-				if(sco<=tmp || nd.size()==1){
+				if(sco<tmp || nd.size()==1){
 					h+=dh[pdir];
 					w+=dw[pdir];
 					sco=tmp;
