@@ -16,7 +16,8 @@ ll lmax=9223372036854775807;
 int n, cone, detected_cycle;
 vector<int> dh={0, -1, 0, 1}, dw={-1, 0, 1, 0};
 string ds="LURD";
-vector< vector<int> > seen, bo;
+vector< vector<int> > seen, bo, fbo;
+const double TIME_LIMIT = 2800.0;
 
 //int型vectorを出力
 template <class T> void PV(T pvv) {
@@ -79,8 +80,10 @@ int score(){
 }
 
 int main(){
+	std::chrono::system_clock::time_point start, current;
+    start = chrono::system_clock::now();
 
-	int t, h, w, pdir, sco, msco=0;
+	int t, fh, fw, h, w, pdir, sco, msco=0;
 	char tmp;
 	string ans, mans;
 	
@@ -90,8 +93,10 @@ int main(){
 
 	cin>> n >> t;
 	bo.resize(n);
+	fbo.resize(n);
 	seen.resize(n);
 	rep(i, n) bo[i].resize(n);
+	rep(i, n) fbo[i].resize(n);
 	rep(i, n) seen[i].resize(n);
 
 	rep(i, n){
@@ -100,57 +105,69 @@ int main(){
 			if('a'<=tmp) tmp=tmp-39;
 			tmp=tmp-48;
 			//cout<< int(tmp) SP;
-			bo[i][j]=int(tmp);
+			fbo[i][j]=int(tmp);
 			if(int(tmp)==0){
-				h=i;
-				w=j;
+				fh=i;
+				fw=j;
 			}
 		}
 		//cout<< endl;
 	}
 	//cout<< "h=" << h << " w=" << w <<endl;
-
-	pdir=mt()%4;
+	
 	sco=score();
-	//cout<< "first score=" << sco <<endl;
-	rep(i, t){
-		//cout<< "turn: " << i <<endl;
-		int d[4];
-		rep(j, 4) d[j]=j;
-		d[(pdir+2)%4]=-1;
-		rep(j, 4){
-			if(h+dh[j]<0 || n<=h+dh[j] || w+dw[j]<0 || n<=w+dw[j]) d[j]=-1;
-		}
-		vector<int> nd;
-		rep(j, 4){
-			if(d[j]!=-1){
-				nd.push_back(d[j]);
+
+	while (true) {
+        current = chrono::system_clock::now();
+        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) {
+            break;
+        }
+
+		rep(i, n) rep(j, n) bo[i][j]=fbo[i][j];
+		pdir=mt()%4;
+		ans="";
+		h=fh;
+		w=fw;
+		//cout<< "first score=" << sco <<endl;
+		rep(i, t){
+			//cout<< "turn: " << i <<endl;
+			int d[4];
+			rep(j, 4) d[j]=j;
+			d[(pdir+2)%4]=-1;
+			rep(j, 4){
+				if(h+dh[j]<0 || n<=h+dh[j] || w+dw[j]<0 || n<=w+dw[j]) d[j]=-1;
 			}
-		}
-		//cout<< "nd=";
-		//PV(nd);
-		while(1){
-			int idx=mt()%nd.size();
-			pdir=nd[idx];
-			swap(bo[h][w], bo[h+dh[pdir]][w+dw[pdir]]);
-			int tmp=score();
-			if(sco<=tmp || nd.size()==1){
-				h+=dh[pdir];
-				w+=dw[pdir];
-				sco=tmp;
-				//cout<< "score=" << sco <<endl;
-				ans+=ds[pdir];
-				if(msco<sco){
-					mans=ans;
-					msco=sco;
+			vector<int> nd;
+			rep(j, 4){
+				if(d[j]!=-1){
+					nd.push_back(d[j]);
 				}
-				break;
-			}else{
+			}
+			//cout<< "nd=";
+			//PV(nd);
+			while(1){
+				int idx=mt()%nd.size();
+				pdir=nd[idx];
 				swap(bo[h][w], bo[h+dh[pdir]][w+dw[pdir]]);
-				nd.erase(nd.begin()+idx);
+				int tmp=score();
+				if(sco<=tmp || nd.size()==1){
+					h+=dh[pdir];
+					w+=dw[pdir];
+					sco=tmp;
+					//cout<< "score=" << sco <<endl;
+					ans+=ds[pdir];
+					if(msco<sco){
+						mans=ans;
+						msco=sco;
+					}
+					break;
+				}else{
+					swap(bo[h][w], bo[h+dh[pdir]][w+dw[pdir]]);
+					nd.erase(nd.begin()+idx);
+				}
 			}
 		}
-	}
+    }
 
 	cout<< mans << endl;
  
