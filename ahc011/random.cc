@@ -91,7 +91,7 @@ int main(){
 	string ans, mans;
 	
     //乱数の準備
-    int seed=100002;
+    int seed=100003;
     mt19937 mt(seed);
 
 	cin>> n >> t;
@@ -150,6 +150,7 @@ int main(){
 			//cout<< "nd=";
 			//PV(nd);
 			while(1){
+				// TODO、連続部分がすくないものを選ぶようにする
 				int idx=mt()%nd.size();
 				pdir=nd[idx];
 				swap(bo[h][w], bo[h+dh[pdir]][w+dw[pdir]]);
