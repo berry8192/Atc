@@ -41,6 +41,7 @@ int main(){
 
 	cin>> n;
 	s.resize(n);
+	// bitsetで高速に
 	vector<bitset<3000>> v(n);
 
 	rep(i, n){
