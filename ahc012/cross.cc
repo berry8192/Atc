@@ -14,8 +14,8 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=2900;
-double start_temp=50.0;
+double TIME_LIMIT=2980;
+double start_temp=2000.0;
 double end_temp=10.0;
 
 //入力など
@@ -39,7 +39,7 @@ void inpt(){
 
 void init(){
     // 番兵として両端点にいてもらう
-    sec=sqrt(sua)*1.06;
+    sec=sqrt(sua)*1.2;
     sec=min(sec, 48);
     sec=max(sec, 10);
     //横の線つくる
@@ -77,11 +77,12 @@ void init_score(){
                 break;
             }
         }
-        if(xx<0 || sec<xx || yy<0 || sec<<yy){
-            d[1]=100000000;
-        }else{
-            bo[xx][yy]++;
-        }
+        // if(xx<0 || sec<xx || yy<0 || sec<<yy){
+        //     d[1]=100000000;
+        // }else{
+        //     bo[xx][yy]++;
+        // }
+        bo[xx][yy]++;
     }
     rep(i, sec+1) rep(j, sec+1) d[bo[i][j]]++;
 
@@ -101,10 +102,11 @@ void score(){
     int ev=0;
     rep3(i, 11, 1){
         cor+=min(a[i], d[i]);
-        ev+=abs(a[i]-d[i]);
+        //cor-=abs(a[i]-d[i]);
     }
     rep3(i, 50, 11){
         ev+=d[i]*i*i;
+        cor-=d[i];
     }
     psco=round(1000000.0*cor/sua);
     pev=ev;
@@ -123,8 +125,8 @@ int main(){
     start = chrono::system_clock::now();
 
     //乱数の準備
-    //int seed=10000;
-    auto seed=(unsigned)time(NULL);
+    int seed=10000;
+    //auto seed=(unsigned)time(NULL);
     mt19937 mt(seed);
 
     rep(i, 60) rep(j, 60) bo[i][j]=0;
@@ -165,7 +167,7 @@ int main(){
             qy[idx]+=del;
         }else{
             //縦の線（横の線+sec）をずらす
-            idx=mt()%(sec-1)+1+sec;
+            idx=mt()%(sec-1)+2+sec;
             mvp=(px[idx+1]-px[idx])/5;
             mvm=(px[idx]-px[idx-1])/5;
             del=mt()%(mvp+mvm)-mvm;
@@ -182,12 +184,12 @@ int main(){
         score();
 
         // 温度関数
-        //double temp = start_temp + (end_temp - start_temp) * (now_time-start_time) / TIME_LIMIT;
+        double temp = start_temp + (end_temp - start_temp) * chrono::duration_cast<chrono::milliseconds>(current - start).count() / TIME_LIMIT;
         // 遷移確率関数(最大化の場合)
-        //double prob = exp((psco-nsco)/temp);
+        double prob = exp((psco-nsco)/temp);
 
-        //if (prob > (mt()%imax)/(double)imax) { // 確率probで遷移する
-        if (nsco<psco) {
+        if (prob > (mt()%imax)/(double)imax) { // 確率probで遷移する
+        //if (nsco<psco) {
             nsco=psco;
             nev=pev;
         }else{
