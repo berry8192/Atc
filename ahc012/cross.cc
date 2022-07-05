@@ -19,11 +19,11 @@ double start_temp=2000.0;
 double end_temp=10.0;
 
 //入力など
-int n, k, sua=0, sec, nsco=0, psco=0, nev=0, pev=0, idx, lp=0;
+int n, k, sua=0, sec, nsco=0, psco=0, nev=0, pev=0;
 vector<int> a(11), x, y, d(5010);
 vector<int> px(100), py(100), qx(100), qy(100);
 vector<int> apx(100), apy(100), aqx(100), aqy(100);
-int bo[90][90], xx[5010], yy[5010];
+int bo[90][90];
 
 void inpt(){
     cin>> n >> k;
@@ -64,50 +64,25 @@ void init_score(){
         // cout<< "(x, y)= " << x[i] SP << y[i] <<endl;
         // cout<< x[i]/(20000/sec)+sec/2 SP << y[i]/(20000/sec)+sec/2 <<endl;
         //bo[int((x[i]+10000)/20000.0*(sec))][int((y[i]+10000)/20000.0*(sec))]++;
-        if(lp==1){
-            rep(j, sec){
-                if((py[j]-y[i])*(py[j+1]-y[i])<=0){
-                    yy[i]=j+1;
-                    break;
-                }
+        int xx, yy;
+        rep(j, sec){
+            if((py[j]-y[i])*(py[j+1]-y[i])<=0){
+                xx=j+1;
+                break;
             }
-            rep(j, sec){
-                if((px[j+sec+1]-x[i])*(px[j+sec+2]-x[i])<=0){
-                    xx[i]=j+1;
-                    break;
-                }
-            }
-        }else if(idx<sec){
-            //if(abs(yy[i]-idx)<3 || lp==1){
-                rep(j, sec){
-                    if((py[j]-y[i])*(py[j+1]-y[i])<=0){
-                        yy[i]=j+1;
-                        break;
-                    }
-                }
-            //}
-        }else{
-            //if(abs(xx[i]-(idx-sec-1))<3 || lp==1){
-                rep(j, sec){
-                    if((px[j+sec+1]-x[i])*(px[j+sec+2]-x[i])<=0){
-                        xx[i]=j+1;
-                        break;
-                    }
-                }
-            //}
         }
-
-        // auto xub=upper_bound(py.begin(), py.begin()+sec, y[i]-1);
-        // xx=xub-py.begin();
-        // auto yub=upper_bound(px.begin()+sec+1, px.end(), x[i]-1);
-        // yy=yub-px.begin()+sec+1;
-
+        rep(j, sec){
+            if((px[j+sec+1]-x[i])*(px[j+sec+2]-x[i])<=0){
+                yy=j+1;
+                break;
+            }
+        }
         // if(xx<0 || sec<xx || yy<0 || sec<<yy){
         //     d[1]=100000000;
         // }else{
         //     bo[xx][yy]++;
         // }
-        bo[xx[i]][yy[i]]++;
+        bo[xx][yy]++;
     }
     rep(i, sec+1) rep(j, sec+1) d[bo[i][j]]++;
 
@@ -129,10 +104,10 @@ void score(){
         cor+=min(a[i], d[i]);
         //cor-=abs(a[i]-d[i]);
     }
-    // rep3(i, 50, 11){
-    //     ev+=d[i]*i*i;
-    //     cor-=d[i];
-    // }
+    rep3(i, 50, 11){
+        ev+=d[i]*i*i;
+        cor-=d[i];
+    }
     psco=round(1000000.0*cor/sua);
     pev=ev;
 }
@@ -155,10 +130,6 @@ int main(){
     mt19937 mt(seed);
 
     rep(i, 60) rep(j, 60) bo[i][j]=0;
-    // rep(i, 5010){
-    //     xx[i]=-1;
-    //     yy[i]=-1;
-    // }
 
     //入力
     inpt();
@@ -173,6 +144,7 @@ int main(){
     //cout<< nsco SP << nev <<endl;
 
     //焼きなまし
+    int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
         //cout<< lp <<endl;
@@ -181,22 +153,23 @@ int main(){
         //if(lp==20000) break;
 
         int type=mt()%2+1;
+        int idx;
         int mvp;
         int mvm;
         int del;
         if(type==1){
             //横の線（1~sec-1）をずらす
             idx=mt()%(sec-1)+1;
-            mvp=(py[idx+1]-py[idx])/3;
-            mvm=(py[idx]-py[idx-1])/3;
+            mvp=(py[idx+1]-py[idx])/5;
+            mvm=(py[idx]-py[idx-1])/5;
             del=mt()%(mvp+mvm)-mvm;
             py[idx]+=del;
             qy[idx]+=del;
         }else{
             //縦の線（横の線+sec）をずらす
             idx=mt()%(sec-1)+2+sec;
-            mvp=(px[idx+1]-px[idx])/3;
-            mvm=(px[idx]-px[idx-1])/3;
+            mvp=(px[idx+1]-px[idx])/5;
+            mvm=(px[idx]-px[idx-1])/5;
             del=mt()%(mvp+mvm)-mvm;
             px[idx]+=del;
             qx[idx]+=del;
@@ -230,7 +203,6 @@ int main(){
         }
     }
 
-    //cout<< lp <<endl;
     print_ans();
 
 	return 0;
