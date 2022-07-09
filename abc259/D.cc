@@ -90,7 +90,7 @@ int main(){
 		rep3(j, n, i+1){
 			// 2つの円が共有点を一つ以上持つかどうかの判定
 			// 円の接触判定は接しない2通り、交差する1通り、内接外接で2通り、合計5通りある
-			// https://qiita.com/tydesign/items/7cb4d189451095b4d667
+			// https://examist.jp/mathematics/figure-circle/two-circle/
 			if((r[i]+r[j])*(r[i]+r[j])>=(x[i]-x[j])*(x[i]-x[j])+(y[i]-y[j])*(y[i]-y[j]) && (r[i]-r[j])*(r[i]-r[j])<=(x[i]-x[j])*(x[i]-x[j])+(y[i]-y[j])*(y[i]-y[j])){
 				uf.unite(i, j);
 			}
