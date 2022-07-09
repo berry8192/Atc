@@ -26,6 +26,8 @@ F composition(F l, F r) { return F{r.a * l.a, r.b * l.a + l.b}; }
 
 F id() { return F{1, 0}; }
 
+// https://atcoder.github.io/ac-library/document_ja/lazysegtree.html
+// https://atcoder.jp/contests/practice2/tasks/practice2_k
 int main() {
     int n, q;
     scanf("%d %d", &n, &q);
