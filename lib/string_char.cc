@@ -1,6 +1,21 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+// ランレングス圧縮、連長圧縮
+// 文字列を何の文字が何連続というかたまりに分解する
+void rle(string s, vector<pair<char, int>> &vec)
+{
+  int cnt = 1;
+  for(int i = 0; i < (int)s.size(); i++){
+    if(s[i] != s[i-1]){
+      vec.push_back({s[i-1], cnt});
+      cnt = 0;
+    }
+    cnt++;
+  }
+  vec.push_back({s.back(), cnt});
+}
+
 //split関数 delimで区切られたstring配列を返す
 vector<string> spl(const string &s, char delim) {
     vector<string> elems;
@@ -133,6 +148,10 @@ int main(){
 
 	//整数を1桁ずつ
 	cout<< (int)(c-'0') <<endl;
+
+	vector<pair<char, int>> svec;
+	// ランレングス圧縮
+	rle(s, svec);
 
 	return 0;
 }
