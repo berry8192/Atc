@@ -20,6 +20,12 @@ template <class T> vector<ll> ruiseki(T vv){
 	return xx;
 }
 
+// いもす法1D, imos1D
+vector<int> imos(vector<int> vv){
+	rep3(i, vv.size(), 1) vv[i]+=vv[i-1];
+	return vv;
+}
+
 int main(){
 
 	int n;
