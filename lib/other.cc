@@ -97,10 +97,11 @@ int main(){
 	// 区間の交差判定、(a, b)と(c, d)
 	int a, b, c, d;
 	if(max(a, c)<min(b, d)){
-		cout<< "交差" <<endl;
+		cout<< "交差" << min(b, d)-max(a, c) <<endl;
 	}else{
 		cout<< "交差しない" <<endl;
 	}
+	cout<< "共有部分は" << max(0, min(b, d)-max(a, c)) <<endl;
 
 	return 0;
 }
