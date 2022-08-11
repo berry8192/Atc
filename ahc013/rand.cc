@@ -101,7 +101,7 @@ struct Room{
         mt()%100;
     }
     void add_co(int x1, int y1, int x2, int y2){
-        cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         int from=board[x1][y1];
         int to=board[x2][y2];
         // for文のために右か下方向に伸ばすようにする
@@ -169,6 +169,18 @@ void inpt(){
                 cpu[fig-1].push_back({i, j});
             }
         }
+    }
+}
+
+int score(Room room){
+    vector<vector<int>> cc=c;
+    rep(i, room.mv.size()){
+        assert(room.board[room.mv[i].to.h][room.mv[i].to.w]==0);
+        assert(room.board[room.mv[i].from.h][room.mv[i].from.w]>0);
+        swap(room.board[room.mv[i].to.h][room.mv[i].to.w], room.board[room.mv[i].from.h][room.mv[i].from.w]);
+    }
+    rep(i, room.co.size()){
+        room.add_co(room.co[i].from.h, room.co[i].from.w, room.co[i].to.h, room.co[i].to.w);
     }
 }
 
@@ -243,7 +255,7 @@ int main(){
     //     }
     // }
 
-    cur.print_board();
+    // cur.print_board();
     cur.print_out();
 
 	return 0;
