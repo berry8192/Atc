@@ -100,6 +100,42 @@ struct Room{
         mt()%k;
         mt()%100;
     }
+    void add_co(int x1, int y1, int x2, int y2){
+        cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        int from=board[x1][y1];
+        int to=board[x2][y2];
+        // for文のために右か下方向に伸ばすようにする
+        if(x1>x2) swap(x1, x2);
+        if(y1>y2) swap(y1, y2);
+        // 別の種類のコンピュータを繋ごうとしていないか確認
+        assert(from==to);
+        // 同一コンピュータを繋ごうとしていないか確認
+        assert(!(x1==x2 && y1==y2));
+        // 直線で結べない位置にいないか確認
+        assert(!(x1!=x2 && y1!=y2));
+        // 間に負の値でケーブルをつなぐ
+        if(x1!=x2){
+            // 間をケーブルが通っていないか確認
+            rep3(i, x2, x1+1){
+                // assert(board[i][y1]==0);
+                if(board[i][y1]!=0) return;
+            }
+            rep3(i, x2, x1+1){
+                board[i][y1]=-from;
+            }
+        }else{
+            // 間をケーブルが通っていないか確認
+            rep3(i, y2, y1+1){
+                // assert(board[x1][i]==0);
+                if(board[x1][i]!=0) return;
+            }
+            rep3(i, y2, y1+1){
+                board[x1][i]=-from;
+            }
+        }
+        // coに追加
+        co.push_back({{x1, y1}, {x2, y2}});
+    }
     void print_board(){
         rep(i, n){
             rep(j, n){
@@ -146,6 +182,33 @@ int main(){
     Room cur, best;
     cur.init();
 
+    rep(i, n){
+        rep(j, n){
+            if(cur.board[i][j]<=0) continue;
+            int tmp=cur.board[i][j];
+            rep3(l, n, i+1){
+                if(cur.board[l][j]==0){
+                    continue;
+                }else if(cur.board[l][j]==tmp){
+                    cur.add_co(i, j, l, j);
+                    break;
+                }else{
+                    break;
+                }
+            }
+            rep3(l, n, j+1){
+                if(cur.board[i][l]<=0){
+                    continue;
+                }else if(cur.board[i][l]==tmp){
+                    cur.add_co(i, j, i, l);
+                    break;
+                }else{
+                    break;
+                }
+            }
+        }
+    }
+
     // // 焼きなまし
     // int lp=0;
     // while (true){
@@ -180,6 +243,7 @@ int main(){
     //     }
     // }
 
+    cur.print_board();
     cur.print_out();
 
 	return 0;
