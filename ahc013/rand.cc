@@ -142,11 +142,12 @@ struct Room{
         board=c;
         comp=cpu;
         uf.init(k*100);
-        rep(i, n){
-            rep(j, n){
-                if(board[i][j].type>0) cout<< board[i][j]
-            }
-        }
+        // rep(i, n){
+        //     rep(j, n){
+        //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
+        //     }
+        //     cout<< endl;
+        // }
     }
     int hand(){
         return mv.size()+co.size();
@@ -256,14 +257,16 @@ void inpt(){
     c.resize(n);
     rep(i, n) c[i].resize(n);
     cpu.resize(k);
+    int cnt=0;
 
     rep(i, n){
         string tmp;
         cin>> tmp;
         rep(j, n){
             int fig=int(tmp[j]-'0');
-            c[i][j]=Num(fig, i*n+j);
+            c[i][j]=Num(fig, cnt);
             if(fig){
+                cnt++;
                 cpu[fig-1].push_back({i, j});
             }
         }
