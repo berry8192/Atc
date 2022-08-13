@@ -87,10 +87,25 @@ struct Num{
     }
 };
 
+struct Cpu{
+    int fig;
+    Pos pos;
+
+    Cpu(){};
+    Cpu(int x, Pos y){
+        fig=x;
+        pos=y;
+    }
+    void print(){
+        cout<< fig SP;
+        pos.print();
+    }
+};
+
 //入力
 int n, k;
 vector<vector<Num>> c;
-vector<vector<Pos>> cpu;
+vector<Cpu> cpu;
 
 struct Move{
     Pos from;
@@ -126,17 +141,13 @@ struct Cone{
 
 struct Room{
     vector<vector<Num>> board;
-    vector<vector<Pos>> comp;
+    vector<Cpu> comp;
     vector<Move> mv;
     vector<Cone> co;
     UnionFind uf;
     int score=0;
 
     Room(){
-        board.resize(n);
-        rep(i, n) board[i].resize(n);
-        comp.resize(k);
-        rep(i, k) comp[i].resize(100);
     }
     void init(){
         board=c;
@@ -256,7 +267,7 @@ void inpt(){
     cin>> n >> k;
     c.resize(n);
     rep(i, n) c[i].resize(n);
-    cpu.resize(k);
+    cpu.resize(k*100);
     int cnt=0;
 
     rep(i, n){
@@ -266,35 +277,49 @@ void inpt(){
             int fig=int(tmp[j]-'0');
             c[i][j]=Num(fig, cnt);
             if(fig){
+                cpu[cnt]={fig, {i, j}};
                 cnt++;
-                cpu[fig-1].push_back({i, j});
             }
         }
     }
-    // rep(i, k){
-    //     rep(j, 100){
-    //         cpu[i][j].print();
-    //         cout SP;
-    //     }
+    // rep(i, k*100){
+    //     cpu[i].print();
     //     cout<< endl;
     // }
 }
 
-// int score(Room room){
-//     vector<vector<Num>> cc=c;
-//     rep(i, room.mv.size()){
-//         int th=room.mv[i].to.h;
-//         int tw=room.mv[i].to.w;
-//         int fh=room.mv[i].from.h;
-//         int fw=room.mv[i].from.w;
-//         assert(room.board[th][tw].type==0);
-//         assert(room.board[fh][fw].type>0);
-//         swap(room.board[th][tw], room.board[fh][fw]);
-//     }
-//     rep(i, room.co.size()){
-//         room.add_co(room.co[i].from.h, room.co[i].from.w, room.co[i].to.h, room.co[i].to.w);
-//     }
-// }
+int score(Room room){
+    int rtn=0;
+
+    Room tes;
+    tes.init();
+    rep(i, room.mv.size()){
+        int th=room.mv[i].to.h;
+        int tw=room.mv[i].to.w;
+        int fh=room.mv[i].from.h;
+        int fw=room.mv[i].from.w;
+        assert(tes.board[th][tw].type*tes.board[fh][fw].type==0);
+        assert(tes.board[th][tw].type+tes.board[fh][fw].type>0);
+        swap(tes.board[th][tw], tes.board[fh][fw]);
+    }
+    rep(i, room.co.size()){
+        int th=room.co[i].to.h;
+        int tw=room.co[i].to.w;
+        int fh=room.co[i].from.h;
+        int fw=room.co[i].from.w;
+        assert(!tes.uf.same(tes.board[th][tw].idx, tes.board[fh][fw].idx));
+        tes.uf.unite(tes.board[th][tw].idx, tes.board[fh][fw].idx);
+    }
+    rep(i, k*100){
+        rep3(j, k*100, i+1){
+            if(tes.uf.same(i, j)){
+                if(cpu[i].fig==cpu[j].fig) rtn++;
+                else rtn--;
+            }
+        }
+    }
+    return rtn;
+}
 
 int main(){
     //開始時間の計測
@@ -302,8 +327,7 @@ int main(){
     start = chrono::system_clock::now();
 
     inpt();
-
-    Room cur, best;
+    Room cur;
     cur.init();
 
     // cur.nomove_connect(1);
@@ -314,6 +338,7 @@ int main(){
     rep(i, k) cur.nomove_connect(i+1, 100);
 
     cur.print_board();
+    cout<< score(cur) <<endl;
     cur.print_out();
 
 	return 0;
