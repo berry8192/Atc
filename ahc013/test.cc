@@ -22,7 +22,7 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-//auto seed=(unsigned)time(NULL);
+// auto seed=(unsigned)time(NULL);
 int seed=10;
 mt19937 mt(seed);
 
@@ -321,7 +321,7 @@ struct Room{
         shuffle(all(perm2), mt);
 
         rep(lp, k*100){
-            if(mv.size()>=(k-1)*100) return;
+            if(mv.size()>=k*50) return;
             int i=perm2[lp];
             if(comp[i].fig!=num) continue;
             Pos pos=comp[i].pos;
@@ -652,14 +652,16 @@ int main(){
             Room cur;
             cur.init();
 
-            rep3(figure, 1+1, 1){
-                // figure番の数字を構築する
+            vector<int> perm(k);
+            rep(i, k) perm[i]=i+1;
+            rep(i, k){
+                // perm[i]番の数字を構築する
                 rep3(j, n, 1){
-                    //cout<< "nomove " << figure <<endl;
-                    cur.nomove_connect(figure, j);
+                    //cout<< "nomove " << perm[i] <<endl;
+                    cur.nomove_connect(perm[i], j);
                 }
-                //cout<< "cpu_slide " << figure <<endl;
-                cur.cpu_slide(figure, mt()%n+1, mt()%(n/2)+1);
+                //cout<< "cpu_slide " << perm[i] <<endl;
+                cur.cpu_slide(perm[i], mt()%n+1, mt()%(n/2)+1);
                 //cout<< "init room" <<endl;
                 rep(a, n){
                     rep(b, n){
@@ -669,11 +671,11 @@ int main(){
                 cur.uf.init(k*100);
                 cur.co.clear();
                 //cout<< "nomove2 " << i+1 <<endl;
-                rep3(j, n/5, 1) cur.nomove_connect(figure, j);
+                rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
             }
             //cout<< "end connect" <<endl;
-            rep3(i, k+1, 1){
-                rep3(j, n, 1) cur.nomove_connect(i, j);
+            rep(i, k){
+                rep3(j, n, 1) cur.nomove_connect(perm[i], j);
             }
 
             cur.easy_score();

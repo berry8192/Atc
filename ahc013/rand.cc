@@ -621,7 +621,7 @@ int main(){
             cur.uf.init(k*100);
             cur.co.clear();
             //cout<< "nomove2 " << i+1 <<endl;
-            rep3(j, mt()%(k-2)+2, 1) cur.nomove_connect(perm[i], j);
+            rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
         }
         //cout<< "end connect" <<endl;
         rep(i, k){
