@@ -57,17 +57,20 @@ struct UnionFind {
     }
 
 	int tsize(int x){ // siz[x]の木の根を見に行き、サイズを返す
-		if (par[x] == x) return siz[x];
-		return tsize(par[x]);
+		return siz[root(x)];
 	}
 
     void unite(int x, int y) { // xとyの木を併合
         int rx = root(x); //xの根をrx
         int ry = root(y); //yの根をry
         if (rx == ry) return; //xとyの根が同じ(=同じ木にある)時はそのまま
-        par[rx] = ry; //xとyの根が同じでない(=同じ木にない)時：xの根rxをyの根ryにつける
+        if(siz[rx]<siz[ry]) swap(rx,ry);
+        par[ry] = rx; //xとyの根が同じでない(=同じ木にない)時：xの根rxをyの根ryにつける
 		siz[rx]+=siz[ry]; //根で管理
-		siz[ry]=siz[rx]; //根で管理
+    }
+
+    bool same(int x, int y){
+        return root(x)==root(y);
     }
 };
 
