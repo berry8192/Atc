@@ -27,6 +27,39 @@ int seed=10;
 mt19937 mt(seed);
 
 // 構造体
+struct UnionFind {
+    vector<int> par; // par[i]:iの親の番号　(例) par[3] = 2 : 3の親が2
+	vector<int> siz; // siz[i]:iの属する木に含まれる点の数
+
+    void init(int N){ //最初は全てが根であるとして初期化
+        par.resize(N);
+        for(int i = 0; i < N; i++) par[i] = i;
+		siz.resize(par.size(), 1); //最初は全てサイズ1
+    }
+
+    int root(int x) { // データxが属する木の根を再帰で得る：root(x) = {xの木の根}
+        if (par[x] == x) return x;
+        return par[x] = root(par[x]);
+    }
+
+	int tsize(int x){ // siz[x]の木の根を見に行き、サイズを返す
+		return siz[root(x)];
+	}
+
+    void unite(int x, int y) { // xとyの木を併合
+        int rx = root(x); //xの根をrx
+        int ry = root(y); //yの根をry
+        if (rx == ry) return; //xとyの根が同じ(=同じ木にある)時はそのまま
+        if(siz[rx]<siz[ry]) swap(rx,ry);
+        par[ry] = rx; //xとyの根が同じでない(=同じ木にない)時：xの根rxをyの根ryにつける
+		siz[rx]+=siz[ry]; //根で管理
+    }
+
+    bool same(int x, int y){
+        return root(x)==root(y);
+    }
+};
+
 struct Pos{
     int h;
     int w;
@@ -41,10 +74,41 @@ struct Pos{
     }
 };
 
+struct Num{
+    int type;
+    int idx;
+
+    Num(){};
+    Num(int x, int y){
+        type=x;
+        idx=y;
+    }
+    void print(){
+        if(type>=0) printf("%02d", type);
+        else cout<< type;
+    }
+};
+
+struct Cpu{
+    int fig;
+    Pos pos;
+    bool le=true, ri=true, up=true, dw=true;
+
+    Cpu(){};
+    Cpu(int x, Pos y){
+        fig=x;
+        pos=y;
+    }
+    void print(){
+        cout<< fig SP;
+        pos.print();
+    }
+};
+
 //入力
 int n, k;
-vector<vector<int>> c;
-vector<vector<Pos>> cpu;
+vector<vector<Num>> c;
+vector<Cpu> cpu;
 
 struct Move{
     Pos from;
@@ -79,33 +143,81 @@ struct Cone{
 };
 
 struct Room{
-    vector<vector<int>> board;
-    vector<vector<Pos>> comp;
+    vector<vector<Num>> board;
+    vector<Cpu> comp;
     vector<Move> mv;
     vector<Cone> co;
+    UnionFind uf;
     int score=0;
 
     Room(){
-        board.resize(n);
-        rep(i, n) board[i].resize(n);
-        comp.resize(k);
-        rep(i, k) comp[i].resize(100);
     }
     void init(){
         board=c;
         comp=cpu;
+        uf.init(k*100);
+        // rep(i, n){
+        //     rep(j, n){
+        //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
+        //     }
+        //     cout<< endl;
+        // }
     }
     int hand(){
         return mv.size()+co.size();
     }
-    void add_mv(){
-        mt()%k;
-        mt()%100;
+    void add_mv(int x1, int y1, int x2, int y2, char di){
+        int cpu_idx=board[x1][y1].idx;
+        // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        // cpu[cpu_idx].print();
+        // cout<< endl;
+        // 動かない場合を排除
+        assert(!(x1==x2 && y1==y2));
+        // 直線でない位置にいないか確認
+        assert(!(x1!=x2 && y1!=y2));
+
+        if(di=='D'){
+            for(int i=x1;i<x2;i++){
+                mv.push_back({{i, y1}, {i+1, y1}});
+                if(cpu[cpu_idx].up) board[i][y1].type=-cpu[cpu_idx].fig;
+                else board[i][y1].type=0;
+            }
+            cpu[cpu_idx].up=false;
+            cpu[cpu_idx].dw=false;
+        }else if(di=='U'){
+            for(int i=x1;i>x2;i--){
+                mv.push_back({{i, y1}, {i-1, y1}});
+                if(cpu[cpu_idx].dw) board[i][y1].type=-cpu[cpu_idx].fig;
+                else board[i][y1].type=0;
+            }
+            cpu[cpu_idx].up=false;
+            cpu[cpu_idx].dw=false;
+        }else if(di=='R'){
+            for(int i=y1;i<y2;i++){
+                mv.push_back({{x1, i}, {x1, i+1}});
+                if(cpu[cpu_idx].le) board[x1][i].type=-cpu[cpu_idx].fig;
+                else board[x1][i].type=0;
+            }
+            cpu[cpu_idx].le=false;
+            cpu[cpu_idx].ri=false;
+        }else{
+            for(int i=y1;i>y2;i--){
+                mv.push_back({{x1, i}, {x1, i-1}});
+                if(cpu[cpu_idx].ri) board[x1][i].type=-cpu[cpu_idx].fig;
+                else board[x1][i].type=0;
+            }
+            cpu[cpu_idx].le=false;
+            cpu[cpu_idx].ri=false;
+        }
+        board[x2][y2]={cpu[cpu_idx].fig, cpu_idx};
+        cpu[cpu_idx].pos={x2, y2};
+        
+        //print_board();
     }
     void add_co(int x1, int y1, int x2, int y2){
         // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
-        int from=board[x1][y1];
-        int to=board[x2][y2];
+        int from=board[x1][y1].type;
+        int to=board[x2][y2].type;
         // for文のために右か下方向に伸ばすようにする
         if(x1>x2) swap(x1, x2);
         if(y1>y2) swap(y1, y2);
@@ -119,40 +231,244 @@ struct Room{
         if(x1!=x2){
             // 間をケーブルが通っていないか確認
             rep3(i, x2, x1+1){
-                assert(board[i][y1]==0);
+                assert(board[i][y1].type==0);
             }
             rep3(i, x2, x1+1){
-                board[i][y1]=-from;
+                board[i][y1].type=-from;
             }
+            cpu[board[x1][y1].idx].le=false;
+            cpu[board[x1][y1].idx].ri=false;
+            cpu[board[x2][y2].idx].le=false;
+            cpu[board[x2][y2].idx].ri=false;
         }else{
             // 間をケーブルが通っていないか確認
             rep3(i, y2, y1+1){
-                assert(board[x1][i]==0);
+                assert(board[x1][i].type==0);
             }
             rep3(i, y2, y1+1){
-                board[x1][i]=-from;
+                board[x1][i].type=-from;
             }
+            cpu[board[x1][y1].idx].up=false;
+            cpu[board[x1][y1].idx].dw=false;
+            cpu[board[x2][y2].idx].up=false;
+            cpu[board[x2][y2].idx].dw=false;
+            // cout<< "banned lr " << x1 SP << y1 <<endl;
+            // cout<< "banned lr " << x2 SP << y2 <<endl;
         }
         // coに追加
         co.push_back({{x1, y1}, {x2, y2}});
+        uf.unite(board[x1][y1].idx, board[x2][y2].idx);
     }
     bool between_zero(int x1, int y1, int x2, int y2){
         if(x1!=x2){
             rep3(i, x2, x1+1){
-                if(board[i][y1]!=0) return false;
+                if(board[i][y1].type!=0) return false;
             }
         }else{
             rep3(i, y2, y1+1){
-                if(board[x1][i]!=0) return false;
+                if(board[x1][i].type!=0) return false;
             }
         }
         return true;
     }
+    void nomove_connect(int num, int length){
+        rep(i, n){
+            rep(j, n){
+                if(hand()>=k*100) return;
+                int tmp=board[i][j].type;
+                if(tmp!=num) continue;
+                // if(tmp>1) continue;
+                rep3(l, min(i+1+length, n), i+1){
+                    if(board[l][j].type==0){
+                        continue;
+                    }else if(board[l][j].type==tmp){
+                        if(!uf.same(board[i][j].idx, board[l][j].idx) && between_zero(i, j, l, j)){
+                            add_co(i, j, l, j);
+                        }
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+                rep3(l, min(j+1+length, n), j+1){
+                    if(board[i][l].type<=0){
+                        continue;
+                    }else if(board[i][l].type==tmp){
+                        if(!uf.same(board[i][j].idx, board[i][l].idx) && between_zero(i, j, i, l)){
+                            add_co(i, j, i, l);
+                        }
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    void cpu_slide(int num, int length, int dep){
+        rep(i, k*100){
+            if(cpu[i].fig!=num) continue;
+            Pos pos=cpu[i].pos;
+        // pos.print();
+        // cout<< endl;
+            int flag=0;
+            if(cpu[i].le){
+                // 左へ移動
+                for(int l=pos.w-1;l>=max(0, pos.w-length);l--){
+                    if(board[pos.h][l].type==0 || board[pos.h][l].type==-cpu[i].fig){
+                        // 上側サーチ
+                        for(int d=pos.h-1;d>=max(0, pos.h-dep);d--){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[d][l].type==cpu[i].fig){
+                                if(!uf.same(i, board[d][l].idx)){
+                                    add_mv(pos.h, pos.w, pos.h, l, 'L');
+                                    //add_co(pos.h, l, d, l);
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[d][l].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                        // 下側サーチ
+                        for(int d=pos.h+1;d<min(n, pos.h+dep);d++){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[d][l].type==cpu[i].fig){
+                                if(!uf.same(i, board[d][l].idx)){
+                                    add_mv(pos.h, pos.w, pos.h, l, 'L');
+                                    //add_co(pos.h, l, d, l);
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[d][l].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                    }else{
+                        break;
+                    }
+                }
+            }else if(cpu[i].up){
+                // 上へ移動
+                for(int l=pos.h-1;l>=max(0, pos.h-length);l--){
+                    if(board[l][pos.w].type==0 || board[l][pos.w].type==-cpu[i].fig){
+                        // 左側サーチ
+                        for(int d=pos.w-1;d>=max(0, pos.w-dep);d--){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[l][d].type==cpu[i].fig){
+                                if(!uf.same(i, board[l][d].idx)){
+                                    add_mv(pos.h, pos.w, l, pos.w, 'U');
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[l][d].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                        // 下側サーチ
+                        for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[l][d].type==cpu[i].fig){
+                                if(!uf.same(i, board[l][d].idx)){
+                                    add_mv(pos.h, pos.w, l, pos.w, 'U');
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[l][d].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                    }else{
+                        break;
+                    }
+                }
+            }else if(cpu[i].ri){
+                // 右へ移動
+                for(int l=pos.w+1;l<min(n, pos.w+length);l++){
+                    if(board[pos.h][l].type==0 || board[pos.h][l].type==-cpu[i].fig){
+                        // 上側サーチ
+                        for(int d=pos.h-1;d>=max(0, pos.h-dep);d--){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[d][l].type==cpu[i].fig){
+                                if(!uf.same(i, board[d][l].idx)){
+                                    add_mv(pos.h, pos.w, pos.h, l, 'R');
+                                    //add_co(pos.h, l, d, l);
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[d][l].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                        // 下側サーチ
+                        for(int d=pos.h+1;d<min(n, pos.h+dep);d++){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[d][l].type==cpu[i].fig){
+                                if(!uf.same(i, board[d][l].idx)){
+                                    add_mv(pos.h, pos.w, pos.h, l, 'R');
+                                    //add_co(pos.h, l, d, l);
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[d][l].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                    }else{
+                        break;
+                    }
+                }
+            }else{
+                // 下へ移動
+                for(int l=pos.h+1;l<min(n, pos.h+length);l++){
+                    if(board[l][pos.w].type==0 || board[l][pos.w].type==-cpu[i].fig){
+                        // 左側サーチ
+                        for(int d=pos.w-1;d>=max(0, pos.w-dep);d--){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[l][d].type==cpu[i].fig){
+                                if(!uf.same(i, board[l][d].idx)){
+                                    add_mv(pos.h, pos.w, l, pos.w, 'D');
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[l][d].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                        // 下側サーチ
+                        for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
+                                //cout<< i SP << d SP << l <<endl;
+                            if(board[l][d].type==cpu[i].fig){
+                                if(!uf.same(i, board[l][d].idx)){
+                                    add_mv(pos.h, pos.w, l, pos.w, 'D');
+                                    flag=1;
+                                    break;
+                                }
+                            }else if(board[l][d].type!=0){
+                                break;
+                            }
+                        }
+                        if(flag) break;
+                    }else{
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
     void print_board(){
         rep(i, n){
             rep(j, n){
-                if(board[i][j]>0) printf("%02d ", board[i][j]);
-                else cout<< board[i][j] SP;
+                board[i][j].print();
+                cout SP;
             }
             cout<< endl;
         }
@@ -169,34 +485,62 @@ void inpt(){
     cin>> n >> k;
     c.resize(n);
     rep(i, n) c[i].resize(n);
-    cpu.resize(k);
+    cpu.resize(k*100);
+    int cnt=0;
 
     rep(i, n){
         string tmp;
         cin>> tmp;
         rep(j, n){
             int fig=int(tmp[j]-'0');
-            c[i][j]=fig;
+            c[i][j]=Num(fig, cnt);
             if(fig){
-                cpu[fig-1].push_back({i, j});
+                cpu[cnt]={fig, {i, j}};
+                cnt++;
             }
         }
     }
+    // rep(i, k*100){
+    //     cpu[i].print();
+    //     cout<< endl;
+    // }
 }
 
 int score(Room room){
-    vector<vector<int>> cc=c;
+    int rtn=0;
+
+    Room tes;
+    tes.init();
     rep(i, room.mv.size()){
-        assert(room.board[room.mv[i].to.h][room.mv[i].to.w]==0);
-        assert(room.board[room.mv[i].from.h][room.mv[i].from.w]>0);
-        swap(room.board[room.mv[i].to.h][room.mv[i].to.w], room.board[room.mv[i].from.h][room.mv[i].from.w]);
+        int th=room.mv[i].to.h;
+        int tw=room.mv[i].to.w;
+        int fh=room.mv[i].from.h;
+        int fw=room.mv[i].from.w;
+        assert(tes.board[th][tw].type*tes.board[fh][fw].type==0);
+        assert(tes.board[th][tw].type+tes.board[fh][fw].type>0);
+        swap(tes.board[th][tw], tes.board[fh][fw]);
     }
     rep(i, room.co.size()){
-        room.add_co(room.co[i].from.h, room.co[i].from.w, room.co[i].to.h, room.co[i].to.w);
+        int th=room.co[i].to.h;
+        int tw=room.co[i].to.w;
+        int fh=room.co[i].from.h;
+        int fw=room.co[i].from.w;
+        assert(!tes.uf.same(tes.board[th][tw].idx, tes.board[fh][fw].idx));
+        tes.uf.unite(tes.board[th][tw].idx, tes.board[fh][fw].idx);
     }
+    rep(i, k*100){
+        rep3(j, k*100, i+1){
+            if(tes.uf.same(i, j)){
+                if(cpu[i].fig==cpu[j].fig) rtn++;
+                else rtn--;
+            }
+        }
+    }
+    return rtn;
 }
 
 int main(){
+    int point=0;
     string path = "testcases/";
     vector<string> file_in_paths;
     for (const auto & file : fs::directory_iterator(path)){
@@ -227,59 +571,56 @@ int main(){
         cpu.clear();
         c.resize(n);
         rep(i, n) c[i].resize(n);
-        cpu.resize(k);
+        cpu.resize(k*100);
+        int cnt=0;
 
         rep(i, n){
             string tmp;
             ifs>> tmp;
             rep(j, n){
                 int fig=int(tmp[j]-'0');
-                c[i][j]=fig;
+                c[i][j]=Num(fig, cnt);
                 if(fig){
-                    cpu[fig-1].push_back({i, j});
+                    cpu[cnt]={fig, {i, j}};
+                    cnt++;
                 }
             }
         }
-        // inot end
+        // inpt end
 
-        Room cur, best;
+        Room cur;
         cur.init();
 
-        rep(i, n){
-            rep(j, n){
-                int tmp=cur.board[i][j];
-                if(tmp<=0) continue;
-                rep3(l, min(i+n/5, n), i+1){
-                    if(cur.board[l][j]==0){
-                        continue;
-                    }else if(cur.board[l][j]==tmp){
-                        if(cur.between_zero(i, j, l, j)) cur.add_co(i, j, l, j);
-                        break;
-                    }else{
-                        break;
-                    }
-                }
-                rep3(l, min(j+n/5, n), j+1){
-                    if(cur.board[i][l]<=0){
-                        continue;
-                    }else if(cur.board[i][l]==tmp){
-                        if(cur.between_zero(i, j, i, l)) cur.add_co(i, j, i, l);
-                        break;
-                    }else{
-                        break;
-                    }
+        rep3(figure, k, 1){
+            // figure番の数字を構築する
+            rep(j, n) cur.nomove_connect(figure, j+1);
+        // cur.print_board();
+            cur.cpu_slide(figure, 5, 2);
+        // cur.print_board();
+            rep(a, n){
+                rep(b, n){
+                    if(cur.board[a][b].type<0) cur.board[a][b].type=0;
                 }
             }
+            cur.uf.init(k*100);
+            cur.co.clear();
         }
-        
-        // cur.print_board();
-        cur.print_out();
-        // cout<< cur.co.size() <<endl;
+        rep(i, k){
+            rep3(j, n, 1) cur.nomove_connect(i+1, j);
+        }
+        // rep(i, k){
+        //     rep3(j, n, n/5) cur.nomove_connect(i+1, j);
+        // }
+
+        int sco=score(cur);
+        cout<< sco SP << cur.mv.size() SP << cur.co.size() SP << k <<endl;
+        point+=sco;
 
 
         // ~~~~~~~~~~~~main~~~~~~~~~~~~
     }
 
+    cout<< "score sum:" << point <<endl;
 	return 0;
 }
 
