@@ -147,6 +147,7 @@ struct Room{
     vector<Cone> co;
     UnionFind uf;
     int score=0;
+    int mv_lim;
 
     Room(){
     }
@@ -154,6 +155,7 @@ struct Room{
         board=c;
         comp=cpu;
         uf.init(k*100);
+        mv_lim=mt()%80+10;
         // rep(i, n){
         //     rep(j, n){
         //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
@@ -319,7 +321,7 @@ struct Room{
         shuffle(all(perm2), mt);
 
         rep(lp, k*100){
-            if(mv.size()>=k*100/2) return;
+            if(mv.size()>=k*mv_lim) return;
             int i=perm2[lp];
             if(comp[i].fig!=num) continue;
             Pos pos=comp[i].pos;
