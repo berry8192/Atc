@@ -17,13 +17,13 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2900;
+double TIME_LIMIT=12900;
 double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
-int seed=10;
+int seed=11;
 mt19937 mt(seed);
 
 // 構造体
@@ -699,7 +699,7 @@ int main(){
         rep(i, best.co.size()) ofs<< best.co[i].from.h SP << best.co[i].from.w SP << best.co[i].to.h SP << best.co[i].to.w <<endl;
 
         int sco=best.score;;
-        cout<< "(n, k, sco)=" << n SP << k SP << sco <<endl;
+        cout<< "(n, k, sco, lp)=" << n SP << k SP << sco SP << lp <<endl;
         point+=sco;
 
 
