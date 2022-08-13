@@ -22,7 +22,7 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
+//auto seed=(unsigned)time(NULL);
 int seed=10;
 mt19937 mt(seed);
 
@@ -167,9 +167,9 @@ struct Room{
         return mv.size()+co.size();
     }
     void add_mv(int x1, int y1, int x2, int y2, char di){
-        int cpu_idx=board[x1][y1].idx;
-        // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
-        // cpu[cpu_idx].print();
+        int comp_idx=board[x1][y1].idx;
+        //cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        // comp[comp_idx].print();
         // cout<< endl;
         // 動かない場合を排除
         assert(!(x1==x2 && y1==y2));
@@ -179,42 +179,47 @@ struct Room{
         if(di=='D'){
             for(int i=x1;i<x2;i++){
                 mv.push_back({{i, y1}, {i+1, y1}});
-                if(cpu[cpu_idx].up) board[i][y1].type=-cpu[cpu_idx].fig;
+                if(comp[comp_idx].up) board[i][y1].type=-comp[comp_idx].fig;
                 else board[i][y1].type=0;
             }
-            cpu[cpu_idx].up=false;
-            cpu[cpu_idx].dw=false;
+            comp[comp_idx].up=false;
+            comp[comp_idx].dw=false;
         }else if(di=='U'){
             for(int i=x1;i>x2;i--){
                 mv.push_back({{i, y1}, {i-1, y1}});
-                if(cpu[cpu_idx].dw) board[i][y1].type=-cpu[cpu_idx].fig;
+                if(comp[comp_idx].dw) board[i][y1].type=-comp[comp_idx].fig;
                 else board[i][y1].type=0;
             }
-            cpu[cpu_idx].up=false;
-            cpu[cpu_idx].dw=false;
+            comp[comp_idx].up=false;
+            comp[comp_idx].dw=false;
         }else if(di=='R'){
             for(int i=y1;i<y2;i++){
                 mv.push_back({{x1, i}, {x1, i+1}});
-                if(cpu[cpu_idx].le) board[x1][i].type=-cpu[cpu_idx].fig;
+                if(comp[comp_idx].le) board[x1][i].type=-comp[comp_idx].fig;
                 else board[x1][i].type=0;
             }
-            cpu[cpu_idx].le=false;
-            cpu[cpu_idx].ri=false;
+            comp[comp_idx].le=false;
+            comp[comp_idx].ri=false;
         }else{
             for(int i=y1;i>y2;i--){
                 mv.push_back({{x1, i}, {x1, i-1}});
-                if(cpu[cpu_idx].ri) board[x1][i].type=-cpu[cpu_idx].fig;
+                if(comp[comp_idx].ri) board[x1][i].type=-comp[comp_idx].fig;
                 else board[x1][i].type=0;
             }
-            cpu[cpu_idx].le=false;
-            cpu[cpu_idx].ri=false;
+            comp[comp_idx].le=false;
+            comp[comp_idx].ri=false;
         }
-        board[x2][y2]={cpu[cpu_idx].fig, cpu_idx};
-        cpu[cpu_idx].pos={x2, y2};
+        board[x2][y2]={comp[comp_idx].fig, comp_idx};
+        comp[comp_idx].pos={x2, y2};
         
         //print_board();
     }
     void add_co(int x1, int y1, int x2, int y2){
+        // if(x1==16 && y1==9 && x2==20 && y2==9){
+        //     cout<< "!" <<endl;
+        //     print_board();
+        // }
+        if(hand()>=k*100) return;
         // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         int from=board[x1][y1].type;
         int to=board[x2][y2].type;
@@ -236,10 +241,10 @@ struct Room{
             rep3(i, x2, x1+1){
                 board[i][y1].type=-from;
             }
-            cpu[board[x1][y1].idx].le=false;
-            cpu[board[x1][y1].idx].ri=false;
-            cpu[board[x2][y2].idx].le=false;
-            cpu[board[x2][y2].idx].ri=false;
+            comp[board[x1][y1].idx].le=false;
+            comp[board[x1][y1].idx].ri=false;
+            comp[board[x2][y2].idx].le=false;
+            comp[board[x2][y2].idx].ri=false;
         }else{
             // 間をケーブルが通っていないか確認
             rep3(i, y2, y1+1){
@@ -248,10 +253,10 @@ struct Room{
             rep3(i, y2, y1+1){
                 board[x1][i].type=-from;
             }
-            cpu[board[x1][y1].idx].up=false;
-            cpu[board[x1][y1].idx].dw=false;
-            cpu[board[x2][y2].idx].up=false;
-            cpu[board[x2][y2].idx].dw=false;
+            comp[board[x1][y1].idx].up=false;
+            comp[board[x1][y1].idx].dw=false;
+            comp[board[x2][y2].idx].up=false;
+            comp[board[x2][y2].idx].dw=false;
             // cout<< "banned lr " << x1 SP << y1 <<endl;
             // cout<< "banned lr " << x2 SP << y2 <<endl;
         }
@@ -272,196 +277,229 @@ struct Room{
         return true;
     }
     void nomove_connect(int num, int length){
-        rep(i, n){
-            rep(j, n){
-                if(hand()>=k*100) return;
-                int tmp=board[i][j].type;
-                if(tmp!=num) continue;
-                // if(tmp>1) continue;
-                rep3(l, min(i+1+length, n), i+1){
-                    if(board[l][j].type==0){
-                        continue;
-                    }else if(board[l][j].type==tmp){
-                        if(!uf.same(board[i][j].idx, board[l][j].idx) && between_zero(i, j, l, j)){
-                            add_co(i, j, l, j);
-                        }
-                        break;
-                    }else{
-                        break;
+        vector<int> perm3(k*100);
+        rep(i, k*100) perm3[i]=i;
+        shuffle(all(perm3), mt);
+
+        rep(lp, k*100){
+            // cout<< num << " nomove lp " << lp <<endl;
+            int i=comp[perm3[lp]].pos.h;
+            int j=comp[perm3[lp]].pos.w;
+            int tmp=board[i][j].type;
+            if(tmp!=num) continue;
+            // if(tmp>1) continue;
+            rep3(l, min(i+1+length, n), i+1){
+                if(board[l][j].type==0){
+                    continue;
+                }else if(board[l][j].type==tmp){
+                    if(!uf.same(board[i][j].idx, board[l][j].idx) && between_zero(i, j, l, j)){
+                        add_co(i, j, l, j);
                     }
+                    break;
+                }else{
+                    break;
                 }
-                rep3(l, min(j+1+length, n), j+1){
-                    if(board[i][l].type<=0){
-                        continue;
-                    }else if(board[i][l].type==tmp){
-                        if(!uf.same(board[i][j].idx, board[i][l].idx) && between_zero(i, j, i, l)){
-                            add_co(i, j, i, l);
-                        }
-                        break;
-                    }else{
-                        break;
+            }
+            rep3(l, min(j+1+length, n), j+1){
+                if(board[i][l].type==0){
+                    continue;
+                }else if(board[i][l].type==tmp){
+                    if(!uf.same(board[i][j].idx, board[i][l].idx) && between_zero(i, j, i, l)){
+                        add_co(i, j, i, l);
                     }
+                    break;
+                }else{
+                    break;
                 }
             }
         }
+        //cout<< "end nomove" <<endl;
     }
     void cpu_slide(int num, int length, int dep){
-        rep(i, k*100){
-            if(cpu[i].fig!=num) continue;
-            Pos pos=cpu[i].pos;
+        vector<int> perm2(k*100);
+        rep(i, k*100) perm2[i]=i;
+        shuffle(all(perm2), mt);
+
+        rep(lp, k*100){
+            if(mv.size()>=(k-1)*100) return;
+            int i=perm2[lp];
+            if(comp[i].fig!=num) continue;
+            Pos pos=comp[i].pos;
         // pos.print();
         // cout<< endl;
             int flag=0;
-            if(cpu[i].le){
-                // 左へ移動
-                for(int l=pos.w-1;l>=max(0, pos.w-length);l--){
-                    if(board[pos.h][l].type==0 || board[pos.h][l].type==-cpu[i].fig){
-                        // 上側サーチ
-                        for(int d=pos.h-1;d>=max(0, pos.h-dep);d--){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[d][l].type==cpu[i].fig){
-                                if(!uf.same(i, board[d][l].idx)){
-                                    add_mv(pos.h, pos.w, pos.h, l, 'L');
-                                    //add_co(pos.h, l, d, l);
-                                    flag=1;
+            vector<int> perm;
+            if(comp[i].le) perm.push_back(0);
+            if(comp[i].up) perm.push_back(1);
+            if(comp[i].ri) perm.push_back(2);
+            if(comp[i].dw) perm.push_back(3);
+            shuffle(all(perm), mt);
+            rep(j, perm.size()){
+                if(perm[j]==0){
+                    // 左へ移動
+                    for(int l=pos.w-1;l>=max(0, pos.w-length);l--){
+                        if(board[pos.h][l].type==0 || board[pos.h][l].type==-comp[i].fig){
+                            // 上側サーチ
+                            for(int d=pos.h-1;d>=max(0, pos.h-dep);d--){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[d][l].type==comp[i].fig){
+                                    if(!uf.same(i, board[d][l].idx)){
+                                        add_mv(pos.h, pos.w, pos.h, l, 'L');
+                                        //add_co(pos.h, l, d, l);
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[d][l].type!=0){
                                     break;
                                 }
-                            }else if(board[d][l].type!=0){
-                                break;
                             }
-                        }
-                        if(flag) break;
-                        // 下側サーチ
-                        for(int d=pos.h+1;d<min(n, pos.h+dep);d++){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[d][l].type==cpu[i].fig){
-                                if(!uf.same(i, board[d][l].idx)){
-                                    add_mv(pos.h, pos.w, pos.h, l, 'L');
-                                    //add_co(pos.h, l, d, l);
-                                    flag=1;
+                            if(flag) break;
+                            // 下側サーチ
+                            for(int d=pos.h+1;d<min(n, pos.h+dep);d++){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[d][l].type==comp[i].fig){
+                                    if(!uf.same(i, board[d][l].idx)){
+                                        add_mv(pos.h, pos.w, pos.h, l, 'L');
+                                        //add_co(pos.h, l, d, l);
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[d][l].type!=0){
                                     break;
                                 }
-                            }else if(board[d][l].type!=0){
-                                break;
                             }
+                            if(flag) break;
+                        }else{
+                            break;
                         }
-                        if(flag) break;
-                    }else{
-                        break;
+                    }
+                    if(flag) break;
+                }else if(perm[j]==1){
+                    // 上へ移動
+                    for(int l=pos.h-1;l>=max(0, pos.h-length);l--){
+                        if(board[l][pos.w].type==0 || board[l][pos.w].type==-comp[i].fig){
+                            // 左側サーチ
+                            for(int d=pos.w-1;d>=max(0, pos.w-dep);d--){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[l][d].type==comp[i].fig){
+                                    if(!uf.same(i, board[l][d].idx)){
+                                        add_mv(pos.h, pos.w, l, pos.w, 'U');
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[l][d].type!=0){
+                                    break;
+                                }
+                            }
+                            if(flag) break;
+                            // 下側サーチ
+                            for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[l][d].type==comp[i].fig){
+                                    if(!uf.same(i, board[l][d].idx)){
+                                        add_mv(pos.h, pos.w, l, pos.w, 'U');
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[l][d].type!=0){
+                                    break;
+                                }
+                            }
+                            if(flag) break;
+                        }else{
+                            break;
+                        }
+                    }
+                    if(flag) break;
+                }else if(perm[j]==2){
+                    // 右へ移動
+                    for(int l=pos.w+1;l<min(n, pos.w+length);l++){
+                        if(board[pos.h][l].type==0 || board[pos.h][l].type==-comp[i].fig){
+                            // 上側サーチ
+                            for(int d=pos.h-1;d>=max(0, pos.h-dep);d--){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[d][l].type==comp[i].fig){
+                                    if(!uf.same(i, board[d][l].idx)){
+                                        add_mv(pos.h, pos.w, pos.h, l, 'R');
+                                        //add_co(pos.h, l, d, l);
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[d][l].type!=0){
+                                    break;
+                                }
+                            }
+                            if(flag) break;
+                            // 下側サーチ
+                            for(int d=pos.h+1;d<min(n, pos.h+dep);d++){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[d][l].type==comp[i].fig){
+                                    if(!uf.same(i, board[d][l].idx)){
+                                        add_mv(pos.h, pos.w, pos.h, l, 'R');
+                                        //add_co(pos.h, l, d, l);
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[d][l].type!=0){
+                                    break;
+                                }
+                            }
+                            if(flag) break;
+                        }else{
+                            break;
+                        }
+                    }
+                    if(flag) break;
+                }else{
+                    // 下へ移動
+                    for(int l=pos.h+1;l<min(n, pos.h+length);l++){
+                        if(board[l][pos.w].type==0 || board[l][pos.w].type==-comp[i].fig){
+                            // 左側サーチ
+                            for(int d=pos.w-1;d>=max(0, pos.w-dep);d--){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[l][d].type==comp[i].fig){
+                                    if(!uf.same(i, board[l][d].idx)){
+                                        add_mv(pos.h, pos.w, l, pos.w, 'D');
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[l][d].type!=0){
+                                    break;
+                                }
+                            }
+                            if(flag) break;
+                            // 下側サーチ
+                            for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
+                                    //cout<< i SP << d SP << l <<endl;
+                                if(board[l][d].type==comp[i].fig){
+                                    if(!uf.same(i, board[l][d].idx)){
+                                        add_mv(pos.h, pos.w, l, pos.w, 'D');
+                                        flag=1;
+                                        break;
+                                    }
+                                }else if(board[l][d].type!=0){
+                                    break;
+                                }
+                            }
+                            if(flag) break;
+                        }else{
+                            break;
+                        }
                     }
                 }
-            }else if(cpu[i].up){
-                // 上へ移動
-                for(int l=pos.h-1;l>=max(0, pos.h-length);l--){
-                    if(board[l][pos.w].type==0 || board[l][pos.w].type==-cpu[i].fig){
-                        // 左側サーチ
-                        for(int d=pos.w-1;d>=max(0, pos.w-dep);d--){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[l][d].type==cpu[i].fig){
-                                if(!uf.same(i, board[l][d].idx)){
-                                    add_mv(pos.h, pos.w, l, pos.w, 'U');
-                                    flag=1;
-                                    break;
-                                }
-                            }else if(board[l][d].type!=0){
-                                break;
-                            }
-                        }
-                        if(flag) break;
-                        // 下側サーチ
-                        for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[l][d].type==cpu[i].fig){
-                                if(!uf.same(i, board[l][d].idx)){
-                                    add_mv(pos.h, pos.w, l, pos.w, 'U');
-                                    flag=1;
-                                    break;
-                                }
-                            }else if(board[l][d].type!=0){
-                                break;
-                            }
-                        }
-                        if(flag) break;
-                    }else{
-                        break;
-                    }
-                }
-            }else if(cpu[i].ri){
-                // 右へ移動
-                for(int l=pos.w+1;l<min(n, pos.w+length);l++){
-                    if(board[pos.h][l].type==0 || board[pos.h][l].type==-cpu[i].fig){
-                        // 上側サーチ
-                        for(int d=pos.h-1;d>=max(0, pos.h-dep);d--){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[d][l].type==cpu[i].fig){
-                                if(!uf.same(i, board[d][l].idx)){
-                                    add_mv(pos.h, pos.w, pos.h, l, 'R');
-                                    //add_co(pos.h, l, d, l);
-                                    flag=1;
-                                    break;
-                                }
-                            }else if(board[d][l].type!=0){
-                                break;
-                            }
-                        }
-                        if(flag) break;
-                        // 下側サーチ
-                        for(int d=pos.h+1;d<min(n, pos.h+dep);d++){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[d][l].type==cpu[i].fig){
-                                if(!uf.same(i, board[d][l].idx)){
-                                    add_mv(pos.h, pos.w, pos.h, l, 'R');
-                                    //add_co(pos.h, l, d, l);
-                                    flag=1;
-                                    break;
-                                }
-                            }else if(board[d][l].type!=0){
-                                break;
-                            }
-                        }
-                        if(flag) break;
-                    }else{
-                        break;
-                    }
-                }
-            }else{
-                // 下へ移動
-                for(int l=pos.h+1;l<min(n, pos.h+length);l++){
-                    if(board[l][pos.w].type==0 || board[l][pos.w].type==-cpu[i].fig){
-                        // 左側サーチ
-                        for(int d=pos.w-1;d>=max(0, pos.w-dep);d--){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[l][d].type==cpu[i].fig){
-                                if(!uf.same(i, board[l][d].idx)){
-                                    add_mv(pos.h, pos.w, l, pos.w, 'D');
-                                    flag=1;
-                                    break;
-                                }
-                            }else if(board[l][d].type!=0){
-                                break;
-                            }
-                        }
-                        if(flag) break;
-                        // 下側サーチ
-                        for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
-                                //cout<< i SP << d SP << l <<endl;
-                            if(board[l][d].type==cpu[i].fig){
-                                if(!uf.same(i, board[l][d].idx)){
-                                    add_mv(pos.h, pos.w, l, pos.w, 'D');
-                                    flag=1;
-                                    break;
-                                }
-                            }else if(board[l][d].type!=0){
-                                break;
-                            }
-                        }
-                        if(flag) break;
-                    }else{
-                        break;
-                    }
-                }
+                    if(flag) break;
             }
         }
+    }
+    void easy_score(){
+        // マイナス点が発生しない前提の得点計算
+        vector<int> cnt(k*100);
+        rep(i, k*100){
+            cnt[uf.root(i)]++;
+        }
+        int rtn=0;
+        rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
+        score=rtn;
     }
 
     void print_board(){
@@ -501,25 +539,32 @@ void inpt(){
         }
     }
     // rep(i, k*100){
-    //     cpu[i].print();
+    //     comp[i].print();
     //     cout<< endl;
     // }
 }
 
 int score(Room room){
     int rtn=0;
-
     Room tes;
+    cout<< "init tes" <<endl;
     tes.init();
+    cout<< "calc score" <<endl;
+    assert(room.hand()<=k*100);
+    cout<< "mv" <<endl;
     rep(i, room.mv.size()){
         int th=room.mv[i].to.h;
         int tw=room.mv[i].to.w;
         int fh=room.mv[i].from.h;
         int fw=room.mv[i].from.w;
-        assert(tes.board[th][tw].type*tes.board[fh][fw].type==0);
-        assert(tes.board[th][tw].type+tes.board[fh][fw].type>0);
+        assert(abs(th-fh)+abs(tw-fw)==1);
+        assert(tes.board[th][tw].type==0 || tes.board[th][tw].type==-tes.board[fh][fw].type);
+        // cout<< tes.board[th][tw].type SP << tes.board[fh][fw].type <<endl;
+        assert(tes.board[fh][fw].type>0);
+        tes.comp[tes.board[th][tw].idx].pos={th, tw};
         swap(tes.board[th][tw], tes.board[fh][fw]);
     }
+    cout<< "co" <<endl;
     rep(i, room.co.size()){
         int th=room.co[i].to.h;
         int tw=room.co[i].to.w;
@@ -528,16 +573,19 @@ int score(Room room){
         assert(!tes.uf.same(tes.board[th][tw].idx, tes.board[fh][fw].idx));
         tes.uf.unite(tes.board[th][tw].idx, tes.board[fh][fw].idx);
     }
+    cout<< "calc" <<endl;
     rep(i, k*100){
         rep3(j, k*100, i+1){
             if(tes.uf.same(i, j)){
-                if(cpu[i].fig==cpu[j].fig) rtn++;
+                if(tes.comp[i].fig==tes.comp[j].fig) rtn++;
                 else rtn--;
             }
         }
     }
+    cout<< "mv" <<endl;
     return rtn;
 }
+
 
 int main(){
     int point=0;
@@ -588,32 +636,56 @@ int main(){
         }
         // inpt end
 
+        Room best;
+
+    int lp=0;
+    while (true) { // 時間の許す限り回す
+        lp++;
+        current = chrono::system_clock::now(); // 現在時刻
+        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+        //cout<< lp <<endl;
+
         Room cur;
         cur.init();
 
-        rep3(figure, k, 1){
+        rep3(figure, 1+1, 1){
             // figure番の数字を構築する
-            rep(j, n) cur.nomove_connect(figure, j+1);
+            rep(j, n){
+                //cout<< "nomove " << figure <<endl;
+                cur.nomove_connect(figure, j+1);
+            }
         // cur.print_board();
-            cur.cpu_slide(figure, 5, 2);
+            //cout<< "cpu_slide " << figure <<endl;
+            cur.cpu_slide(figure, mt()%n+1, mt()%(n/2)+1);
         // cur.print_board();
+            //cout<< "init room" <<endl;
             rep(a, n){
                 rep(b, n){
-                    if(cur.board[a][b].type<0) cur.board[a][b].type=0;
+                    if(cur.board[a][b].type<figure) cur.board[a][b].type=0;
                 }
             }
             cur.uf.init(k*100);
             cur.co.clear();
         }
         rep(i, k){
+            //cout<< "nomove2 " << i+1 <<endl;
             rep3(j, n, 1) cur.nomove_connect(i+1, j);
         }
+        //cout<< "end connect" <<endl;
         // rep(i, k){
         //     rep3(j, n, n/5) cur.nomove_connect(i+1, j);
         // }
 
-        int sco=score(cur);
-        cout<< sco SP << cur.mv.size() SP << cur.co.size() SP << k <<endl;
+        cur.easy_score();
+        //cout<< cur.score <<endl;
+        if(best.score<cur.score) best=cur;
+    }
+
+        //cout<< score(cur) <<endl;
+        best.print_out();
+
+        int sco=best.score;;
+        cout<< "(n, k, sco)=" << n SP << k SP << sco <<endl;
         point+=sco;
 
 

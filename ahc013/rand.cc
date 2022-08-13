@@ -21,7 +21,7 @@ double end_temp=10.0;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
-// int seed=10;
+//int seed=10;
 mt19937 mt(seed);
 
 // 構造体
@@ -166,7 +166,7 @@ struct Room{
     }
     void add_mv(int x1, int y1, int x2, int y2, char di){
         int comp_idx=board[x1][y1].idx;
-        // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        //cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         // comp[comp_idx].print();
         // cout<< endl;
         // 動かない場合を排除
@@ -213,6 +213,10 @@ struct Room{
         //print_board();
     }
     void add_co(int x1, int y1, int x2, int y2){
+        // if(x1==16 && y1==9 && x2==20 && y2==9){
+        //     cout<< "!" <<endl;
+        //     print_board();
+        // }
         if(hand()>=k*100) return;
         // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         int from=board[x1][y1].type;
@@ -271,15 +275,14 @@ struct Room{
         return true;
     }
     void nomove_connect(int num, int length){
-        vector<int> perm(n*n);
-        rep(i, n){
-            rep(j, n) perm[i*n+j]=i*100+j;
-        }
-        shuffle(all(perm), mt);
+        vector<int> perm3(k*100);
+        rep(i, k*100) perm3[i]=i;
+        shuffle(all(perm3), mt);
 
-        rep(lp, n*n){
-            int i=perm[lp]/100;
-            int j=perm[lp]%100;
+        rep(lp, k*100){
+            // cout<< num << " nomove lp " << lp <<endl;
+            int i=comp[perm3[lp]].pos.h;
+            int j=comp[perm3[lp]].pos.w;
             int tmp=board[i][j].type;
             if(tmp!=num) continue;
             // if(tmp>1) continue;
@@ -296,7 +299,7 @@ struct Room{
                 }
             }
             rep3(l, min(j+1+length, n), j+1){
-                if(board[i][l].type<=0){
+                if(board[i][l].type==0){
                     continue;
                 }else if(board[i][l].type==tmp){
                     if(!uf.same(board[i][j].idx, board[i][l].idx) && between_zero(i, j, i, l)){
@@ -308,6 +311,7 @@ struct Room{
                 }
             }
         }
+        //cout<< "end nomove" <<endl;
     }
     void cpu_slide(int num, int length, int dep){
         vector<int> perm2(k*100);
@@ -367,7 +371,7 @@ struct Room{
                             break;
                         }
                     }
-                if(flag) break;
+                    if(flag) break;
                 }else if(perm[j]==1){
                     // 上へ移動
                     for(int l=pos.h-1;l>=max(0, pos.h-length);l--){
@@ -404,7 +408,7 @@ struct Room{
                             break;
                         }
                     }
-                if(flag) break;
+                    if(flag) break;
                 }else if(perm[j]==2){
                     // 右へ移動
                     for(int l=pos.w+1;l<min(n, pos.w+length);l++){
@@ -443,7 +447,7 @@ struct Room{
                             break;
                         }
                     }
-                if(flag) break;
+                    if(flag) break;
                 }else{
                     // 下へ移動
                     for(int l=pos.h+1;l<min(n, pos.h+length);l++){
@@ -481,9 +485,19 @@ struct Room{
                         }
                     }
                 }
-                if(flag) break;
+                    if(flag) break;
             }
         }
+    }
+    void easy_score(){
+        // マイナス点が発生しない前提の得点計算
+        vector<int> cnt(k*100);
+        rep(i, k*100){
+            cnt[uf.root(i)]++;
+        }
+        int rtn=0;
+        rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
+        score=rtn;
     }
 
     void print_board(){
@@ -530,10 +544,12 @@ void inpt(){
 
 int score(Room room){
     int rtn=0;
-
     Room tes;
+    cout<< "init tes" <<endl;
     tes.init();
+    cout<< "calc score" <<endl;
     assert(room.hand()<=k*100);
+    cout<< "mv" <<endl;
     rep(i, room.mv.size()){
         int th=room.mv[i].to.h;
         int tw=room.mv[i].to.w;
@@ -546,6 +562,7 @@ int score(Room room){
         tes.comp[tes.board[th][tw].idx].pos={th, tw};
         swap(tes.board[th][tw], tes.board[fh][fw]);
     }
+    cout<< "co" <<endl;
     rep(i, room.co.size()){
         int th=room.co[i].to.h;
         int tw=room.co[i].to.w;
@@ -554,6 +571,7 @@ int score(Room room){
         assert(!tes.uf.same(tes.board[th][tw].idx, tes.board[fh][fw].idx));
         tes.uf.unite(tes.board[th][tw].idx, tes.board[fh][fw].idx);
     }
+    cout<< "calc" <<endl;
     rep(i, k*100){
         rep3(j, k*100, i+1){
             if(tes.uf.same(i, j)){
@@ -562,6 +580,7 @@ int score(Room room){
             }
         }
     }
+    cout<< "mv" <<endl;
     return rtn;
 }
 
@@ -583,27 +602,35 @@ int main(){
         Room cur;
         cur.init();
 
-        rep3(figure, mt()%(k-1)+2, 1){
+        rep3(figure, 1+1, 1){
             // figure番の数字を構築する
-            rep(j, n) cur.nomove_connect(figure, j+1);
+            rep(j, n){
+                //cout<< "nomove " << figure <<endl;
+                cur.nomove_connect(figure, j+1);
+            }
         // cur.print_board();
+            //cout<< "cpu_slide " << figure <<endl;
             cur.cpu_slide(figure, mt()%n+1, mt()%(n/2)+1);
         // cur.print_board();
+            //cout<< "init room" <<endl;
             rep(a, n){
                 rep(b, n){
-                    if(cur.board[a][b].type<0) cur.board[a][b].type=0;
+                    if(cur.board[a][b].type<figure) cur.board[a][b].type=0;
                 }
             }
             cur.uf.init(k*100);
             cur.co.clear();
         }
         rep(i, k){
+            //cout<< "nomove2 " << i+1 <<endl;
             rep3(j, n, 1) cur.nomove_connect(i+1, j);
         }
+        //cout<< "end connect" <<endl;
         // rep(i, k){
         //     rep3(j, n, n/5) cur.nomove_connect(i+1, j);
         // }
-        cur.score=score(cur);
+
+        cur.easy_score();
         //cout<< cur.score <<endl;
         if(best.score<cur.score) best=cur;
     }
@@ -618,4 +645,3 @@ int main(){
     // どかすというより無理やりくっつけるほうが大事かも
 // doing
 // 順番をランダムにして時間の限りいい解を探す
-// 
