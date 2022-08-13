@@ -20,8 +20,8 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-auto seed=(unsigned)time(NULL);
-//int seed=10;
+// auto seed=(unsigned)time(NULL);
+int seed=10;
 mt19937 mt(seed);
 
 // 構造体
@@ -604,31 +604,27 @@ int main(){
 
         rep3(figure, 1+1, 1){
             // figure番の数字を構築する
-            rep(j, n){
+            rep3(j, n, 1){
                 //cout<< "nomove " << figure <<endl;
-                cur.nomove_connect(figure, j+1);
+                cur.nomove_connect(figure, j);
             }
-        // cur.print_board();
             //cout<< "cpu_slide " << figure <<endl;
             cur.cpu_slide(figure, mt()%n+1, mt()%(n/2)+1);
-        // cur.print_board();
             //cout<< "init room" <<endl;
             rep(a, n){
                 rep(b, n){
-                    if(cur.board[a][b].type<figure) cur.board[a][b].type=0;
+                    if(cur.board[a][b].type<0) cur.board[a][b].type=0;
                 }
             }
             cur.uf.init(k*100);
             cur.co.clear();
-        }
-        rep(i, k){
             //cout<< "nomove2 " << i+1 <<endl;
-            rep3(j, n, 1) cur.nomove_connect(i+1, j);
+            rep3(j, n/5, 1) cur.nomove_connect(figure, j);
         }
         //cout<< "end connect" <<endl;
-        // rep(i, k){
-        //     rep3(j, n, n/5) cur.nomove_connect(i+1, j);
-        // }
+        rep3(i, k+1, 1){
+            rep3(j, n, 1) cur.nomove_connect(i, j);
+        }
 
         cur.easy_score();
         //cout<< cur.score <<endl;
@@ -643,5 +639,6 @@ int main(){
 // todo
 // 通り道の邪魔な別種CPUをどかす処理
     // どかすというより無理やりくっつけるほうが大事かも
+    // 1, 2番目にでかい塊をくっつける、をランダムに繰り返す
 // doing
-// 順番をランダムにして時間の限りいい解を探す
+

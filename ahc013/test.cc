@@ -17,7 +17,7 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2.9;
+double TIME_LIMIT=2900;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -586,16 +586,20 @@ int score(Room room){
     return rtn;
 }
 
-
 int main(){
     int point=0;
     string path = "testcases/";
     vector<string> file_in_paths;
-    for (const auto & file : fs::directory_iterator(path)){
-        string tmp=file.path();
+    vector<string> file_out_paths;
+    rep(i, 100){
+        int no=i+10000;
+        string tmp="testcases/"+to_string(no).substr(1, 4)+".txt";
         file_in_paths.push_back(tmp);
+        file_out_paths.push_back(tmp.substr(0, 15)+"out");
     }
     sort(all(file_in_paths));
+    //rep(i, 100) cout<< file_in_paths[i] <<endl;
+    sort(all(file_out_paths));
     rep(testcase, file_in_paths.size()){
         std::ifstream ifs(file_in_paths[testcase]);
         if (!ifs)
@@ -614,9 +618,9 @@ int main(){
         // posting inpt here
         // replace cin -> ifs
         // add c&cpu clear
-        ifs>> n >> k;
         c.clear();
         cpu.clear();
+        ifs>> n >> k;
         c.resize(n);
         rep(i, n) c[i].resize(n);
         cpu.resize(k*100);
@@ -638,51 +642,57 @@ int main(){
 
         Room best;
 
-    int lp=0;
-    while (true) { // 時間の許す限り回す
-        lp++;
-        current = chrono::system_clock::now(); // 現在時刻
-        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
-        //cout<< lp <<endl;
+        int lp=0;
+        while (true) { // 時間の許す限り回す
+            lp++;
+            current = chrono::system_clock::now(); // 現在時刻
+            if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+            //cout<< lp <<endl;
 
-        Room cur;
-        cur.init();
+            Room cur;
+            cur.init();
 
-        rep3(figure, 1+1, 1){
-            // figure番の数字を構築する
-            rep(j, n){
-                //cout<< "nomove " << figure <<endl;
-                cur.nomove_connect(figure, j+1);
-            }
-        // cur.print_board();
-            //cout<< "cpu_slide " << figure <<endl;
-            cur.cpu_slide(figure, mt()%n+1, mt()%(n/2)+1);
-        // cur.print_board();
-            //cout<< "init room" <<endl;
-            rep(a, n){
-                rep(b, n){
-                    if(cur.board[a][b].type<figure) cur.board[a][b].type=0;
+            rep3(figure, 1+1, 1){
+                // figure番の数字を構築する
+                rep3(j, n, 1){
+                    //cout<< "nomove " << figure <<endl;
+                    cur.nomove_connect(figure, j);
                 }
+                //cout<< "cpu_slide " << figure <<endl;
+                cur.cpu_slide(figure, mt()%n+1, mt()%(n/2)+1);
+                //cout<< "init room" <<endl;
+                rep(a, n){
+                    rep(b, n){
+                        if(cur.board[a][b].type<0) cur.board[a][b].type=0;
+                    }
+                }
+                cur.uf.init(k*100);
+                cur.co.clear();
+                //cout<< "nomove2 " << i+1 <<endl;
+                rep3(j, n/5, 1) cur.nomove_connect(figure, j);
             }
-            cur.uf.init(k*100);
-            cur.co.clear();
-        }
-        rep(i, k){
-            //cout<< "nomove2 " << i+1 <<endl;
-            rep3(j, n, 1) cur.nomove_connect(i+1, j);
-        }
-        //cout<< "end connect" <<endl;
-        // rep(i, k){
-        //     rep3(j, n, n/5) cur.nomove_connect(i+1, j);
-        // }
+            //cout<< "end connect" <<endl;
+            rep3(i, k+1, 1){
+                rep3(j, n, 1) cur.nomove_connect(i, j);
+            }
 
-        cur.easy_score();
-        //cout<< cur.score <<endl;
-        if(best.score<cur.score) best=cur;
-    }
+            cur.easy_score();
+            //cout<< cur.score <<endl;
+            if(best.score<cur.score) best=cur;
+        }
 
         //cout<< score(cur) <<endl;
-        best.print_out();
+        std::ofstream ofs(file_out_paths[testcase]);
+        if (!ofs){
+            std::cout << file_out_paths[testcase] << " 書き込み失敗" << std::endl;
+            continue;
+        }
+        //cout << "opened " << file_out_paths[testcase] <<endl;
+
+        ofs<< best.mv.size() <<endl;
+        rep(i, best.mv.size()) ofs<< best.mv[i].from.h SP << best.mv[i].from.w SP << best.mv[i].to.h SP << best.mv[i].to.w <<endl;
+        ofs<< best.co.size() <<endl;
+        rep(i, best.co.size()) ofs<< best.co[i].from.h SP << best.co[i].from.w SP << best.co[i].to.h SP << best.co[i].to.w <<endl;
 
         int sco=best.score;;
         cout<< "(n, k, sco)=" << n SP << k SP << sco <<endl;
