@@ -156,7 +156,7 @@ struct Room{
         board=c;
         comp=cpu;
         uf.init(k*100);
-        mv_lim=mt()%40+30;
+        mv_lim=mt()%80+10;
         // rep(i, n){
         //     rep(j, n){
         //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
@@ -653,9 +653,9 @@ int main(){
             cur.co.clear();
             //cout<< "nomove2 " << i+1 <<endl;
             //rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
-            cur.nomove_connect(perm[i], n/4+mt()%3-1);
-            cur.nomove_connect(perm[i], n/2+mt()%5-2);
-            //cur.nomove_connect(perm[i], n);
+            //cur.nomove_connect(perm[i], n/4+mt()%3-1);
+            //cur.nomove_connect(perm[i], n/2+mt()%5-2);
+            cur.nomove_connect(perm[i], n);
         }
         // 優先度1番以外の1点しか取れない
         //cur.shrot_erase(perm[0]);
