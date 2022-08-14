@@ -15,7 +15,7 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2950;
+double TIME_LIMIT=2980;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -198,9 +198,9 @@ struct Room{
         // comp[comp_idx].print();
         // cout<< endl;
         // 動かない場合を排除
-        assert(!(x1==x2 && y1==y2));
+        //assert(!(x1==x2 && y1==y2));
         // 直線でない位置にいないか確認
-        assert(!(x1!=x2 && y1!=y2));
+        //assert(!(x1!=x2 && y1!=y2));
 
         if(di=='D'){
             for(int i=x1;i<x2;i++){
@@ -269,17 +269,17 @@ struct Room{
         if(x1>x2) swap(x1, x2);
         if(y1>y2) swap(y1, y2);
         // 別の種類のコンピュータを繋ごうとしていないか確認
-        assert(from==to);
+        //assert(from==to);
         // 同一コンピュータを繋ごうとしていないか確認
-        assert(!(x1==x2 && y1==y2));
+        //assert(!(x1==x2 && y1==y2));
         // 直線で結べない位置にいないか確認
-        assert(!(x1!=x2 && y1!=y2));
+        //assert(!(x1!=x2 && y1!=y2));
         // 間に負の値でケーブルをつなぐ
         if(x1!=x2){
             // 間をケーブルが通っていないか確認
-            rep3(i, x2, x1+1){
-                assert(board[i][y1].type==0);
-            }
+            // rep3(i, x2, x1+1){
+            //     assert(board[i][y1].type==0);
+            // }
             rep3(i, x2, x1+1){
                 board[i][y1].type=-from;
                 minus.push_back({i, y1});
@@ -290,9 +290,9 @@ struct Room{
             comp[board[x2][y2].idx].ri=false;
         }else{
             // 間をケーブルが通っていないか確認
-            rep3(i, y2, y1+1){
-                assert(board[x1][i].type==0);
-            }
+            // rep3(i, y2, y1+1){
+            //     assert(board[x1][i].type==0);
+            // }
             rep3(i, y2, y1+1){
                 board[x1][i].type=-from;
                 minus.push_back({x1, i});
@@ -817,30 +817,30 @@ int main(){
         // cout<< cur.mv.size() SP << cur.co.size() <<endl;
 
         rep3(i, k, 1){
-            // perm[i]番の数字を構築する
-            // rep3(j, n, 1){
-            //     //cout<< "nomove " << perm[i] <<endl;
-            //     cur.nomove_connect(perm[i], j);
-            // }
-            cur.nomove_connect(perm[i], n/4+mt()%3-1);
-            cur.nomove_connect(perm[i], n/2+mt()%5-2);
-            cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
-            rep(j, cur.minus.size()){
-                int mh=cur.minus[j].h;
-                int mw=cur.minus[j].w;
-                if(cur.board[mh][mw].type<0) cur.board[mh][mw].type=0;
+                // perm[i]番の数字を構築する
+                // rep3(j, n, 1){
+                //     //cout<< "nomove " << perm[i] <<endl;
+                //     cur.nomove_connect(perm[i], j);
+                // }
+                cur.nomove_connect(perm[i], 3);
+                cur.nomove_connect(perm[i], 6);
+                cur.nomove_connect(perm[i], n);
+                cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
+                rep(j, cur.minus.size()){
+                    int mh=cur.minus[j].h;
+                    int mw=cur.minus[j].w;
+                    if(cur.board[mh][mw].type<0) cur.board[mh][mw].type=0;
+                }
+                cur.minus.clear();
+                cur.uf.init(k*100);
+                cur.co.clear();
+                cur.nomove_connect(perm[i], n/4+mt()%3-1);
+                cur.nomove_connect(perm[i], n/2+mt()%5-2);
             }
-            cur.minus.clear();
-            cur.uf.init(k*100);
-            cur.co.clear();
-            //cur.nomove_connect(perm[i], n/4+mt()%3-1);
-            //cur.nomove_connect(perm[i], n/2+mt()%5-2);
-            cur.nomove_connect(perm[i], n);
-        }
-        rep(i, k){
-            //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
-            cur.nomove_connect(perm[i], n);
-        }
+            rep(i, k){
+                //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
+                cur.nomove_connect(perm[i], n);
+            }
 
         cur.easy_score();
         //cout<< cur.score <<endl;
