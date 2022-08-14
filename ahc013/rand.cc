@@ -124,6 +124,24 @@ struct Move{
     }
 };
 
+struct Rmove{
+    char di;
+    Pos from;
+    Pos to;
+
+    Rmove(){};
+    Rmove(char dr, Pos x, Pos y){
+        di=dr;
+        from=x;
+        to=y;
+    }
+    void print(){
+        from.print();
+        cout<< "->";
+        to.print();
+    }
+};
+
 struct Cone{
     Pos from;
     Pos to;
@@ -147,8 +165,11 @@ struct Room{
     vector<Cone> co;
     UnionFind uf;
     vector<Pos> minus;
+    vector<Rmove> rmv1;
+    vector<Rmove> rmv2;
     int score=0;
     int mv_lim;
+    int co_lim;
 
     Room(){
     }
@@ -157,6 +178,7 @@ struct Room{
         comp=cpu;
         uf.init(k*100);
         mv_lim=mt()%80+10;
+        co_lim=k*100-mt()%(k*20);
         // rep(i, n){
         //     rep(j, n){
         //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
@@ -168,8 +190,9 @@ struct Room{
         return mv.size()+co.size();
     }
     void add_mv(int x1, int y1, int x2, int y2, char di){
+        if(hand()>=k*100-abs(x1-x2)-abs(y1-y2)) return;
         int comp_idx=board[x1][y1].idx;
-        //cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         // comp[comp_idx].print();
         // cout<< endl;
         // 動かない場合を排除
@@ -334,7 +357,7 @@ struct Room{
         }
         //cout<< "end nomove" <<endl;
     }
-    void cpu_slide(int num, int length, int dep){
+    void cpu_slide(int num, int length, int dep, bool rmable, int lim_rm){
         vector<int> perm2(k*100);
         rep(i, k*100) perm2[i]=i;
         shuffle(all(perm2), mt);
@@ -354,6 +377,9 @@ struct Room{
             if(comp[i].dw) perm.push_back(3);
             shuffle(all(perm), mt);
             rep(j, perm.size()){
+                rmv1.clear();
+                rmv2.clear();
+                //cout<< perm[j] <<endl;
                 if(perm[j]==0){
                     // 左へ移動
                     for(int l=pos.w-1;l>=max(0, pos.w-length);l--){
@@ -363,14 +389,23 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, pos.h, l, 'L');
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[d][l].type>0){
+                                    if(board[d][max(l-1, 0)].type==0) rmv2.push_back({'L', {d, l}, {d, l-1}});
+                                    else if(board[d][min(l+1, n-1)].type==0) rmv2.push_back({'R', {d, l}, {d, l+1}});
                                 }else if(board[d][l].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
                             // 下側サーチ
@@ -378,16 +413,33 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, pos.h, l, 'L');
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[d][l].type>0){
+                                    if(board[d][max(l-1, 0)].type==0) rmv2.push_back({'L', {d, l}, {d, l-1}});
+                                    else if(board[d][min(l+1, n-1)].type==0) rmv2.push_back({'R', {d, l}, {d, l+1}});
                                 }else if(board[d][l].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
+                        }else if(rmable && board[pos.h][l].type>0 && board[pos.h][l].type!=comp[i].fig){
+                            vector<int> rd;
+                            if(board[max(pos.h-1, 0)][l].type==0) rd.push_back(0);
+                            if(board[min(pos.h+1, n-1)][l].type==0) rd.push_back(1);
+                            if(rd.size()==0) break;
+                            int rdidx=mt()%rd.size();
+                            if(rd[rdidx]==0) rmv1.push_back({'U', {pos.h, l}, {pos.h-1, l}});
+                            if(rd[rdidx]==1) rmv1.push_back({'D', {pos.h, l}, {pos.h+1, l}});
                         }else{
                             break;
                         }
@@ -402,29 +454,55 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, l, pos.w, 'U');
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[l][d].type>0){
+                                    if(board[l][max(d-1, 0)].type==0) rmv2.push_back({'U', {l, d}, {l-1, d}});
+                                    else if(board[l][min(d+1, n-1)].type==0) rmv2.push_back({'D', {l, d}, {l+1, d}});
                                 }else if(board[l][d].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
-                            // 下側サーチ
+                            // 右側サーチ
                             for(int d=pos.w+1;d<min(n, pos.w+dep);d++){
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, l, pos.w, 'U');
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[l][d].type>0){
+                                    if(board[l][max(d-1, 0)].type==0) rmv2.push_back({'U', {l, d}, {l-1, d}});
+                                    else if(board[l][min(d+1, n-1)].type==0) rmv2.push_back({'D', {l, d}, {l+1, d}});
                                 }else if(board[l][d].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
+                        }else if(rmable && board[l][pos.w].type>0 && board[l][pos.w].type!=comp[i].fig){
+                            vector<int> rd;
+                            if(board[l][max(pos.w-1, 0)].type==0) rd.push_back(0);
+                            if(board[l][min(pos.w+1, n-1)].type==0) rd.push_back(1);
+                            if(rd.size()==0) break;
+                            int rdidx=mt()%rd.size();
+                            if(rd[rdidx]==0) rmv1.push_back({'L', {l, pos.w}, {l, pos.w-1}});
+                            if(rd[rdidx]==1) rmv1.push_back({'R', {l, pos.w}, {l, pos.w+1}});
                         }else{
                             break;
                         }
@@ -439,14 +517,23 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, pos.h, l, 'R');
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[d][l].type>0){
+                                    if(board[d][max(l-1, 0)].type==0) rmv2.push_back({'L', {d, l}, {d, l-1}});
+                                    else if(board[d][min(l+1, n-1)].type==0) rmv2.push_back({'R', {d, l}, {d, l+1}});
                                 }else if(board[d][l].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
                             // 下側サーチ
@@ -454,16 +541,33 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, pos.h, l, 'R');
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[d][l].type>0){
+                                    if(board[d][max(l-1, 0)].type==0) rmv2.push_back({'L', {d, l}, {d, l-1}});
+                                    else if(board[d][min(l+1, n-1)].type==0) rmv2.push_back({'R', {d, l}, {d, l+1}});
                                 }else if(board[d][l].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
+                        }else if(rmable && board[pos.h][l].type>0 && board[pos.h][l].type!=comp[i].fig){
+                            vector<int> rd;
+                            if(board[max(pos.h-1, 0)][l].type==0) rd.push_back(0);
+                            if(board[min(pos.h+1, n-1)][l].type==0) rd.push_back(1);
+                            if(rd.size()==0) break;
+                            int rdidx=mt()%rd.size();
+                            if(rd[rdidx]==0) rmv1.push_back({'U', {pos.h, l}, {pos.h-1, l}});
+                            if(rd[rdidx]==1) rmv1.push_back({'D', {pos.h, l}, {pos.h+1, l}});
                         }else{
                             break;
                         }
@@ -478,13 +582,22 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, l, pos.w, 'D');
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[l][d].type>0){
+                                    if(board[l][max(d-1, 0)].type==0) rmv2.push_back({'U', {l, d}, {l-1, d}});
+                                    else if(board[l][min(d+1, n-1)].type==0) rmv2.push_back({'D', {l, d}, {l+1, d}});
                                 }else if(board[l][d].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
                             // 下側サーチ
@@ -492,15 +605,32 @@ struct Room{
                                     //cout<< i SP << d SP << l <<endl;
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
+                                        if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                        }
                                         add_mv(pos.h, pos.w, l, pos.w, 'D');
                                         flag=1;
                                         break;
                                     }
+                                }else if(rmable && board[l][d].type>0){
+                                    if(board[l][max(d-1, 0)].type==0) rmv2.push_back({'U', {l, d}, {l-1, d}});
+                                    else if(board[l][min(d+1, n-1)].type==0) rmv2.push_back({'D', {l, d}, {l+1, d}});
                                 }else if(board[l][d].type!=0){
+                                    rmv2.clear();
                                     break;
                                 }
+                                rmv2.clear();
                             }
                             if(flag) break;
+                        }else if(rmable && board[l][pos.w].type>0 && board[l][pos.w].type!=comp[i].fig){
+                            vector<int> rd;
+                            if(board[l][max(pos.w-1, 0)].type==0) rd.push_back(0);
+                            if(board[l][min(pos.w+1, n-1)].type==0) rd.push_back(1);
+                            if(rd.size()==0) break;
+                            int rdidx=mt()%rd.size();
+                            if(rd[rdidx]==0) rmv1.push_back({'L', {l, pos.w}, {l, pos.w-1}});
+                            if(rd[rdidx]==1) rmv1.push_back({'R', {l, pos.w}, {l, pos.w+1}});
                         }else{
                             break;
                         }
@@ -626,7 +756,32 @@ int main(){
         vector<int> perm(k);
         rep(i, k) perm[i]=i+1;
         shuffle(all(perm), mt);
-        rep(i, k){
+        int lim_rm=mt()%k+1;
+
+        // 第一優先の数字を構築
+        cur.nomove_connect(perm[0], n/4+mt()%3-1);
+        cur.nomove_connect(perm[0], n/2+mt()%5-2);
+        cur.cpu_slide(perm[0], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
+        rep(j, cur.minus.size()){
+            int mh=cur.minus[j].h;
+            int mw=cur.minus[j].w;
+            if(cur.board[mh][mw].type<0) cur.board[mh][mw].type=0;
+        }
+        cur.minus.clear();
+        cur.uf.init(k*100);
+        cur.co.clear();
+        cur.co_lim=k*100;
+        cur.nomove_connect(perm[0], n);
+
+        // cur.print_out();
+        // cur.print_board();
+        // cout<< cur.mv.size() SP << cur.co.size() <<endl;
+        // cur.cpu_slide(perm[0], mt()%(n/2)+2, mt()%(n/2)+2, true, lim_rm);
+        // cur.print_out();
+        // cur.print_board();
+        // cout<< cur.mv.size() SP << cur.co.size() <<endl;
+
+        rep3(i, k, 1){
             // perm[i]番の数字を構築する
             // rep3(j, n, 1){
             //     //cout<< "nomove " << perm[i] <<endl;
@@ -636,7 +791,7 @@ int main(){
             cur.nomove_connect(perm[i], n/2+mt()%5-2);
             //cur.nomove_connect(perm[i], n);
             //cout<< "cpu_slide " << perm[i] <<endl;
-            cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2);
+            cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
             //cout<< "init room" <<endl;
             // rep(a, n){
             //     rep(b, n){
@@ -651,15 +806,10 @@ int main(){
             cur.minus.clear();
             cur.uf.init(k*100);
             cur.co.clear();
-            //cout<< "nomove2 " << i+1 <<endl;
-            //rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
             //cur.nomove_connect(perm[i], n/4+mt()%3-1);
             //cur.nomove_connect(perm[i], n/2+mt()%5-2);
             cur.nomove_connect(perm[i], n);
         }
-        // 優先度1番以外の1点しか取れない
-        //cur.shrot_erase(perm[0]);
-        //cout<< "end connect" <<endl;
         rep(i, k){
             //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
             cur.nomove_connect(perm[i], n);
