@@ -20,8 +20,8 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=10;
+auto seed=(unsigned)time(NULL);
+//int seed=10;
 mt19937 mt(seed);
 
 // 構造体
@@ -146,6 +146,7 @@ struct Room{
     vector<Move> mv;
     vector<Cone> co;
     UnionFind uf;
+    vector<Pos> minus;
     int score=0;
     int mv_lim;
 
@@ -155,7 +156,7 @@ struct Room{
         board=c;
         comp=cpu;
         uf.init(k*100);
-        mv_lim=mt()%80+10;
+        mv_lim=mt()%40+30;
         // rep(i, n){
         //     rep(j, n){
         //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
@@ -179,32 +180,48 @@ struct Room{
         if(di=='D'){
             for(int i=x1;i<x2;i++){
                 mv.push_back({{i, y1}, {i+1, y1}});
-                if(comp[comp_idx].up) board[i][y1].type=-comp[comp_idx].fig;
-                else board[i][y1].type=0;
+                if(comp[comp_idx].up){
+                    board[i][y1].type=-comp[comp_idx].fig;
+                    minus.push_back({i, y1});
+                }else{
+                    board[i][y1].type=0;
+                }
             }
             comp[comp_idx].up=false;
             comp[comp_idx].dw=false;
         }else if(di=='U'){
             for(int i=x1;i>x2;i--){
                 mv.push_back({{i, y1}, {i-1, y1}});
-                if(comp[comp_idx].dw) board[i][y1].type=-comp[comp_idx].fig;
-                else board[i][y1].type=0;
+                if(comp[comp_idx].dw){
+                    board[i][y1].type=-comp[comp_idx].fig;
+                    minus.push_back({i, y1});
+                }else{
+                    board[i][y1].type=0;
+                }
             }
             comp[comp_idx].up=false;
             comp[comp_idx].dw=false;
         }else if(di=='R'){
             for(int i=y1;i<y2;i++){
                 mv.push_back({{x1, i}, {x1, i+1}});
-                if(comp[comp_idx].le) board[x1][i].type=-comp[comp_idx].fig;
-                else board[x1][i].type=0;
+                if(comp[comp_idx].le){
+                    board[x1][i].type=-comp[comp_idx].fig;
+                    minus.push_back({x1, i});
+                }else{
+                    board[x1][i].type=0;
+                }
             }
             comp[comp_idx].le=false;
             comp[comp_idx].ri=false;
         }else{
             for(int i=y1;i>y2;i--){
                 mv.push_back({{x1, i}, {x1, i-1}});
-                if(comp[comp_idx].ri) board[x1][i].type=-comp[comp_idx].fig;
-                else board[x1][i].type=0;
+                if(comp[comp_idx].ri){
+                    board[x1][i].type=-comp[comp_idx].fig;
+                    minus.push_back({x1, i});
+                }else{
+                    board[x1][i].type=0;
+                }
             }
             comp[comp_idx].le=false;
             comp[comp_idx].ri=false;
@@ -240,6 +257,7 @@ struct Room{
             }
             rep3(i, x2, x1+1){
                 board[i][y1].type=-from;
+                minus.push_back({i, y1});
             }
             comp[board[x1][y1].idx].le=false;
             comp[board[x1][y1].idx].ri=false;
@@ -252,6 +270,7 @@ struct Room{
             }
             rep3(i, y2, y1+1){
                 board[x1][i].type=-from;
+                minus.push_back({x1, i});
             }
             comp[board[x1][y1].idx].up=false;
             comp[board[x1][y1].idx].dw=false;
@@ -613,21 +632,30 @@ int main(){
             //     //cout<< "nomove " << perm[i] <<endl;
             //     cur.nomove_connect(perm[i], j);
             // }
-            cur.nomove_connect(perm[i], 3);
-            cur.nomove_connect(perm[i], 6);
-            cur.nomove_connect(perm[i], n);
+            cur.nomove_connect(perm[i], n/4+mt()%3-1);
+            cur.nomove_connect(perm[i], n/2+mt()%5-2);
+            //cur.nomove_connect(perm[i], n);
             //cout<< "cpu_slide " << perm[i] <<endl;
-            cur.cpu_slide(perm[i], mt()%n+1, mt()%(n/2)+1);
+            cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2);
             //cout<< "init room" <<endl;
-            rep(a, n){
-                rep(b, n){
-                    if(cur.board[a][b].type<0) cur.board[a][b].type=0;
-                }
+            // rep(a, n){
+            //     rep(b, n){
+            //         if(cur.board[a][b].type<0) cur.board[a][b].type=0;
+            //     }
+            // }
+            rep(j, cur.minus.size()){
+                int mh=cur.minus[j].h;
+                int mw=cur.minus[j].w;
+                if(cur.board[mh][mw].type<0) cur.board[mh][mw].type=0;
             }
+            cur.minus.clear();
             cur.uf.init(k*100);
             cur.co.clear();
             //cout<< "nomove2 " << i+1 <<endl;
-            rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
+            //rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
+            cur.nomove_connect(perm[i], n/4+mt()%3-1);
+            cur.nomove_connect(perm[i], n/2+mt()%5-2);
+            //cur.nomove_connect(perm[i], n);
         }
         // 優先度1番以外の1点しか取れない
         //cur.shrot_erase(perm[0]);
