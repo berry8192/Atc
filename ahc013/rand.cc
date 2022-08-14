@@ -15,7 +15,7 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2900;
+double TIME_LIMIT=2950;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -606,6 +606,7 @@ int main(){
 
         vector<int> perm(k);
         rep(i, k) perm[i]=i+1;
+        shuffle(all(perm), mt);
         rep(i, k){
             // perm[i]番の数字を構築する
             // rep3(j, n, 1){
@@ -628,6 +629,8 @@ int main(){
             //cout<< "nomove2 " << i+1 <<endl;
             rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
         }
+        // 優先度1番以外の1点しか取れない
+        //cur.shrot_erase(perm[0]);
         //cout<< "end connect" <<endl;
         rep(i, k){
             //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
