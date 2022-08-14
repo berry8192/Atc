@@ -167,6 +167,7 @@ struct Room{
     vector<Pos> minus;
     vector<Rmove> rmv1;
     vector<Rmove> rmv2;
+    vector<int> used_other;
     int score=0;
     int mv_lim;
     int co_lim;
@@ -179,6 +180,7 @@ struct Room{
         uf.init(k*100);
         mv_lim=mt()%80+10;
         co_lim=k*100-mt()%(k*20);
+        used_other.resize(k);
         // rep(i, n){
         //     rep(j, n){
         //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
@@ -189,7 +191,7 @@ struct Room{
     int hand(){
         return mv.size()+co.size();
     }
-    void add_mv(int x1, int y1, int x2, int y2, char di){
+    void add_mv(int x1, int y1, int x2, int y2, char di, bool no_min){
         if(hand()>=k*100-abs(x1-x2)-abs(y1-y2)) return;
         int comp_idx=board[x1][y1].idx;
         // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
@@ -203,7 +205,7 @@ struct Room{
         if(di=='D'){
             for(int i=x1;i<x2;i++){
                 mv.push_back({{i, y1}, {i+1, y1}});
-                if(comp[comp_idx].up){
+                if(comp[comp_idx].up && no_min){
                     board[i][y1].type=-comp[comp_idx].fig;
                     minus.push_back({i, y1});
                 }else{
@@ -215,7 +217,7 @@ struct Room{
         }else if(di=='U'){
             for(int i=x1;i>x2;i--){
                 mv.push_back({{i, y1}, {i-1, y1}});
-                if(comp[comp_idx].dw){
+                if(comp[comp_idx].dw && no_min){
                     board[i][y1].type=-comp[comp_idx].fig;
                     minus.push_back({i, y1});
                 }else{
@@ -227,7 +229,7 @@ struct Room{
         }else if(di=='R'){
             for(int i=y1;i<y2;i++){
                 mv.push_back({{x1, i}, {x1, i+1}});
-                if(comp[comp_idx].le){
+                if(comp[comp_idx].le && no_min){
                     board[x1][i].type=-comp[comp_idx].fig;
                     minus.push_back({x1, i});
                 }else{
@@ -239,7 +241,7 @@ struct Room{
         }else{
             for(int i=y1;i>y2;i--){
                 mv.push_back({{x1, i}, {x1, i-1}});
-                if(comp[comp_idx].ri){
+                if(comp[comp_idx].ri && no_min){
                     board[x1][i].type=-comp[comp_idx].fig;
                     minus.push_back({x1, i});
                 }else{
@@ -390,10 +392,10 @@ struct Room{
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, pos.h, l, 'L');
+                                        add_mv(pos.h, pos.w, pos.h, l, 'L', false);
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
@@ -414,10 +416,10 @@ struct Room{
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, pos.h, l, 'L');
+                                        add_mv(pos.h, pos.w, pos.h, l, 'L', false);
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
@@ -455,10 +457,10 @@ struct Room{
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, l, pos.w, 'U');
+                                        add_mv(pos.h, pos.w, l, pos.w, 'U', false);
                                         flag=1;
                                         break;
                                     }
@@ -478,10 +480,10 @@ struct Room{
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, l, pos.w, 'U');
+                                        add_mv(pos.h, pos.w, l, pos.w, 'U', false);
                                         flag=1;
                                         break;
                                     }
@@ -518,10 +520,10 @@ struct Room{
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, pos.h, l, 'R');
+                                        add_mv(pos.h, pos.w, pos.h, l, 'R', false);
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
@@ -542,10 +544,10 @@ struct Room{
                                 if(board[d][l].type==comp[i].fig){
                                     if(!uf.same(i, board[d][l].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, pos.h, l, 'R');
+                                        add_mv(pos.h, pos.w, pos.h, l, 'R', false);
                                         //add_co(pos.h, l, d, l);
                                         flag=1;
                                         break;
@@ -583,10 +585,10 @@ struct Room{
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, l, pos.w, 'D');
+                                        add_mv(pos.h, pos.w, l, pos.w, 'D', false);
                                         flag=1;
                                         break;
                                     }
@@ -606,10 +608,10 @@ struct Room{
                                 if(board[l][d].type==comp[i].fig){
                                     if(!uf.same(i, board[l][d].idx)){
                                         if(rmable && rmv1.size()+rmv2.size()<=lim_rm){
-                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di);
-                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di);
+                                            rep(r, rmv1.size()) add_mv(rmv1[r].from.h, rmv1[r].from.w, rmv1[r].to.h, rmv1[r].to.w, rmv1[r].di, false);
+                                            rep(r, rmv2.size()) add_mv(rmv2[r].from.h, rmv2[r].from.w, rmv2[r].to.h, rmv2[r].to.w, rmv2[r].di, false);
                                         }
-                                        add_mv(pos.h, pos.w, l, pos.w, 'D');
+                                        add_mv(pos.h, pos.w, l, pos.w, 'D', false);
                                         flag=1;
                                         break;
                                     }
@@ -649,6 +651,38 @@ struct Room{
         int rtn=0;
         rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
         score=rtn;
+    }
+    void move_other(int num){
+        rep(i, k*100){
+            if(comp[i].fig==num) continue;
+            vector<int> di={0, 0, 0, 0};
+            int ch=comp[i].pos.h;
+            int cw=comp[i].pos.w;
+            rep(j, 4){
+                int l=1;
+                while(0<ch+dir_h[j]*l && ch+dir_h[j]*l<n && 0<cw+dir_w[j]*l && ch+dir_w[j]*l<n){
+                    if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==num){
+                        di[j]=1;
+                        break;
+                    }else if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type!=0) break;
+                    l++;
+                }
+            }
+            int okd=0;
+            string dd="LURD";
+            rep(j, 4){
+                if(di[j]==1) okd++;
+            }
+            if(okd>=2){
+                rep(j, 4){
+                    if(di[j]==0 && 0<ch+dir_h[j] && ch+dir_h[j]<n && 0<cw+dir_w[j] && cw+dir_w[j]<n && board[ch+dir_h[j]][cw+dir_w[j]].type==0){
+                        add_mv(ch, cw, ch+dir_h[j], cw+dir_w[j], dd[j], true);
+                        //cout<< ch SP << cw SP << ch+dir_h[j] SP << cw+dir_w[j] SP << dd[j] <<endl;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     void print_board(){
@@ -758,7 +792,6 @@ int main(){
         shuffle(all(perm), mt);
         int lim_rm=mt()%k+1;
 
-        // 第一優先の数字を構築
         cur.nomove_connect(perm[0], n/4+mt()%3-1);
         cur.nomove_connect(perm[0], n/2+mt()%5-2);
         cur.cpu_slide(perm[0], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
@@ -770,7 +803,9 @@ int main(){
         cur.minus.clear();
         cur.uf.init(k*100);
         cur.co.clear();
-        cur.co_lim=k*100;
+        //cur.nomove_connect(perm[0], n/4+mt()%3-1);
+        //cur.nomove_connect(perm[0], n/2+mt()%5-2);
+        cur.move_other(perm[0]);
         cur.nomove_connect(perm[0], n);
 
         // cur.print_out();
@@ -789,15 +824,7 @@ int main(){
             // }
             cur.nomove_connect(perm[i], n/4+mt()%3-1);
             cur.nomove_connect(perm[i], n/2+mt()%5-2);
-            //cur.nomove_connect(perm[i], n);
-            //cout<< "cpu_slide " << perm[i] <<endl;
             cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
-            //cout<< "init room" <<endl;
-            // rep(a, n){
-            //     rep(b, n){
-            //         if(cur.board[a][b].type<0) cur.board[a][b].type=0;
-            //     }
-            // }
             rep(j, cur.minus.size()){
                 int mh=cur.minus[j].h;
                 int mw=cur.minus[j].w;
