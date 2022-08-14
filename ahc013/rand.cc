@@ -608,10 +608,13 @@ int main(){
         rep(i, k) perm[i]=i+1;
         rep(i, k){
             // perm[i]番の数字を構築する
-            rep3(j, n, 1){
-                //cout<< "nomove " << perm[i] <<endl;
-                cur.nomove_connect(perm[i], j);
-            }
+            // rep3(j, n, 1){
+            //     //cout<< "nomove " << perm[i] <<endl;
+            //     cur.nomove_connect(perm[i], j);
+            // }
+            cur.nomove_connect(perm[i], 3);
+            cur.nomove_connect(perm[i], 6);
+            cur.nomove_connect(perm[i], n);
             //cout<< "cpu_slide " << perm[i] <<endl;
             cur.cpu_slide(perm[i], mt()%n+1, mt()%(n/2)+1);
             //cout<< "init room" <<endl;
@@ -627,7 +630,8 @@ int main(){
         }
         //cout<< "end connect" <<endl;
         rep(i, k){
-            rep3(j, n, 1) cur.nomove_connect(perm[i], j);
+            //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
+            cur.nomove_connect(perm[i], n);
         }
 
         cur.easy_score();
@@ -637,6 +641,7 @@ int main(){
 
     //cout<< best.score <<endl;
     best.print_out();
+    //cout<< "lp:" << lp <<endl;
 
 	return 0;
 }
@@ -644,5 +649,6 @@ int main(){
 // 通り道の邪魔な別種CPUをどかす処理
     // どかすというより無理やりくっつけるほうが大事かも
     // 1, 2番目にでかい塊をくっつける、をランダムに繰り返す
-// doing
+    // どかす処理もランダムに実行する
+// ランダムにマスを動かしてみる
 
