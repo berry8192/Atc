@@ -45,6 +45,7 @@ ll SML(vector<ll> smv) {
 struct UnionFind {
     vector<int> par; // par[i]:iの親の番号　(例) par[3] = 2 : 3の親が2
 	vector<int> siz; // siz[i]:iの属する木に含まれる点の数
+    // map<ll,vector<ll>> group;
 
     UnionFind(int N) : par(N) { //最初は全てが根であるとして初期化
         for(int i = 0; i < N; i++) par[i] = i;
@@ -72,6 +73,14 @@ struct UnionFind {
     bool same(int x, int y){
         return root(x)==root(y);
     }
+
+    // //素集合をそれぞれグループ化
+    // void grouping(){
+    //     //経路圧縮を先に行う
+    //     REP(i,n)root(i);
+    //     //mapで管理する(デフォルト構築を利用)
+    //     REP(i,n)group[parent[i]].PB(i);
+    // }
 };
 
 int main(){
