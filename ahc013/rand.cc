@@ -549,6 +549,29 @@ struct Room{
         }
         return rdc;
     }
+    void random_mv(int rnd){
+        string dd="RDLU";
+        int rn=mt()%(n*n);
+        while(board[rn/n][rn%n].type!=0) rn=(rn+1)%(n*n);
+
+        int rh=rn/n;
+        int rw=rn%n;
+        int prd=-1;
+        rep(i, rnd){
+            rep(j, 4){
+                if(j==prd) continue;
+                if(0<rh+dir_h[j] && rh+dir_h[j]<n && 0<rw+dir_w[j] && rw+dir_w[j]<n){
+                    if(board[rh+dir_h[j]][rw+dir_w[j]].type>0){
+                        add_mv(rh+dir_h[j], rw+dir_w[j], rh, rw, dd[j]);
+                        rh+=dir_h[j];
+                        rw+=dir_w[j];
+                        prd=j;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     void print_board(){
         rep(i, n){
@@ -661,6 +684,10 @@ int main(){
 
         Room cur;
         cur.init();
+
+        int rnd=max(0, (k*10000/(n*n)-80))*k*10;
+        rnd=mt()%rnd;
+        if(rnd) cur.random_mv(rnd);
 
         vector<int> perm(k);
         rep(i, k) perm[i]=i+1;
