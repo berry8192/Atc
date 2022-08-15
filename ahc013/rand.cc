@@ -15,7 +15,7 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2980;
+double TIME_LIMIT=2950;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -326,15 +326,16 @@ struct Room{
         }
         //cout<< "end nomove" <<endl;
     }
-    void cpu_slide(int num, int length, int dep){
+    int cpu_slide(int num, int length, int dep){
         vector<int> perm2(k*100);
         rep(i, k*100) perm2[i]=i;
         shuffle(all(perm2), mt);
+        int rdc=mv.size();
 
         rep(lp, k*100){
-            if(mv.size()>=k*mv_lim) return;
             int i=perm2[lp];
             if(comp[i].fig!=num) continue;
+            if(mv.size()>=k*mv_lim) return 0;
             Pos pos=comp[i].pos;
         // pos.print();
         // cout<< endl;
@@ -501,6 +502,7 @@ struct Room{
                     if(flag) break;
             }
         }
+        return rdc-mv.size();
     }
     void easy_score(){
         // マイナス点が発生しない前提の得点計算
@@ -512,7 +514,8 @@ struct Room{
         rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
         score=rtn;
     }
-    void move_other(int num){
+    int move_other(int num){
+        int rdc=0;
         rep(i, k*100){
             if(comp[i].fig==num) continue;
             vector<int> di={0, 0, 0, 0};
@@ -538,11 +541,13 @@ struct Room{
                     if(di[j]==0 && 0<ch+dir_h[j] && ch+dir_h[j]<n && 0<cw+dir_w[j] && cw+dir_w[j]<n && board[ch+dir_h[j]][cw+dir_w[j]].type==0){
                         add_mv(ch, cw, ch+dir_h[j], cw+dir_w[j], dd[j]);
                         //cout<< ch SP << cw SP << ch+dir_h[j] SP << cw+dir_w[j] SP << dd[j] <<endl;
+                        rdc++;
                         break;
                     }
                 }
             }
         }
+        return rdc;
     }
 
     void print_board(){
@@ -590,42 +595,52 @@ void inpt(){
 int score(Room room){
     int rtn=0;
     Room tes;
-    cout<< "init tes" <<endl;
+    //cout<< "init tes" <<endl;
     tes.init();
-    cout<< "calc score" <<endl;
+    //cout<< "calc score" <<endl;
     assert(room.hand()<=k*100);
-    cout<< "mv" <<endl;
+    //cout<< "mv" <<endl;
     rep(i, room.mv.size()){
         int th=room.mv[i].to.h;
         int tw=room.mv[i].to.w;
         int fh=room.mv[i].from.h;
         int fw=room.mv[i].from.w;
         assert(abs(th-fh)+abs(tw-fw)==1);
-        assert(tes.board[th][tw].type==0 || tes.board[th][tw].type==-tes.board[fh][fw].type);
-        // cout<< tes.board[th][tw].type SP << tes.board[fh][fw].type <<endl;
+        assert(tes.board[th][tw].type==0);
         assert(tes.board[fh][fw].type>0);
-        tes.comp[tes.board[th][tw].idx].pos={th, tw};
+        // cout<< tes.board[th][tw].type SP << tes.board[fh][fw].type <<endl;
+        //tes.comp[tes.board[th][tw].idx].pos={th, tw};
         swap(tes.board[th][tw], tes.board[fh][fw]);
     }
-    cout<< "co" <<endl;
     rep(i, room.co.size()){
         int th=room.co[i].to.h;
         int tw=room.co[i].to.w;
         int fh=room.co[i].from.h;
         int fw=room.co[i].from.w;
-        assert(!tes.uf.same(tes.board[th][tw].idx, tes.board[fh][fw].idx));
-        tes.uf.unite(tes.board[th][tw].idx, tes.board[fh][fw].idx);
+        assert((th==fh && tw!=fw) || (th!=fh && tw==fw));
+        assert(tes.board[fh][fw].type>0);
+        assert(tes.board[th][tw].type>0);
+        assert(tes.board[fh][fw].type==tes.board[th][tw].type);
     }
-    cout<< "calc" <<endl;
-    rep(i, k*100){
-        rep3(j, k*100, i+1){
-            if(tes.uf.same(i, j)){
-                if(tes.comp[i].fig==tes.comp[j].fig) rtn++;
-                else rtn--;
-            }
-        }
-    }
-    cout<< "mv" <<endl;
+    // cout<< "co" <<endl;
+    // rep(i, room.co.size()){
+    //     int th=room.co[i].to.h;
+    //     int tw=room.co[i].to.w;
+    //     int fh=room.co[i].from.h;
+    //     int fw=room.co[i].from.w;
+    //     assert(!tes.uf.same(tes.board[th][tw].idx, tes.board[fh][fw].idx));
+    //     tes.uf.unite(tes.board[th][tw].idx, tes.board[fh][fw].idx);
+    // }
+    // cout<< "calc" <<endl;
+    // rep(i, k*100){
+    //     rep3(j, k*100, i+1){
+    //         if(tes.uf.same(i, j)){
+    //             if(tes.comp[i].fig==tes.comp[j].fig) rtn++;
+    //             else rtn--;
+    //         }
+    //     }
+    // }
+    // cout<< "mv" <<endl;
     return rtn;
 }
 
@@ -660,23 +675,26 @@ int main(){
             cur.nomove_connect(perm[i], 6);
             cur.nomove_connect(perm[i], n);
             //cout<< "cpu_slide " << perm[i] <<endl;
-            cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
-            //cout<< "init room" <<endl;
-            // rep(a, n){
-            //     rep(b, n){
-            //         if(cur.board[a][b].type<0) cur.board[a][b].type=0;
-            //     }
-            // }
-            rep(j, cur.minus.size()){
-                int mh=cur.minus[j].h;
-                int mw=cur.minus[j].w;
-                if(cur.board[mh][mw].type<0) cur.board[mh][mw].type=0;
-            }
-            cur.minus.clear();
-            cur.uf.init(k*100);
-            cur.co.clear();
             //cout<< "nomove2 " << i+1 <<endl;
-            if(i==0) cur.move_other(perm[0]);
+            int rdc=1, mc=0;
+            while(i==0 && rdc!=0 && mc<5){
+                rdc=cur.move_other(perm[i]);
+
+                cur.nomove_connect(perm[i], n);
+
+                rdc+=cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
+                rep(j, cur.minus.size()){
+                    int mh=cur.minus[j].h;
+                    int mw=cur.minus[j].w;
+                    if(cur.board[mh][mw].type<0) cur.board[mh][mw].type=0;
+                }
+                cur.minus.clear();
+                cur.uf.init(k*100);
+                cur.co.clear();
+
+                cur.nomove_connect(perm[i], n);
+                mc++;
+            }
             rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
         }
         // 優先度1番以外の1点しか取れない
@@ -686,7 +704,7 @@ int main(){
             //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
             cur.nomove_connect(perm[i], n);
         }
-
+        //score(cur);
         cur.easy_score();
         //cout<< cur.score <<endl;
         if(best.score<cur.score) best=cur;
