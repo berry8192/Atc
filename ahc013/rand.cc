@@ -693,7 +693,8 @@ int main(){
         if(rnd){
             rnd=mt()%rnd;
             cur.random_mv(rnd);
-            
+        }
+
 
         vector<int> perm(k);
         rep(i, k) perm[i]=i+1;
