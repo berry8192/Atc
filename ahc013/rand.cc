@@ -834,8 +834,7 @@ int main(){
                 cur.minus.clear();
                 cur.uf.init(k*100);
                 cur.co.clear();
-                cur.nomove_connect(perm[i], n/4+mt()%3-1);
-                cur.nomove_connect(perm[i], n/2+mt()%5-2);
+                rep3(j, n, 1) cur.nomove_connect(perm[i], j);
             }
             rep(i, k){
                 //rep3(j, n, 1) cur.nomove_connect(perm[i], j);

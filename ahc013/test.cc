@@ -872,9 +872,7 @@ int main(){
                 //     //cout<< "nomove " << perm[i] <<endl;
                 //     cur.nomove_connect(perm[i], j);
                 // }
-                cur.nomove_connect(perm[i], 3);
-                cur.nomove_connect(perm[i], 6);
-                cur.nomove_connect(perm[i], n);
+                rep3(j, n, 1)cur.nomove_connect(perm[i], j);
                 cur.cpu_slide(perm[i], mt()%(n/2)+2, mt()%(n/2)+2, false, lim_rm);
                 rep(j, cur.minus.size()){
                     int mh=cur.minus[j].h;
@@ -884,12 +882,11 @@ int main(){
                 cur.minus.clear();
                 cur.uf.init(k*100);
                 cur.co.clear();
-                cur.nomove_connect(perm[i], n/4+mt()%3-1);
-                cur.nomove_connect(perm[i], n/2+mt()%5-2);
+                rep3(j, n, 1)cur.nomove_connect(perm[i], j);
             }
             rep(i, k){
                 //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
-                cur.nomove_connect(perm[i], n);
+                //cur.nomove_connect(perm[i], n);
             }
 
             cur.easy_score();
