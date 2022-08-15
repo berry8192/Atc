@@ -1,3 +1,6 @@
+#pragma GCC target("avx")
+#pragma GCC optimize("O3")
+
 #include <bits/stdc++.h>
 #include <experimental/filesystem>
 
@@ -159,6 +162,8 @@ struct Room{
         comp=cpu;
         uf.init(k*100);
         mv_lim=mt()%80+10;
+        mv.reserve(500);
+        co.reserve(500);
         // rep(i, n){
         //     rep(j, n){
         //         if(board[i][j].type>0) cout<< board[i][j].idx SP;
@@ -181,40 +186,40 @@ struct Room{
 
         if(di=='D'){
             for(int i=x1;i<x2;i++){
-                mv.push_back({{i, y1}, {i+1, y1}});
+                mv.emplace_back(Move{{i, y1}, {i+1, y1}});
                 if(comp[comp_idx].up){
                     board[i][y1].type=-comp[comp_idx].fig;
-                    minus.push_back({i, y1});
+                    minus.emplace_back(Pos{i, y1});
                 }else board[i][y1].type=0;
             }
             comp[comp_idx].up=false;
             comp[comp_idx].dw=false;
         }else if(di=='U'){
             for(int i=x1;i>x2;i--){
-                mv.push_back({{i, y1}, {i-1, y1}});
+                mv.emplace_back(Move{{i, y1}, {i-1, y1}});
                 if(comp[comp_idx].dw){
                     board[i][y1].type=-comp[comp_idx].fig;
-                    minus.push_back({i, y1});
+                    minus.emplace_back(Pos{i, y1});
                 }else board[i][y1].type=0;
             }
             comp[comp_idx].up=false;
             comp[comp_idx].dw=false;
         }else if(di=='R'){
             for(int i=y1;i<y2;i++){
-                mv.push_back({{x1, i}, {x1, i+1}});
+                mv.emplace_back(Move{{x1, i}, {x1, i+1}});
                 if(comp[comp_idx].le){
                     board[x1][i].type=-comp[comp_idx].fig;
-                    minus.push_back({x1, i});
+                    minus.emplace_back(Pos{x1, i});
                 }else board[x1][i].type=0;
             }
             comp[comp_idx].le=false;
             comp[comp_idx].ri=false;
         }else{
             for(int i=y1;i>y2;i--){
-                mv.push_back({{x1, i}, {x1, i-1}});
+                mv.emplace_back(Move{{x1, i}, {x1, i-1}});
                 if(comp[comp_idx].ri){
                     board[x1][i].type=-comp[comp_idx].fig;
-                    minus.push_back({x1, i});
+                    minus.emplace_back(Pos{x1, i});
                 }else board[x1][i].type=0;
             }
             comp[comp_idx].le=false;
@@ -251,7 +256,7 @@ struct Room{
             // }
             rep3(i, x2, x1+1){
                 board[i][y1].type=-from;
-                minus.push_back({i, y1});
+                minus.emplace_back(Pos{i, y1});
             }
             comp[board[x1][y1].idx].le=false;
             comp[board[x1][y1].idx].ri=false;
@@ -264,7 +269,7 @@ struct Room{
             // }
             rep3(i, y2, y1+1){
                 board[x1][i].type=-from;
-                minus.push_back({x1, i});
+                minus.emplace_back(Pos{x1, i});
             }
             comp[board[x1][y1].idx].up=false;
             comp[board[x1][y1].idx].dw=false;
@@ -274,7 +279,7 @@ struct Room{
             // cout<< "banned lr " << x2 SP << y2 <<endl;
         }
         // coに追加
-        co.push_back({{x1, y1}, {x2, y2}});
+        co.emplace_back(Cone{{x1, y1}, {x2, y2}});
         uf.unite(board[x1][y1].idx, board[x2][y2].idx);
     }
     bool between_zero(int x1, int y1, int x2, int y2){
@@ -343,10 +348,10 @@ struct Room{
         // cout<< endl;
             int flag=0;
             vector<int> perm;
-            if(comp[i].le) perm.push_back(0);
-            if(comp[i].up) perm.push_back(1);
-            if(comp[i].ri) perm.push_back(2);
-            if(comp[i].dw) perm.push_back(3);
+            if(comp[i].le) perm.emplace_back(0);
+            if(comp[i].up) perm.emplace_back(1);
+            if(comp[i].ri) perm.emplace_back(2);
+            if(comp[i].dw) perm.emplace_back(3);
             shuffle(all(perm), mt);
             rep(j, perm.size()){
                 if(perm[j]==0){
@@ -551,6 +556,29 @@ struct Room{
         }
         return rdc;
     }
+    void random_mv(int rnd){
+        string dd="RDLU";
+        int rn=mt()%(n*n);
+        while(board[rn/n][rn%n].type!=0) rn=(rn+1)%(n*n);
+
+        int rh=rn/n;
+        int rw=rn%n;
+        int prd=-1;
+        rep(i, rnd){
+            rep(j, 4){
+                if(j==prd) continue;
+                if(0<rh+dir_h[j] && rh+dir_h[j]<n && 0<rw+dir_w[j] && rw+dir_w[j]<n){
+                    if(board[rh+dir_h[j]][rw+dir_w[j]].type>0){
+                        add_mv(rh+dir_h[j], rw+dir_w[j], rh, rw, dd[j]);
+                        rh+=dir_h[j];
+                        rw+=dir_w[j];
+                        prd=j;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     void print_board(){
         rep(i, n){
@@ -712,6 +740,12 @@ int main(){
             Room cur;
             cur.init();
 
+            int rnd=max(0, (k*10000/(n*n)-80))*k*10;
+            if(rnd){
+                rnd=mt()%rnd;
+                cur.random_mv(rnd);
+            }
+
             vector<int> perm(k);
             rep(i, k) perm[i]=i+1;
             shuffle(all(perm), mt);
@@ -728,7 +762,7 @@ int main(){
                 //cout<< "nomove2 " << i+1 <<endl;
                 int rdc=1, mc=0;
                 while(i==0 && rdc!=0 && mc<5){
-                    rdc+=cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
+                rdc+=cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
                     rep(j, cur.minus.size()){
                         int mh=cur.minus[j].h;
                         int mw=cur.minus[j].w;
@@ -739,7 +773,7 @@ int main(){
                     cur.co.clear();
 
                     cur.nomove_connect(perm[i], n);
-
+                
                     rdc=cur.move_other(perm[i]);
 
                     cur.nomove_connect(perm[i], n);
@@ -755,7 +789,7 @@ int main(){
                 //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
                 cur.nomove_connect(perm[i], n);
             }
-
+            //score(cur);
             cur.easy_score();
             //cout<< cur.score <<endl;
             if(best.score<cur.score) best=cur;
