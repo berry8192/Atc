@@ -1,3 +1,7 @@
+#pragma GCC target("avx2")
+#pragma GCC optimize("O3")
+#pragma GCC optimize("unroll-loops")
+
 #include <bits/stdc++.h>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
@@ -686,8 +690,10 @@ int main(){
         cur.init();
 
         int rnd=max(0, (k*10000/(n*n)-80))*k*10;
-        rnd=mt()%rnd;
-        if(rnd) cur.random_mv(rnd);
+        if(rnd){
+            rnd=mt()%rnd;
+            cur.random_mv(rnd);
+            
 
         vector<int> perm(k);
         rep(i, k) perm[i]=i+1;
@@ -740,7 +746,7 @@ int main(){
 
     //cout<< best.score <<endl;
     best.print_out();
-    //cout<< "lp:" << lp <<endl;
+    cout<< "lp:" << lp <<endl;
 
 	return 0;
 }
