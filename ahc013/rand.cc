@@ -514,17 +514,24 @@ struct Room{
         rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
         score=rtn;
     }
-    int move_other(int num){
+    int move_other(int nid, vector<int> perm){
         int rdc=0;
         rep(i, k*100){
-            if(comp[i].fig==num) continue;
+            int mvable=1;
+            rep(j, nid){
+                if(comp[i].fig==perm[j]){
+                    mvable=0;
+                    break;
+                }
+            }
+            if(!mvable) continue;
             vector<int> di={0, 0, 0, 0};
             int ch=comp[i].pos.h;
             int cw=comp[i].pos.w;
             rep(j, 4){
                 int l=1;
                 while(0<ch+dir_h[j]*l && ch+dir_h[j]*l<n && 0<cw+dir_w[j]*l && ch+dir_w[j]*l<n){
-                    if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==num){
+                    if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==perm[nid]){
                         di[j]=1;
                         break;
                     }else if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type!=0) break;
@@ -677,11 +684,11 @@ int main(){
             //cout<< "cpu_slide " << perm[i] <<endl;
             //cout<< "nomove2 " << i+1 <<endl;
             int rdc=1, mc=0;
-            while(i==0 && rdc!=0 && mc<5){
-                rdc=cur.move_other(perm[i]);
+            while(rdc!=0 && mc<5){
+                if(i) break;
+                rdc=cur.move_other(i+1, perm);
 
                 cur.nomove_connect(perm[i], n);
-
                 rdc+=cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
                 rep(j, cur.minus.size()){
                     int mh=cur.minus[j].h;
@@ -717,9 +724,7 @@ int main(){
 	return 0;
 }
 // todo
-// 通り道の邪魔な別種CPUをどかす処理
-    // どかすというより無理やりくっつけるほうが大事かも
-    // 1, 2番目にでかい塊をくっつける、をランダムに繰り返す
-    // どかす処理もランダムに実行する
-// ランダムにマスを動かしてみる
+// primaryでないものにもmove_other
+// 異種とも無理やりくっつける
+// 隙間がないときランダムにマスを動かしてみる
 
