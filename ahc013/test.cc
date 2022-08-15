@@ -514,6 +514,38 @@ struct Room{
         rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
         score=rtn;
     }
+    void move_other(int num){
+        rep(i, k*100){
+            if(comp[i].fig==num) continue;
+            vector<int> di={0, 0, 0, 0};
+            int ch=comp[i].pos.h;
+            int cw=comp[i].pos.w;
+            rep(j, 4){
+                int l=1;
+                while(0<ch+dir_h[j]*l && ch+dir_h[j]*l<n && 0<cw+dir_w[j]*l && ch+dir_w[j]*l<n){
+                    if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==num){
+                        di[j]=1;
+                        break;
+                    }else if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type!=0) break;
+                    l++;
+                }
+            }
+            int okd=0;
+            string dd="LURD";
+            rep(j, 4){
+                if(di[j]==1) okd++;
+            }
+            if(okd>=2){
+                rep(j, 4){
+                    if(di[j]==0 && 0<ch+dir_h[j] && ch+dir_h[j]<n && 0<cw+dir_w[j] && cw+dir_w[j]<n && board[ch+dir_h[j]][cw+dir_w[j]].type==0){
+                        add_mv(ch, cw, ch+dir_h[j], cw+dir_w[j], dd[j]);
+                        //cout<< ch SP << cw SP << ch+dir_h[j] SP << cw+dir_w[j] SP << dd[j] <<endl;
+                        break;
+                    }
+                }
+            }
+        }
+    }
 
     void print_board(){
         rep(i, n){
@@ -694,6 +726,7 @@ int main(){
                 cur.uf.init(k*100);
                 cur.co.clear();
                 //cout<< "nomove2 " << i+1 <<endl;
+                if(i==0) cur.move_other(perm[0]);
                 rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
             }
             // 優先度1番以外の1点しか取れない
