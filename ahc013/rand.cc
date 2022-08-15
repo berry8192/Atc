@@ -761,8 +761,8 @@ int main(){
     }
 
     //cout<< best.score <<endl;
-    //best.print_out();
-    cout<< "lp:" << lp <<endl;
+    best.print_out();
+    //cout<< "lp:" << lp <<endl;
 
 	return 0;
 }
