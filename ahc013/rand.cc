@@ -15,7 +15,7 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2950;
+double TIME_LIMIT=2980;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -514,24 +514,17 @@ struct Room{
         rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
         score=rtn;
     }
-    int move_other(int nid, vector<int> perm){
+    int move_other(int num){
         int rdc=0;
         rep(i, k*100){
-            int mvable=1;
-            rep(j, nid){
-                if(comp[i].fig==perm[j]){
-                    mvable=0;
-                    break;
-                }
-            }
-            if(!mvable) continue;
+            if(comp[i].fig==num) continue;
             vector<int> di={0, 0, 0, 0};
             int ch=comp[i].pos.h;
             int cw=comp[i].pos.w;
             rep(j, 4){
                 int l=1;
                 while(0<ch+dir_h[j]*l && ch+dir_h[j]*l<n && 0<cw+dir_w[j]*l && ch+dir_w[j]*l<n){
-                    if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==perm[nid]){
+                    if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==num){
                         di[j]=1;
                         break;
                     }else if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type!=0) break;
@@ -684,12 +677,8 @@ int main(){
             //cout<< "cpu_slide " << perm[i] <<endl;
             //cout<< "nomove2 " << i+1 <<endl;
             int rdc=1, mc=0;
-            while(rdc!=0 && mc<5){
-                if(i) break;
-                rdc=cur.move_other(i+1, perm);
-
-                cur.nomove_connect(perm[i], n);
-                rdc+=cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
+            while(i==0 && rdc!=0 && mc<5){
+              rdc+=cur.cpu_slide(perm[i], mt()%(n/2)+1, mt()%(n/2)+1);
                 rep(j, cur.minus.size()){
                     int mh=cur.minus[j].h;
                     int mw=cur.minus[j].w;
@@ -700,6 +689,11 @@ int main(){
                 cur.co.clear();
 
                 cur.nomove_connect(perm[i], n);
+              
+                rdc=cur.move_other(perm[i]);
+
+                cur.nomove_connect(perm[i], n);
+
                 mc++;
             }
             rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
@@ -727,4 +721,3 @@ int main(){
 // primaryでないものにもmove_other
 // 異種とも無理やりくっつける
 // 隙間がないときランダムにマスを動かしてみる
-
