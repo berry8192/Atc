@@ -25,8 +25,8 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=10;
+auto seed=(unsigned)time(NULL);
+//int seed=10;
 mt19937 mt(seed);
 
 // 構造体
@@ -154,6 +154,8 @@ struct Room{
     vector<Pos> minus;
     int score=0;
     int mv_lim;
+    int co_lim;
+    int prf=0;
 
     Room(){
     }
@@ -162,6 +164,7 @@ struct Room{
         comp=cpu;
         uf.init(k*100);
         mv_lim=mt()%80+10;
+        co_lim=mt()%6+95;
         mv.reserve(500);
         co.reserve(500);
         // rep(i, n){
@@ -176,7 +179,7 @@ struct Room{
     }
     void add_mv(int x1, int y1, int x2, int y2, char di){
         int comp_idx=board[x1][y1].idx;
-        //cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
+        // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         // comp[comp_idx].print();
         // cout<< endl;
         // 動かない場合を排除
@@ -235,10 +238,11 @@ struct Room{
         //     cout<< "!" <<endl;
         //     print_board();
         // }
-        if(hand()>=k*100) return;
+        if(hand()>=k*co_lim) return;
         // cout<< x1 SP << y1 SP << x2 SP << y2 <<endl;
         int from=board[x1][y1].type;
         int to=board[x2][y2].type;
+        //if(from!=to) return;
         // for文のために右か下方向に伸ばすようにする
         if(x1>x2) swap(x1, x2);
         if(y1>y2) swap(y1, y2);
@@ -328,6 +332,48 @@ struct Room{
                     break;
                 }else{
                     break;
+                }
+            }
+        }
+        //cout<< "end nomove" <<endl;
+    }
+    void nomove_connect_hw(int num, int length, char ty){
+        vector<int> perm3(k*100);
+        rep(i, k*100) perm3[i]=i;
+        shuffle(all(perm3), mt);
+
+        rep(lp, k*100){
+            // cout<< num << " nomove lp " << lp <<endl;
+            int i=comp[perm3[lp]].pos.h;
+            int j=comp[perm3[lp]].pos.w;
+            int tmp=board[i][j].type;
+            if(tmp!=num) continue;
+            // if(tmp>1) continue;
+            if(ty=='D'){
+                rep3(l, min(i+1+length, n), i+1){
+                    if(board[l][j].type==0){
+                        continue;
+                    }else if(board[l][j].type==tmp){
+                        if(!uf.same(board[i][j].idx, board[l][j].idx) && between_zero(i, j, l, j)){
+                            add_co(i, j, l, j);
+                        }
+                        break;
+                    }else{
+                        break;
+                    }
+                }
+            }else{
+                rep3(l, min(j+1+length, n), j+1){
+                    if(board[i][l].type==0){
+                        continue;
+                    }else if(board[i][l].type==tmp){
+                        if(!uf.same(board[i][j].idx, board[i][l].idx) && between_zero(i, j, i, l)){
+                            add_co(i, j, i, l);
+                        }
+                        break;
+                    }else{
+                        break;
+                    }
                 }
             }
         }
@@ -519,7 +565,7 @@ struct Room{
         }
         int rtn=0;
         rep(i, k*100) rtn+=cnt[i]*(cnt[i]-1)/2;
-        score=rtn;
+        score+=rtn;
     }
     int move_other(int num){
         int rdc=0;
@@ -530,7 +576,7 @@ struct Room{
             int cw=comp[i].pos.w;
             rep(j, 4){
                 int l=1;
-                while(0<ch+dir_h[j]*l && ch+dir_h[j]*l<n && 0<cw+dir_w[j]*l && ch+dir_w[j]*l<n){
+                while(0<=ch+dir_h[j]*l && ch+dir_h[j]*l<n && 0<=cw+dir_w[j]*l && ch+dir_w[j]*l<n){
                     if(board[ch+dir_h[j]*l][cw+dir_w[j]*l].type==num){
                         di[j]=1;
                         break;
@@ -545,7 +591,7 @@ struct Room{
             }
             if(okd>=2){
                 rep(j, 4){
-                    if(di[j]==0 && 0<ch+dir_h[j] && ch+dir_h[j]<n && 0<cw+dir_w[j] && cw+dir_w[j]<n && board[ch+dir_h[j]][cw+dir_w[j]].type==0){
+                    if(di[j]==0 && 0<=ch+dir_h[j] && ch+dir_h[j]<n && 0<=cw+dir_w[j] && cw+dir_w[j]<n && board[ch+dir_h[j]][cw+dir_w[j]].type==0){
                         add_mv(ch, cw, ch+dir_h[j], cw+dir_w[j], dd[j]);
                         //cout<< ch SP << cw SP << ch+dir_h[j] SP << cw+dir_w[j] SP << dd[j] <<endl;
                         rdc++;
@@ -567,13 +613,139 @@ struct Room{
         rep(i, rnd){
             rep(j, 4){
                 if(j==prd) continue;
-                if(0<rh+dir_h[j] && rh+dir_h[j]<n && 0<rw+dir_w[j] && rw+dir_w[j]<n){
+                if(0<=rh+dir_h[j] && rh+dir_h[j]<n && 0<=rw+dir_w[j] && rw+dir_w[j]<n){
                     if(board[rh+dir_h[j]][rw+dir_w[j]].type>0){
                         add_mv(rh+dir_h[j], rw+dir_w[j], rh, rw, dd[j]);
                         rh+=dir_h[j];
                         rw+=dir_w[j];
                         prd=j;
                         break;
+                    }
+                }
+            }
+        }
+    }
+    void bridge(int notouch_sz, int nocon_sz, int mi_sco, vector<int> perm){
+        int rdc=0;
+        //vector<Bridge> di;
+        rep(i, k*100){
+            // ある程度でかい塊に所属しているCPUはノータッチ
+            if(uf.siz[uf.root(i)]>=notouch_sz) continue;
+            int ch=comp[i].pos.h;
+            int cw=comp[i].pos.w;
+            int con=0;
+            rep(lp, k){
+                int j=perm[lp];
+                // cout<< "j=" << j <<endl;
+                if(hand()>k*100-2) return;
+                if(comp[i].fig==j) continue;
+                // int ma=0;
+                int pre_r=-1, psh, psw, psz;
+                rep(di, 4){
+                    int l=1;
+                    int sh, sw;
+                    while(0<=ch+dir_h[di]*l && ch+dir_h[di]*l<n && 0<=cw+dir_w[di]*l && cw+dir_w[di]*l<n){
+                        sh=ch+dir_h[di]*l;
+                        sw=cw+dir_w[di]*l;
+                        if(board[sh][sw].type==0){
+                            l++;
+                            continue;
+                        }else if(board[sh][sw].type==j){
+                            int rt=uf.root(board[sh][sw].idx);
+                            if(uf.siz[rt]>=nocon_sz) break;
+                            if(pre_r==-1){
+                                pre_r=rt;
+                                psh=sh;
+                                psw=sw;
+                                psz=uf.siz[rt];
+                            }else{
+                                if(rt==pre_r) break;
+                                int del=(psz+uf.siz[rt])*(psz+uf.siz[rt]-1)/2-psz*(psz-1)/2+uf.siz[rt]*(uf.siz[rt]-1)/2-uf.siz[uf.root(i)]*(uf.siz[uf.root(i)]-1)/2-uf.siz[uf.root(i)]*(psz+uf.siz[rt]);
+                                //if(del>0) cout<< del <<endl;
+                                if(del<mi_sco) break;
+                                add_co(ch, cw, sh, sw);
+                                add_co(ch, cw, psh, psw);
+                                board[ch][cw].type=mt()%imax;
+                                con=1;
+                                score+=del;
+                                prf+=del;
+                            }
+                            break;
+                        }else{
+                            break;
+                        }
+                    }
+                    if(con) break;
+                }
+                if(con) break;
+            }
+        }
+    }
+    void lar(int p1, int p2, int itv){
+        //int aim1=1;
+        int aim2=2+itv/5;
+        int rr, ph, pw;
+        rep(i, k*100){
+            ph=comp[i].pos.h;
+            pw=comp[i].pos.w;
+            rr=ph%itv;
+            if(comp[i].fig==p1){
+                if(rr==4){
+                    if(ph<n-1 && board[ph+1][pw].type==0){
+                        add_mv(ph, pw, ph+1, pw, 'D');
+                    }
+                }else if(rr==3){
+                    if(0<ph && board[ph-1][pw].type==0){
+                        add_mv(ph, pw, ph-1, pw, 'U');
+                    }
+                }
+                if(rr==0 || rr==4){
+                    if(ph<n-1 && board[ph+1][pw].type==0){
+                        add_mv(ph, pw, ph+1, pw, 'D');
+                    }
+                }else if(rr==2 || rr==3){
+                    if(0<ph && board[ph-1][pw].type==0){
+                        add_mv(ph, pw, ph-1, pw, 'U');
+                    }
+                }
+            }else if(comp[i].fig==p2){
+                if(aim2==2){
+                    if(rr==1){
+                        if(ph<n-1 && board[ph+1][pw].type==0){
+                            add_mv(ph, pw, ph+1, pw, 'D');
+                        }
+                    }else if(rr==0){
+                        if(0<ph && board[ph-1][pw].type==0){
+                            add_mv(ph, pw, ph-1, pw, 'U');
+                        }
+                    }
+                }else{
+                    if(rr==1 || rr==2){
+                        if(ph<n-1 && board[ph+1][pw].type==0){
+                            add_mv(ph, pw, ph+1, pw, 'D');
+                        }
+                    }else if(rr==0 || rr==4){
+                        if(0<ph && board[ph-1][pw].type==0){
+                            add_mv(ph, pw, ph-1, pw, 'U');
+                        }
+                    }
+                    if(rr==1){
+                        if(ph<n-1 && board[ph+1][pw].type==0){
+                            add_mv(ph, pw, ph+1, pw, 'D');
+                        }
+                    }else if(rr==0){
+                        if(0<ph && board[ph-1][pw].type==0){
+                            add_mv(ph, pw, ph-1, pw, 'U');
+                        }
+                    }
+                }
+            }else{
+                if(rr==1 || rr==aim2){
+                    if(0<ph && board[ph-1][pw].type==0){
+                        add_mv(ph, pw, ph-1, pw, 'U');
+                    }
+                    if(ph<n-1 && board[ph+1][pw].type==0){
+                        add_mv(ph, pw, ph+1, pw, 'D');
                     }
                 }
             }
@@ -650,7 +822,7 @@ int score(Room room){
         assert((th==fh && tw!=fw) || (th!=fh && tw==fw));
         assert(tes.board[fh][fw].type>0);
         assert(tes.board[th][tw].type>0);
-        assert(tes.board[fh][fw].type==tes.board[th][tw].type);
+        //assert(tes.board[fh][fw].type==tes.board[th][tw].type);
     }
     // cout<< "co" <<endl;
     // rep(i, room.co.size()){
@@ -749,6 +921,17 @@ int main(){
             vector<int> perm(k);
             rep(i, k) perm[i]=i+1;
             shuffle(all(perm), mt);
+
+        if(n*n>(k*300)){
+            rnd=mt()%100;
+            if(rnd==3 || rnd==5){
+                cur.lar(perm[0], perm[1], rnd);
+                cur.nomove_connect_hw(perm[0], n, 'R');
+                cur.nomove_connect_hw(perm[1], n, 'R');
+            }
+        }
+
+        //cur.co_lim=100;
             rep(i, k){
                 // perm[i]番の数字を構築する
                 // rep3(j, n, 1){
@@ -789,6 +972,9 @@ int main(){
                 //rep3(j, n, 1) cur.nomove_connect(perm[i], j);
                 cur.nomove_connect(perm[i], n);
             }
+            cur.co_lim=100;
+            cur.bridge(20, 3, 100, perm);
+            cur.bridge(10, 6, 25, perm);
             //score(cur);
             cur.easy_score();
             //cout<< cur.score <<endl;
@@ -809,7 +995,7 @@ int main(){
         rep(i, best.co.size()) ofs<< best.co[i].from.h SP << best.co[i].from.w SP << best.co[i].to.h SP << best.co[i].to.w <<endl;
 
         int sco=best.score;;
-        cout<< "(n, k, sco, lp)=" << n SP << k SP << sco SP << lp <<endl;
+        cout<< "(n, k, sco, lp)=" << n SP << k SP << sco SP << lp SP << best.prf <<endl;
         point+=sco;
 
 
