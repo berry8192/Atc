@@ -999,7 +999,7 @@ int main(){
             rep(i, k) perm[i]=i+1;
             shuffle(all(perm), mt);
 
-            int rnd=max(0, (k*10000/(n*n)-80))*k*10;
+            int rnd=max(0, (k*10000/(n*n)-70))*k*10;
             if(rnd){
                 rnd=mt()%rnd;
                 cur.random_mv(rnd);
@@ -1051,7 +1051,7 @@ int main(){
               
                 rdc=cur.move_other(perm[i]);
 
-                rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
+                rep3(j, mt()%(n/2), 1) cur.nomove_connect(perm[i], j);
 
                 mc++;
             }
@@ -1067,7 +1067,7 @@ int main(){
         }
         cur.co_lim=100;
         // cur.bridge(20, 3, 100, perm);
-        // cur.bridge(10, 6, 25, perm);
+        //if(mt()%3==0) cur.bridge(10, 6, 10, perm);
         //score(cur);
         cur.easy_score();
         //cout<< cur.score <<endl;
