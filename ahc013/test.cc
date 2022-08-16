@@ -681,71 +681,191 @@ struct Room{
             }
         }
     }
-    void lar(int p1, int p2, int itv){
+    void lar(int p1, int p2, int itv, char ty){
         //int aim1=1;
         int aim2=2+itv/5;
         int rr, ph, pw;
         rep(i, k*100){
             ph=comp[i].pos.h;
             pw=comp[i].pos.w;
-            rr=ph%itv;
-            if(comp[i].fig==p1){
-                if(rr==4){
-                    if(ph<n-1 && board[ph+1][pw].type==0){
-                        add_mv(ph, pw, ph+1, pw, 'D');
-                    }
-                }else if(rr==3){
-                    if(0<ph && board[ph-1][pw].type==0){
-                        add_mv(ph, pw, ph-1, pw, 'U');
-                    }
-                }
-                if(rr==0 || rr==4){
-                    if(ph<n-1 && board[ph+1][pw].type==0){
-                        add_mv(ph, pw, ph+1, pw, 'D');
-                    }
-                }else if(rr==2 || rr==3){
-                    if(0<ph && board[ph-1][pw].type==0){
-                        add_mv(ph, pw, ph-1, pw, 'U');
-                    }
-                }
-            }else if(comp[i].fig==p2){
-                if(aim2==2){
-                    if(rr==1){
+            if(ty=='h'){
+                rr=ph%itv;
+                if(comp[i].fig==p1){
+                    if(rr==4){
                         if(ph<n-1 && board[ph+1][pw].type==0){
                             add_mv(ph, pw, ph+1, pw, 'D');
                         }
-                    }else if(rr==0){
+                    }else if(rr==3){
                         if(0<ph && board[ph-1][pw].type==0){
                             add_mv(ph, pw, ph-1, pw, 'U');
+                        }
+                    }
+                    if(rr==0 || rr==4){
+                        if(ph<n-1 && board[ph+1][pw].type==0){
+                            add_mv(ph, pw, ph+1, pw, 'D');
+                        }
+                    }else if(rr==2 || rr==3){
+                        if(0<ph && board[ph-1][pw].type==0){
+                            add_mv(ph, pw, ph-1, pw, 'U');
+                        }
+                    }
+                }else if(comp[i].fig==p2){
+                    if(aim2==2){
+                        if(rr==1){
+                            if(ph<n-1 && board[ph+1][pw].type==0){
+                                add_mv(ph, pw, ph+1, pw, 'D');
+                            }
+                        }else if(rr==0){
+                            if(0<ph && board[ph-1][pw].type==0){
+                                add_mv(ph, pw, ph-1, pw, 'U');
+                            }
+                        }
+                    }else{
+                        if(rr==1 || rr==2){
+                            if(ph<n-1 && board[ph+1][pw].type==0){
+                                add_mv(ph, pw, ph+1, pw, 'D');
+                            }
+                        }else if(rr==0 || rr==4){
+                            if(0<ph && board[ph-1][pw].type==0){
+                                add_mv(ph, pw, ph-1, pw, 'U');
+                            }
+                        }
+                        if(rr==1){
+                            if(ph<n-1 && board[ph+1][pw].type==0){
+                                add_mv(ph, pw, ph+1, pw, 'D');
+                            }
+                        }else if(rr==0){
+                            if(0<ph && board[ph-1][pw].type==0){
+                                add_mv(ph, pw, ph-1, pw, 'U');
+                            }
                         }
                     }
                 }else{
-                    if(rr==1 || rr==2){
-                        if(ph<n-1 && board[ph+1][pw].type==0){
-                            add_mv(ph, pw, ph+1, pw, 'D');
-                        }
-                    }else if(rr==0 || rr==4){
+                    if(rr==1 || rr==aim2){
                         if(0<ph && board[ph-1][pw].type==0){
                             add_mv(ph, pw, ph-1, pw, 'U');
                         }
-                    }
-                    if(rr==1){
                         if(ph<n-1 && board[ph+1][pw].type==0){
                             add_mv(ph, pw, ph+1, pw, 'D');
-                        }
-                    }else if(rr==0){
-                        if(0<ph && board[ph-1][pw].type==0){
-                            add_mv(ph, pw, ph-1, pw, 'U');
                         }
                     }
                 }
             }else{
-                if(rr==1 || rr==aim2){
-                    if(0<ph && board[ph-1][pw].type==0){
-                        add_mv(ph, pw, ph-1, pw, 'U');
+                rr=pw%itv;
+                if(comp[i].fig==p1){
+                    if(rr==4){
+                        if(pw<n-1 && board[ph][pw+1].type==0){
+                            add_mv(ph, pw, ph, pw+1, 'R');
+                        }
+                    }else if(rr==3){
+                        if(0<pw && board[ph][pw-1].type==0){
+                            add_mv(ph, pw, ph, pw-1, 'L');
+                        }
                     }
-                    if(ph<n-1 && board[ph+1][pw].type==0){
+                    if(rr==0 || rr==4){
+                        if(pw<n-1 && board[ph][pw+1].type==0){
+                            add_mv(ph, pw, ph, pw+1, 'R');
+                        }
+                    }else if(rr==2 || rr==3){
+                        if(0<pw && board[ph][pw-1].type==0){
+                            add_mv(ph, pw, ph, pw-1, 'L');
+                        }
+                    }
+                }else if(comp[i].fig==p2){
+                    if(aim2==2){
+                        if(rr==1){
+                            if(pw<n-1 && board[ph][pw+1].type==0){
+                                add_mv(ph, pw, ph, pw+1, 'R');
+                            }
+                        }else if(rr==0){
+                            if(0<pw && board[ph][pw-1].type==0){
+                                add_mv(ph, pw, ph, pw-1, 'L');
+                            }
+                        }
+                    }else{
+                        if(rr==1 || rr==2){
+                            if(pw<n-1 && board[ph][pw+1].type==0){
+                                add_mv(ph, pw, ph, pw+1, 'R');
+                            }
+                        }else if(rr==0 || rr==4){
+                            if(0<pw && board[ph][pw-1].type==0){
+                                add_mv(ph, pw, ph, pw-1, 'L');
+                            }
+                        }
+                        if(rr==1){
+                            if(pw<n-1 && board[ph][pw+1].type==0){
+                                add_mv(ph, pw, ph, pw+1, 'R');
+                            }
+                        }else if(rr==0){
+                            if(0<pw && board[ph][pw-1].type==0){
+                                add_mv(ph, pw, ph, pw-1, 'L');
+                            }
+                        }
+                    }
+                }else{
+                    if(rr==1 || rr==aim2){
+                        if(0<pw && board[ph][pw-1].type==0){
+                            add_mv(ph, pw, ph, pw-1, 'L');
+                        }
+                        if(pw<n-1 && board[ph][pw+1].type==0){
+                            add_mv(ph, pw, ph, pw+1, 'R');
+                        }
+                    }
+                }
+            }
+        }
+    }
+    void center(int mar, int num){
+        int margin[4];
+        rep(i, 4) margin[i]=mar*(mt()%50+25)/100;
+        if(margin==0) return;
+        //cout<< margin <<endl;
+        int ph, pw;
+        rep(i, k*100){
+            if(comp[i].fig!=num) continue;
+            ph=comp[i].pos.h;
+            pw=comp[i].pos.w;
+            int cnt=1;
+            while(cnt){
+                cnt=0;
+                while(ph<margin[0]){
+                    // D
+                    if(board[ph+1][pw].type==0){
                         add_mv(ph, pw, ph+1, pw, 'D');
+                        ph=comp[i].pos.h;
+                        cnt++;
+                    }else{
+                        break;
+                    }
+                }
+                while(pw<margin[1]){
+                    // R
+                    if(board[ph][pw+1].type==0){
+                        add_mv(ph, pw, ph, pw+1, 'R');
+                        pw=comp[i].pos.w;
+                        cnt++;
+                    }else{
+                        break;
+                    }
+                }
+                while(n-1-ph<margin[2]){
+                    // U
+                    if(board[ph-1][pw].type==0){
+                        add_mv(ph, pw, ph-1, pw, 'U');
+                        ph=comp[i].pos.h;
+                        cnt++;
+                    }else{
+                        break;
+                    }
+                }
+                while(n-1-pw<margin[3]){
+                    // L
+                    if(board[ph][pw-1].type==0){
+                        add_mv(ph, pw, ph, pw-1, 'L');
+                        pw=comp[i].pos.w;
+                        cnt++;
+                    }else{
+                        break;
                     }
                 }
             }
@@ -912,26 +1032,35 @@ int main(){
             Room cur;
             cur.init();
 
-            int rnd=max(0, (k*10000/(n*n)-80))*k*10;
-            if(rnd){
-                rnd=mt()%rnd;
-                cur.random_mv(rnd);
-            }
-
             vector<int> perm(k);
             rep(i, k) perm[i]=i+1;
             shuffle(all(perm), mt);
 
-        if(n*n>(k*300)){
-            rnd=mt()%100;
-            if(rnd==3 || rnd==5){
-                cur.lar(perm[0], perm[1], rnd);
-                cur.nomove_connect_hw(perm[0], n, 'R');
-                cur.nomove_connect_hw(perm[1], n, 'R');
+            int rnd=max(0, (k*10000/(n*n)-80))*k*10;
+            if(rnd){
+                rnd=mt()%rnd;
+                cur.random_mv(rnd);
+            }else{
+                rnd=lp%101;
+                if(rnd<10){
+                    cur.center((n*n/k/5)/(mt()%4+8), perm[0]);
+                }
+                if(rnd==3 || rnd==5){
+                    if(n*n>(k*300)){
+                        if(lp%2){
+                            cur.lar(perm[0], perm[1], rnd, 'h');
+                            cur.nomove_connect_hw(perm[0], n, 'R');
+                            cur.nomove_connect_hw(perm[1], n, 'R');
+                        }else{
+                            cur.lar(perm[0], perm[1], rnd, 'w');
+                            cur.nomove_connect_hw(perm[0], n, 'D');
+                            cur.nomove_connect_hw(perm[1], n, 'D');
+                        }
+                    }
+                }
             }
-        }
 
-        //cur.co_lim=100;
+            //cur.co_lim=100;
             rep(i, k){
                 // perm[i]番の数字を構築する
                 // rep3(j, n, 1){
@@ -973,8 +1102,8 @@ int main(){
                 cur.nomove_connect(perm[i], n);
             }
             cur.co_lim=100;
-            cur.bridge(20, 3, 100, perm);
-            cur.bridge(10, 6, 25, perm);
+            //cur.bridge(20, 3, 100, perm);
+            //cur.bridge(10, 6, 25, perm);
             //score(cur);
             cur.easy_score();
             //cout<< cur.score <<endl;
