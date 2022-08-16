@@ -1051,11 +1051,12 @@ int main(){
               
                 rdc=cur.move_other(perm[i]);
 
-                cur.nomove_connect(perm[i], n);
+                rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
 
                 mc++;
             }
-            rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
+            //rep3(j, mt()%(n-2)+2, 1) cur.nomove_connect(perm[i], j);
+            cur.nomove_connect(perm[i], n);
         }
         // 優先度1番以外の1点しか取れない
         //cur.shrot_erase(perm[0]);
