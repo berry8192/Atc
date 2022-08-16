@@ -20,7 +20,7 @@ ll lmax=9223372036854775807;
 int dir_h[]={0, -1, 0, 1}, dir_w[]={-1, 0, 1, 0};
 
 //焼きなましの定数
-double TIME_LIMIT=2980;
+double TIME_LIMIT=12980;
 double start_temp=50.0;
 double end_temp=10.0;
 
