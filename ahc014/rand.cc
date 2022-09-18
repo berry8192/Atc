@@ -54,6 +54,8 @@ struct Point{
     int par;
     Pos pos;
     int next_to[8]={-1, -1, -1, -1, -1, -1, -1, -1};
+    //8bit分をintで持つ
+    int connectable=0;
 
     Point(){};
     Point(int parent, Pos position){
@@ -74,6 +76,7 @@ struct Paper{
     vector<vector<int>> inv_board;
     vector<Point> poi;
     int score=0;
+    set<int> connectable;
 
     Paper(){
     }
@@ -172,7 +175,26 @@ struct Paper{
         }
     }
     void search_connect(){
+        rep(i, poi.size()){
+            rep(j, 8){
+                if(poi[i].next_to[j]!=-1 && poi[i].next_to[(j+2)%8]!=-1){
+                    if(point_add(poi[i].next_to[j], poi[i].next_to[(j+2)%8], i)){
+                        poi[i].connectable+=(1<<j);
+                        connectable.insert(i);
+                    }
+                }
+            }
+        }
+    }
+    bool point_add(int a, int b, int c){
+        double x=(poi[a].pos.x+poi[b].pos.x)/2.0;
+        double y=(poi[a].pos.y+poi[b].pos.y)/2.0;
+        x+=x-poi[c].pos.x;
+        y+=y-poi[c].pos.y;
+        int xx=round(x);
+        int yy=round(y);
         
+        return ;
     }
 
     void print_board(){
@@ -234,6 +256,3 @@ return 0;
 	return 0;
 }
 // todo
-// primaryでないものにもmove_other
-// 異種とも無理やりくっつける
-// 隙間がないときランダムにマスを動かしてみる
