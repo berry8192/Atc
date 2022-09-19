@@ -17,7 +17,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=4950;
+double TIME_LIMIT=950;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -226,23 +226,22 @@ struct Paper{
             }
         }
     }
-    void search_connect(){
+    void search_connect(int index){
         //cout<< "search_connect" <<endl;
-        rep(i, poi.size()){
-            rep(j, 8){
-                int a_index=poi[i].next_to[j];
-                int b_index=poi[i].next_to[(j+2)%8];
-                //出発点から伸びる2辺を確認
-                if(a_index>=0 && b_index>=0){
-                    assert(a_index<poi.size());
-                    assert(b_index<poi.size());
-                    //出発点から伸びた2点を確認
-                    if(poi[a_index].next_to[(j+4)%8]<0 || poi[b_index].next_to[(j+6)%8]<0) continue;
-                    if(poi[a_index].next_to[(j+2)%8]<0 || poi[b_index].next_to[j]<0) continue;
-                    if(point_can_be_add(a_index, b_index, i, j)){
-                        // poi[i].connectable+=(1<<j);
-                        // connectable.insert(i);
-                    }
+        int i=index;
+        rep(j, 8){
+            int a_index=poi[i].next_to[j];
+            int b_index=poi[i].next_to[(j+2)%8];
+            //出発点から伸びる2辺を確認
+            if(a_index>=0 && b_index>=0){
+                assert(a_index<poi.size());
+                assert(b_index<poi.size());
+                //出発点から伸びた2点を確認
+                if(poi[a_index].next_to[(j+4)%8]<0 || poi[b_index].next_to[(j+6)%8]<0) continue;
+                if(poi[a_index].next_to[(j+2)%8]<0 || poi[b_index].next_to[j]<0) continue;
+                if(point_can_be_add(a_index, b_index, i, j)){
+                    // poi[i].connectable+=(1<<j);
+                    // connectable.insert(i);
                 }
             }
         }
@@ -382,20 +381,24 @@ int main(){
     best.init();
     // best.print_board();
     // best.print_point();
-    best.search_connect();
-    best.print_out();
-return 0;
+    //int poi_size=0;
 
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+        //cout<< poi_size SP << best.poi.size() <<endl;
+        //poi_size=best.poi.size();
+        int index=mt()%best.poi.size();
+        best.search_connect(index);
+        //if(poi_size==best.poi.size()) break;
         //cout<< lp <<endl;
     }
 
     //best.print_out();
-    //cout<< "lp:" << lp <<endl;
+    cout<< "lp:" << lp <<endl;
+    best.print_out();
 
 	return 0;
 }
