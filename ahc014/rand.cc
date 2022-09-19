@@ -41,12 +41,17 @@ struct Pos{
         y=yy;
     }
     int weight(){
+        //cout<< "weight" <<endl;
         return (x-n/2)*(x-n/2)+(y-n/2)*(y-n/2)+1;
     }
     bool out_of_bounce(){
+        //cout<< "out_of_bounce" <<endl;
         return (x<0 || n-1<x || y<0 || n-1<y);
     }
     int manhattan(Pos a){
+        //cout<< "manhattan" <<endl;
+        assert(!a.out_of_bounce());
+        assert(!out_of_bounce());
         return (abs(a.x-x)+abs(a.y-y));
     }
 
@@ -65,7 +70,7 @@ struct Pos{
         y+=pos.y;
     }
 };
-Pos d8[]={{1, 0}, {1, 1}, {0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}};
+Pos d8[]={{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
 
 struct Rect{
     Pos p1;
@@ -75,6 +80,7 @@ struct Rect{
 
     Rect(){};
     Rect(Pos point1, Pos point2, Pos point3, Pos point4){
+        //cout<< "Rect" <<endl;
         p1=point1;
         p2=point2;
         p3=point3;
@@ -84,6 +90,9 @@ struct Rect{
     void print(){
         cout<< p1.x SP << p1.y SP << p2.x SP << p2.y SP << p3.x SP << p3.y SP << p4.x SP << p4.y <<endl;
     }
+    // void print(int idx){
+    //     cout<< idx SP << p1.x SP << p1.y SP << p2.x SP << p2.y SP << p3.x SP << p3.y SP << p4.x SP << p4.y <<endl;
+    // }
 };
 
 struct Point{
@@ -99,7 +108,7 @@ struct Point{
     }
 
     void print(){
-         cout<< "parent: ";
+        cout<< "parent: ";
         rep(i, par.size()) cout<< par[i] SP;
         pos.print();
         cout<< " nextto: ";
@@ -118,6 +127,7 @@ struct Paper{
     Paper(){
     }
     void init(){
+        //cout<< "init" <<endl;
         inv_board.resize(n, vector<int>(n, -1));
         rep(i, m){
             add_point(Pos(x[i], y[i]));
@@ -125,6 +135,8 @@ struct Paper{
         search_line();
     }
     void add_point(Pos position){
+        //position.print();
+        //cout<< " add_point" <<endl;
         // idを振るための採番をしている
         assert(0<=position.x && position.x<=n-1);
         assert(0<=position.y && position.y<=n-1);
@@ -132,6 +144,7 @@ struct Paper{
         poi.emplace_back(Point(position));
     }
     void search_line(){
+        //cout<< "search_line" <<endl;
         //左から右
         rep(i, n){
             int prev=-1;
@@ -214,18 +227,31 @@ struct Paper{
         }
     }
     void search_connect(){
+        //cout<< "search_connect" <<endl;
         rep(i, poi.size()){
             rep(j, 8){
-                if(poi[i].next_to[j]!=-1 && poi[i].next_to[(j+2)%8]!=-1){
-                    if(point_can_be_add(poi[i].next_to[j], poi[i].next_to[(j+2)%8], i, j)){
-                        poi[i].connectable+=(1<<j);
-                        connectable.insert(i);
+                int a_index=poi[i].next_to[j];
+                int b_index=poi[i].next_to[(j+2)%8];
+                //出発点から伸びる2辺を確認
+                if(a_index>=0 && b_index>=0){
+                    assert(a_index<poi.size());
+                    assert(b_index<poi.size());
+                    //出発点から伸びた2点を確認
+                    if(poi[a_index].next_to[(j+4)%8]<0 || poi[b_index].next_to[(j+6)%8]<0) continue;
+                    if(poi[a_index].next_to[(j+2)%8]<0 || poi[b_index].next_to[j]<0) continue;
+                    if(point_can_be_add(a_index, b_index, i, j)){
+                        // poi[i].connectable+=(1<<j);
+                        // connectable.insert(i);
                     }
                 }
             }
         }
     }
     bool point_can_be_add(int a, int b, int c, int dir){
+        //cout<< "point_can_be_add" <<endl;
+        // if(c>70){
+        //     cout<< "70over" <<endl;
+        // }
         double x=(poi[a].pos.x+poi[b].pos.x)/2.0;
         double y=(poi[a].pos.y+poi[b].pos.y)/2.0;
         x+=x-poi[c].pos.x;
@@ -234,37 +260,84 @@ struct Paper{
         //方眼紙の領域外なら中断
         if(pos.out_of_bounce()) return false;
         //置きたい場所にすでに点があったら中断
+        assert(0<=pos.x);
+        assert(0<=pos.y);
+        assert(pos.x<=n-1);
+        assert(pos.y<=n-1);
         if(inv_board[pos.x][pos.y]!=-1) return false;
         //置きたい点と既存の点との間に点があったら中断
         int a_next_index=poi[a].next_to[(dir+2)%8];
         int b_next_index=poi[b].next_to[(dir)%8];
+        assert(a_next_index<int(poi.size()));
+        assert(b_next_index<int(poi.size()));
+        //-1なら隣接点なしなのでOK
         bool a_line=(a_next_index==-1);
         bool b_line=(b_next_index==-1);
-        a_line=a_line || (poi[a].pos.manhattan(pos)<poi[a].pos.manhattan(poi[a_next_index].pos));
-        b_line=b_line || (poi[b].pos.manhattan(pos)<poi[b].pos.manhattan(poi[b_next_index].pos));
+        if(!a_line) a_line=(poi[a].pos.manhattan(pos)<poi[a].pos.manhattan(poi[a_next_index].pos));
+        if(!b_line) b_line=(poi[b].pos.manhattan(pos)<poi[b].pos.manhattan(poi[b_next_index].pos));
+        //つなぐ
         if(a_line && b_line){
-            reconnect_line(c, dir);
             rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos));
             add_point(pos);
+// cout<< poi.size()-1 SP << a SP << c SP << b <<endl;
+// poi[poi.size()-1].print();
+// poi[a].print();
+// poi[c].print();
+// poi[b].print();
+            reconnect_line(dir);
+// poi[poi.size()-1].print();
+// poi[a].print();
+// poi[c].print();
+// poi[b].print();
+            delete_next_to(dir, a, b, c);
+// poi[poi.size()-1].print();
+// poi[a].print();
+// poi[c].print();
+// poi[b].print();
+// rectangle[rectangle.size()-1].print(c);
+// print_board();
         }
 
         return true;
     }
-    void reconnect_line(int a, int dir){
+    void reconnect_line(int dir){
+        //cout<< "reconnect_line" <<endl;
+        dir=(dir+4)%8;
+        int add_index=poi.size()-1;
         rep(i, 8){
             if(i==dir || i==(dir+2)%8) continue;
-            Pos pos=poi[a].pos+d8[i];
-            while(pos.out_of_bounce()){
+            Pos pos=poi[add_index].pos+d8[i];
+            while(!pos.out_of_bounce()){
                 int next_to_index=inv_board[pos.x][pos.y];
                 if(next_to_index!=-1){
+                    if(poi[next_to_index].next_to[(i+4)%8]<-1){
+                        poi[add_index].next_to[i]-=10000;
+                        break;
+                    }else if(poi[next_to_index].next_to[(i+4)%8]>=0){
+                        poi[next_to_index].next_to[(i+4)%8]=add_index;
+                        poi[add_index].next_to[i]=next_to_index;
+                        break;
+                    }
                     //assert(poi[next_to_index].next_to[(i+4)%8]=-1);
-                    poi[next_to_index].next_to[(i+4)%8]=a;
-                    poi[a].next_to[i]=next_to_index;
+                    poi[next_to_index].next_to[(i+4)%8]=add_index;
+                    poi[add_index].next_to[i]=next_to_index;
                     break;
                 }
                 pos+=d8[i];
             }
         }
+    }
+    void delete_next_to(int dir, int a, int b, int c){
+        //cout<< "delete_next_to" <<endl;
+        poi[c].next_to[dir]-=10000;
+        poi[a].next_to[(dir+4)%8]-=10000;
+        poi[a].next_to[(dir+2)%8]-=10000;
+        //新規追加の点は一番最後にいる
+        poi[poi.size()-1].next_to[(dir+6)%8]-=10000;
+        poi[poi.size()-1].next_to[(dir+4)%8]-=10000;
+        poi[b].next_to[dir]-=10000;
+        poi[b].next_to[(dir+6)%8]-=10000;
+        poi[c].next_to[(dir+2)%8]-=10000;
     }
 
     void print_board(){
@@ -288,6 +361,7 @@ struct Paper{
 };
 
 void inpt(){
+    //cout<< "inpt" <<endl;
     cin>> n >> m;
     rep(i, m) cin>> x[i] >> y[i];
 }
@@ -306,8 +380,8 @@ int main(){
     inpt();
     Paper best;
     best.init();
-    best.print_board();
-    best.print_point();
+    // best.print_board();
+    // best.print_point();
     best.search_connect();
     best.print_out();
 return 0;
