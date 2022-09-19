@@ -237,8 +237,8 @@ struct Paper{
                 assert(a_index<poi.size());
                 assert(b_index<poi.size());
                 //出発点から伸びた2点を確認
-                if(poi[a_index].next_to[(j+4)%8]<0 || poi[b_index].next_to[(j+6)%8]<0) continue;
-                if(poi[a_index].next_to[(j+2)%8]<0 || poi[b_index].next_to[j]<0) continue;
+                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
+                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
                 if(point_can_be_add(a_index, b_index, i, j)){
                     // poi[i].connectable+=(1<<j);
                     // connectable.insert(i);
@@ -397,7 +397,7 @@ int main(){
     }
 
     //best.print_out();
-    cout<< "lp:" << lp <<endl;
+    //cout<< "lp:" << lp <<endl;
     best.print_out();
 
 	return 0;
