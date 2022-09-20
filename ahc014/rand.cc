@@ -27,7 +27,7 @@ int seed=1;
 mt19937 mt(seed);
 
 //入力
-int n, m, s=0;
+int n, m, s;
 int x[350], y[350];
 
 // 構造体
@@ -227,28 +227,6 @@ struct Paper{
             }
         }
     }
-    void search_connect(int index){
-        //cout<< "search_connect" <<endl;
-        int i=index;
-        int random_dir=mt()%8;
-        rep(dir, 8){
-            int j=(random_dir+dir)%8;
-            int a_index=poi[i].next_to[j];
-            int b_index=poi[i].next_to[(j+2)%8];
-            //出発点から伸びる2辺を確認
-            if(a_index>=0 && b_index>=0){
-                assert(a_index<poi.size());
-                assert(b_index<poi.size());
-                //出発点から伸びた2点を確認
-                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
-                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
-                if(point_can_be_add(a_index, b_index, i, j)){
-                    // poi[i].connectable+=(1<<j);
-                    // connectable.insert(i);
-                }
-            }
-        }
-    }
     bool point_can_be_add(int a, int b, int c, int dir){
         //cout<< "point_can_be_add" <<endl;
         // if(c>70){
@@ -341,18 +319,47 @@ struct Paper{
         poi[b].next_to[(dir+6)%8]-=10000;
         poi[c].next_to[(dir+2)%8]-=10000;
     }
+    void search_connect(int index){
+        //cout<< "search_connect" <<endl;
+        int i=index;
+        int random_dir=mt()%8;
+        rep(dir, 8){
+            int j=(random_dir+dir)%8;
+            int a_index=poi[i].next_to[j];
+            int b_index=poi[i].next_to[(j+2)%8];
+            //出発点から伸びる2辺を確認
+            if(a_index>=0 && b_index>=0){
+                assert(a_index<poi.size());
+                assert(b_index<poi.size());
+                //出発点から伸びた2点を確認
+                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
+                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
+                if(point_can_be_add(a_index, b_index, i, j)){
+                    // poi[i].connectable+=(1<<j);
+                    // connectable.insert(i);
+                }
+            }
+        }
+    }
     void search_connect_all(){
         vector<int> permutation(poi.size());
         rep(i, poi.size()) permutation[i]=i;
         shuffle(all(permutation), mt);
         rep(i, permutation.size()) search_connect(permutation[i]);
     }
-    void random_search(){
+    void random_search_all(){
         int prev_score;
         do{
             prev_score=score;
             search_connect_all();
         }while(prev_score<score);
+    }
+    void edge_search_all(int distance_limit){
+        rep(i, poi.size()){
+            if(abs(poi[i].pos.x-n/2)>=distance_limit || abs(poi[i].pos.y-n/2)>=distance_limit){
+                search_connect(i);
+            }
+        }
     }
 
     int correct_score(){
@@ -383,8 +390,15 @@ struct Paper{
     }
 };
 
+int output_validation(Paper paper){
+    int rtn=0;
+    vector<vector<int>> test_board(n, vector<int>(n));
+    return rtn;
+}
+
 void inpt(){
     //cout<< "inpt" <<endl;
+    s=0;
     cin>> n >> m;
     rep(i, m) cin>> x[i] >> y[i];
     rep(i, n){
@@ -392,12 +406,6 @@ void inpt(){
             s+=Pos(i, j).weight();
         }
     }
-}
-
-int output_validation(Paper paper){
-    int rtn=0;
-    vector<vector<int>> test_board(n, vector<int>(n));
-    return rtn;
 }
 
 void solve(){
@@ -421,7 +429,8 @@ void solve(){
         //cout<< poi_size SP << best.poi.size() <<endl;
         //poi_size=best.poi.size();
         Paper new_paper=base;
-        new_paper.random_search();
+        if(mt()%2) new_paper.edge_search_all(n/4-1);
+        new_paper.random_search_all();
         if(best.score<new_paper.score){
             best=new_paper;
         }
