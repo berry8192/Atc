@@ -17,7 +17,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=950;
+double TIME_LIMIT=4900;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -27,7 +27,7 @@ int seed=1;
 mt19937 mt(seed);
 
 //入力
-int n, m;
+int n, m, s=0;
 int x[350], y[350];
 
 // 構造体
@@ -142,6 +142,7 @@ struct Paper{
         assert(0<=position.y && position.y<=n-1);
         inv_board[position.x][position.y]=poi.size();
         poi.emplace_back(Point(position));
+        score+=position.weight();
     }
     void search_line(){
         //cout<< "search_line" <<endl;
@@ -229,7 +230,9 @@ struct Paper{
     void search_connect(int index){
         //cout<< "search_connect" <<endl;
         int i=index;
-        rep(j, 8){
+        int random_dir=mt()%8;
+        rep(dir, 8){
+            int j=(random_dir+dir)%8;
             int a_index=poi[i].next_to[j];
             int b_index=poi[i].next_to[(j+2)%8];
             //出発点から伸びる2辺を確認
@@ -338,7 +341,28 @@ struct Paper{
         poi[b].next_to[(dir+6)%8]-=10000;
         poi[c].next_to[(dir+2)%8]-=10000;
     }
+    void search_connect_all(){
+        vector<int> permutation(poi.size());
+        rep(i, poi.size()) permutation[i]=i;
+        shuffle(all(permutation), mt);
+        rep(i, permutation.size()) search_connect(permutation[i]);
+    }
+    void random_search(){
+        int prev_score;
+        do{
+            prev_score=score;
+            search_connect_all();
+        }while(prev_score<score);
+    }
 
+    int correct_score(){
+        double ans=1000000.0;
+        ans*=n*n;
+        ans/=m;
+        ans*=score;
+        ans/=s;
+        return round(ans);
+    }
     void print_board(){
         rep(i, n){
             rep(j, n){
@@ -363,6 +387,11 @@ void inpt(){
     //cout<< "inpt" <<endl;
     cin>> n >> m;
     rep(i, m) cin>> x[i] >> y[i];
+    rep(i, n){
+        rep(j, n){
+            s+=Pos(i, j).weight();
+        }
+    }
 }
 
 int output_validation(Paper paper){
@@ -377,11 +406,12 @@ int main(){
     start = chrono::system_clock::now();
 
     inpt();
-    Paper best;
-    best.init();
+    Paper base;
+    base.init();
     // best.print_board();
     // best.print_point();
     //int poi_size=0;
+    Paper best=base;
 
     int lp=0;
     while (true) { // 時間の許す限り回す
@@ -390,16 +420,22 @@ int main(){
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
         //cout<< poi_size SP << best.poi.size() <<endl;
         //poi_size=best.poi.size();
-        int index=mt()%best.poi.size();
-        best.search_connect(index);
+        Paper new_paper=base;
+        new_paper.random_search();
+        if(best.score<new_paper.score){
+            best=new_paper;
+        }
+        
         //if(poi_size==best.poi.size()) break;
         //cout<< lp <<endl;
     }
 
-    //best.print_out();
-    //cout<< "lp:" << lp <<endl;
     best.print_out();
+    //cout<< "lp:" << lp <<endl;
+    //cout<< best.score SP << best.correct_score() <<endl;
 
 	return 0;
 }
 // todo
+//得点計算を実装して焼けるようにする
+//最悪ビームサーチでいい
