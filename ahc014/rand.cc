@@ -400,7 +400,7 @@ int output_validation(Paper paper){
     return rtn;
 }
 
-int main(){
+void solve(){
     //開始時間の計測
     std::chrono::system_clock::time_point start, current;
     start = chrono::system_clock::now();
@@ -433,8 +433,10 @@ int main(){
     best.print_out();
     //cout<< "lp:" << lp <<endl;
     //cout<< best.score SP << best.correct_score() <<endl;
+}
 
-	return 0;
+int main(){
+    solve();
 }
 // todo
 //得点計算を実装して焼けるようにする
