@@ -121,7 +121,7 @@ struct ConeList{
     }
 
     bool operator<(const ConeList &in) const{
-		return pos_wei!=in.pos_wei ? pos_wei<in.pos_wei : pos!=in.pos ? pos<in.pos : dir<in.dir;
+		return pos_wei!=in.pos_wei ? pos_wei>in.pos_wei : pos!=in.pos ? pos<in.pos : dir<in.dir;
 	};
 };
 
@@ -290,7 +290,7 @@ struct Paper{
             if(execute){
                 execute_connect(pos, dir, a, b, c);
             }else{
-                ConeList(pos, dir, a, b, c).print();
+                //ConeList(pos, dir, a, b, c).print();
                 connectable_list.insert(ConeList(pos, dir, a, b, c));
             }
         }
@@ -446,11 +446,19 @@ void solve(){
     // cout<< base.connectable_list.size() <<endl;
     Paper best=base;
 
-    while(!best.connectable_list.empty()){
-       cout<< best.connectable_list.size() <<endl;
-       ConeList tmp=*best.connectable_list.begin();
-       best.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-       best.connectable_list.erase(best.connectable_list.begin());
+    while(1){
+        int flag=1;
+        best.connectable_list.clear();
+        best.search_connect_all(false);
+        while(!best.connectable_list.empty()){
+            //cout<< best.connectable_list.size() <<endl;
+            ConeList tmp=*best.connectable_list.begin();
+            best.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
+            best.connectable_list.erase(best.connectable_list.begin());
+            flag=0;
+            break;
+        }
+        if(flag) break;
     }
     best.print_out();
 
