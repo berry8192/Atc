@@ -446,23 +446,23 @@ void solve(){
     // cout<< base.connectable_list.size() <<endl;
     Paper best=base;
 
-    while(1){
-        int flag=1;
-        best.connectable_list.clear();
-        best.search_connect_all(false);
-        while(!best.connectable_list.empty()){
-            //cout<< best.connectable_list.size() <<endl;
-            ConeList tmp=*best.connectable_list.begin();
-            best.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-            best.connectable_list.erase(best.connectable_list.begin());
-            flag=0;
-            break;
-        }
-        if(flag) break;
-    }
-    best.print_out();
+    // while(1){
+    //     int flag=1;
+    //     best.connectable_list.clear();
+    //     best.search_connect_all(false);
+    //     while(!best.connectable_list.empty()){
+    //         //cout<< best.connectable_list.size() <<endl;
+    //         ConeList tmp=*best.connectable_list.begin();
+    //         best.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
+    //         best.connectable_list.erase(best.connectable_list.begin());
+    //         flag=0;
+    //         break;
+    //     }
+    //     if(flag) break;
+    // }
+    // best.print_out();
 
-return;
+// return;
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
@@ -472,7 +472,19 @@ return;
         //poi_size=best.poi.size();
         Paper new_paper=base;
         // if(mt()%2) new_paper.edge_search_all(n/4-1);
-        new_paper.random_search_all(true);
+        if(mt()%2){
+            new_paper.connectable_list.clear();
+            new_paper.search_connect_all(false);
+            if(!new_paper.connectable_list.empty()){
+                //cout<< best.connectable_list.size() <<endl;
+                ConeList tmp=*new_paper.connectable_list.begin();
+                new_paper.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
+                //best.connectable_list.erase(best.connectable_list.begin());
+            }
+        }else{
+            new_paper.random_search_all(true);
+        }
+
         if(best.score<new_paper.score){
             best=new_paper;
         }
@@ -482,8 +494,8 @@ return;
     }
 
     best.print_out();
-    cout<< "lp:" << lp <<endl;
-    cout<< best.score SP << best.correct_score() <<endl;
+    // cout<< "lp:" << lp <<endl;
+    // cout<< best.score SP << best.correct_score() <<endl;
 }
 
 int main(){
