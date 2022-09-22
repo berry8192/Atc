@@ -164,16 +164,6 @@ struct Paper{
         }
         search_line();
     }
-    void add_point(Pos position){
-        //position.print();
-        //cout<< " add_point" <<endl;
-        // idを振るための採番をしている
-        assert(0<=position.x && position.x<=n-1);
-        assert(0<=position.y && position.y<=n-1);
-        inv_board[position.x][position.y]=poi.size();
-        poi.emplace_back(Point(position));
-        score+=position.weight();
-    }
     void search_line(){
         //cout<< "search_line" <<endl;
         //左から右
@@ -257,6 +247,45 @@ struct Paper{
             }
         }
     }
+    void random_search_amap(bool execute){
+        int prev_score;
+        do{
+            prev_score=score;
+            search_connect_all(execute);
+        }while(prev_score<score);
+    }
+    void search_connect_all(bool execute){
+        vector<int> permutation(poi.size());
+        rep(i, poi.size()) permutation[i]=i;
+        shuffle(all(permutation), mt);
+        rep(i, permutation.size()) search_connect(permutation[i], execute);
+    }
+    void edge_search_all(int distance_limit, bool execute){
+        rep(i, poi.size()){
+            if(abs(poi[i].pos.x-n/2)>=distance_limit || abs(poi[i].pos.y-n/2)>=distance_limit){
+                search_connect(i, execute);
+            }
+        }
+    }
+    void search_connect(int index, bool execute){
+        //cout<< "search_connect" <<endl;
+        int i=index;
+        int random_dir=mt()%8;
+        rep(dir, 8){
+            int j=(random_dir+dir)%8;
+            int a_index=poi[i].next_to[j];
+            int b_index=poi[i].next_to[(j+2)%8];
+            //出発点から伸びる2辺を確認
+            if(a_index>=0 && b_index>=0){
+                //出発点から伸びた2点を確認
+                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
+                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
+                point_can_be_add(a_index, b_index, i, j, execute);
+                assert(a_index<poi.size());
+                assert(b_index<poi.size());
+            }
+        }
+    }
     void point_can_be_add(int a, int b, int c, int dir, bool execute){
         //cout<< "point_can_be_add" <<endl;
         // if(c>70){
@@ -294,6 +323,22 @@ struct Paper{
                 connectable_list.insert(ConeList(pos, dir, a, b, c));
             }
         }
+    }
+    void execute_connect(Pos pos, int dir, int a, int b, int c){
+        rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos));
+        add_point(pos);
+        reconnect_line(dir);
+        delete_next_to(dir, a, b, c);
+    }
+    void add_point(Pos position){
+        //position.print();
+        //cout<< " add_point" <<endl;
+        // idを振るための採番をしている
+        assert(0<=position.x && position.x<=n-1);
+        assert(0<=position.y && position.y<=n-1);
+        inv_board[position.x][position.y]=poi.size();
+        poi.emplace_back(Point(position));
+        score+=position.weight();
     }
     void reconnect_line(int dir){
         //cout<< "reconnect_line" <<endl;
@@ -337,51 +382,6 @@ struct Paper{
         poi[b].next_to[dir]-=10000;
         poi[b].next_to[(dir+6)%8]-=10000;
         poi[c].next_to[(dir+2)%8]-=10000;
-    }
-    void search_connect(int index, bool execute){
-        //cout<< "search_connect" <<endl;
-        int i=index;
-        int random_dir=mt()%8;
-        rep(dir, 8){
-            int j=(random_dir+dir)%8;
-            int a_index=poi[i].next_to[j];
-            int b_index=poi[i].next_to[(j+2)%8];
-            //出発点から伸びる2辺を確認
-            if(a_index>=0 && b_index>=0){
-                //出発点から伸びた2点を確認
-                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
-                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
-                point_can_be_add(a_index, b_index, i, j, execute);
-                assert(a_index<poi.size());
-                assert(b_index<poi.size());
-            }
-        }
-    }
-    void search_connect_all(bool execute){
-        vector<int> permutation(poi.size());
-        rep(i, poi.size()) permutation[i]=i;
-        shuffle(all(permutation), mt);
-        rep(i, permutation.size()) search_connect(permutation[i], execute);
-    }
-    void random_search_all(bool execute){
-        int prev_score;
-        do{
-            prev_score=score;
-            search_connect_all(execute);
-        }while(prev_score<score);
-    }
-    void edge_search_all(int distance_limit, bool execute){
-        rep(i, poi.size()){
-            if(abs(poi[i].pos.x-n/2)>=distance_limit || abs(poi[i].pos.y-n/2)>=distance_limit){
-                search_connect(i, execute);
-            }
-        }
-    }
-    void execute_connect(Pos pos, int dir, int a, int b, int c){
-        rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos));
-        add_point(pos);
-        reconnect_line(dir);
-        delete_next_to(dir, a, b, c);
     }
 
     int correct_score(){
@@ -472,17 +472,22 @@ void solve(){
         //poi_size=best.poi.size();
         Paper new_paper=base;
         // if(mt()%2) new_paper.edge_search_all(n/4-1);
-        if(mt()%10){
-            new_paper.connectable_list.clear();
-            new_paper.search_connect_all(false);
-            if(!new_paper.connectable_list.empty()){
-                //cout<< best.connectable_list.size() <<endl;
-                ConeList tmp=*new_paper.connectable_list.begin();
-                new_paper.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-                //best.connectable_list.erase(best.connectable_list.begin());
+        while(1){
+            if(mt()%(lp%8+2)){
+                new_paper.connectable_list.clear();
+                new_paper.search_connect_all(false);
+                if(!new_paper.connectable_list.empty()){
+                    //cout<< best.connectable_list.size() <<endl;
+                    ConeList tmp=*new_paper.connectable_list.begin();
+                    new_paper.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
+                    //best.connectable_list.erase(best.connectable_list.begin());
+                }
+            }else{
+                //new_paper.random_search_amap(true);
+                int sco=new_paper.score;
+                new_paper.search_connect_all(true);
+                if(sco==new_paper.score) break;
             }
-        }else{
-            new_paper.random_search_all(true);
         }
 
         if(best.score<new_paper.score){
@@ -494,8 +499,8 @@ void solve(){
     }
 
     best.print_out();
-    cout<< "lp:" << lp <<endl;
-    cout<< best.score SP << best.correct_score() <<endl;
+    // cout<< "lp:" << lp <<endl;
+    // cout<< best.score SP << best.correct_score() <<endl;
 }
 
 int main(){
