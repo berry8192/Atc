@@ -22,8 +22,8 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=2;
+auto seed=(unsigned)time(NULL);
+//int seed=2;
 mt19937 mt(seed);
 
 //入力
@@ -472,7 +472,7 @@ void solve(){
         //poi_size=best.poi.size();
         Paper new_paper=base;
         // if(mt()%2) new_paper.edge_search_all(n/4-1);
-        if(mt()%2){
+        if(mt()%10){
             new_paper.connectable_list.clear();
             new_paper.search_connect_all(false);
             if(!new_paper.connectable_list.empty()){
@@ -494,8 +494,8 @@ void solve(){
     }
 
     best.print_out();
-    // cout<< "lp:" << lp <<endl;
-    // cout<< best.score SP << best.correct_score() <<endl;
+    cout<< "lp:" << lp <<endl;
+    cout<< best.score SP << best.correct_score() <<endl;
 }
 
 int main(){
@@ -510,3 +510,7 @@ int main(){
 //頑張れば既存頂点から達成できるポイントを全網羅できるかと思ったけど頂点がふえていくので怪しい
 //なるべく壁に近い頂点を生成できる操作を優先する？
 //どこかが結ばれると結べなくなる点があるので注意
+
+//search_connectの中でdirごとに探索できるように分離する
+//reconnect_lineで上を使う
+//頂点削除にも転用できそう
