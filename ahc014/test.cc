@@ -14,7 +14,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-int TEST_CASE=100;
+int TEST_CASE=2000;
 int testcase=0;
 string path = "testcases/";
 vector<string> file_in_paths;
@@ -45,6 +45,8 @@ string getDatetimeStr() {
     // std::stringにして値を返す
     return s.str();
 }
+
+std::ofstream gofs("testcases/"+getDatetimeStr());
 
 // 定数周り
 int imax=2147483647;
@@ -505,24 +507,24 @@ int solve(){
         //poi_size=best.poi.size();
         Paper new_paper=base;
         // if(mt()%2) new_paper.edge_search_all(n/4-1);
-        while(1){
-            if(mt()%(lp%18+2)){
-                new_paper.connectable_list.clear();
-                new_paper.search_connect_all(false);
-                if(!new_paper.connectable_list.empty()){
-                    //cout<< best.connectable_list.size() <<endl;
-                    ConeList tmp=*new_paper.connectable_list.begin();
-                    new_paper.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-                    //best.connectable_list.erase(best.connectable_list.begin());
-                }
-            }else{
-                //new_paper.random_search_amap(true);
-                int sco=new_paper.score;
-                new_paper.search_connect_all(true);
-                if(sco==new_paper.score) break;
-            }
-        }
-
+        // while(1){
+        //     if(0 && mt()%(lp%18+2)){
+        //         new_paper.connectable_list.clear();
+        //         new_paper.search_connect_all(false);
+        //         if(!new_paper.connectable_list.empty()){
+        //             //cout<< best.connectable_list.size() <<endl;
+        //             ConeList tmp=*new_paper.connectable_list.begin();
+        //             new_paper.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
+        //             //best.connectable_list.erase(best.connectable_list.begin());
+        //         }
+        //     }else{
+        //         //new_paper.random_search_amap(true);
+        //         int sco=new_paper.score;
+        //         new_paper.search_connect_all(true);
+        //         if(sco==new_paper.score) break;
+        //     }
+        // }
+        new_paper.random_search_amap(true);
         if(best.score<new_paper.score){
             best=new_paper;
         }
@@ -569,12 +571,14 @@ int main(){
     setup_input();
     ll score_sum=test();
     cout<< "score sum:" << score_sum <<endl;
-    std::ofstream ofs("testcases/"+getDatetimeStr());
-    ofs<< "TIME_LIMIT: " << TIME_LIMIT <<endl;
-    ofs<< "start_temp: " << start_temp <<endl;
-    ofs<< "end_temp: " << end_temp <<endl;
-    ofs<< "seed: " << seed <<endl;
-    ofs<< "score sum: " << score_sum <<endl;
+
+    gofs<< "TIME_LIMIT: " << TIME_LIMIT <<endl;
+    gofs<< "start_temp: " << start_temp <<endl;
+    gofs<< "end_temp: " << end_temp <<endl;
+    gofs<< "seed: " << seed <<endl;
+    gofs<< "TEST_CASES: " << TEST_CASE <<endl;
+    gofs<< "score sum: " << score_sum <<endl;
+    gofs<< "average: " << 1.0*score_sum/TEST_CASE <<endl;
 }
 // todo
 //得点計算を実装して焼けるようにする

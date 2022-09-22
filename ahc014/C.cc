@@ -40,13 +40,16 @@ int main(){
 
 	cin>> n >> m >> k;
 
+	rep(i, n) cout<< i <<endl;
+	return 0;
+
 	rep(i, n/2+1){
 		rep(j, n/2+1){
 			s+=i*i+j*j+1;
 		}
 	}
 
-	cout<< base*n*n/m* << endl;
+	cout<< base*n*n/m <<endl;
  
 	return 0;
 }
