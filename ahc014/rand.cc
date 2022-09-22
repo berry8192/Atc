@@ -267,23 +267,28 @@ struct Paper{
             }
         }
     }
-    void search_connect(int index, bool execute){
+    void search_connect(int index, bool execute, int direction=-1){
         //cout<< "search_connect" <<endl;
-        int i=index;
-        int random_dir=mt()%8;
-        rep(dir, 8){
-            int j=(random_dir+dir)%8;
-            int a_index=poi[i].next_to[j];
-            int b_index=poi[i].next_to[(j+2)%8];
-            //出発点から伸びる2辺を確認
-            if(a_index>=0 && b_index>=0){
-                //出発点から伸びた2点を確認
-                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
-                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
-                point_can_be_add(a_index, b_index, i, j, execute);
-                assert(a_index<poi.size());
-                assert(b_index<poi.size());
+        if(direction!=-1){
+            search_connect_direction(index, execute, direction);
+        }else{
+            int random_dir=mt()%8;
+            rep(dir, 8){
+                search_connect_direction(index, execute, (random_dir+dir)%8);
             }
+        }
+    }
+    void search_connect_direction(int i, bool execute, int j){
+        int a_index=poi[i].next_to[j];
+        int b_index=poi[i].next_to[(j+2)%8];
+        //出発点から伸びる2辺を確認
+        if(a_index>=0 && b_index>=0){
+            //出発点から伸びた2点を確認
+            if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return;
+            if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return;
+            point_can_be_add(a_index, b_index, i, j, execute);
+            assert(a_index<poi.size());
+            assert(b_index<poi.size());
         }
     }
     void point_can_be_add(int a, int b, int c, int dir, bool execute){
@@ -446,23 +451,6 @@ void solve(){
     // cout<< base.connectable_list.size() <<endl;
     Paper best=base;
 
-    // while(1){
-    //     int flag=1;
-    //     best.connectable_list.clear();
-    //     best.search_connect_all(false);
-    //     while(!best.connectable_list.empty()){
-    //         //cout<< best.connectable_list.size() <<endl;
-    //         ConeList tmp=*best.connectable_list.begin();
-    //         best.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-    //         best.connectable_list.erase(best.connectable_list.begin());
-    //         flag=0;
-    //         break;
-    //     }
-    //     if(flag) break;
-    // }
-    // best.print_out();
-
-// return;
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
