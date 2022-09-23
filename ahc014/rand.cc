@@ -277,11 +277,11 @@ struct Paper{
             }
         }
     }
-    void random_search_amap(bool execute){
+    void random_search_amap(){
         int prev_score;
         do{
             prev_score=score;
-            search_connect_all(execute);
+            search_connect_all(true);
         }while(prev_score<score);
     }
     void search_connect_all(bool execute){
@@ -392,19 +392,14 @@ struct Paper{
                 if(next_to_index!=-1){
                     if(poi[next_to_index].next_to[(i+4)%8]<-1){
                         poi[add_index].next_to[i]-=10000;
-                        break;
-                    }else if(poi[next_to_index].next_to[(i+4)%8]>=0){
+                    }else{
                         poi[next_to_index].next_to[(i+4)%8]=add_index;
                         poi[add_index].next_to[i]=next_to_index;
                         // search_connect_direction(next_to_index, false, (i+2)%8);
                         // search_connect_direction(next_to_index, false, (i+4)%8);
                         search_connect(next_to_index, false);
                         //reconnects.emplace_back(next_to_index);
-                        break;
                     }
-                    //assert(poi[next_to_index].next_to[(i+4)%8]=-1);
-                    poi[next_to_index].next_to[(i+4)%8]=add_index;
-                    poi[add_index].next_to[i]=next_to_index;
                     break;
                 }
                 pos+=d8[i];
@@ -493,16 +488,17 @@ void solve(){
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
         Paper new_paper=base;
-        while(1){
-            int sz=new_paper.connectable_list.size();
-            //cout<< sz <<endl;
-            if(sz==0) break;
-            int index=mt()%sz;
-            auto itr=new_paper.connectable_list.begin()+index;
-            new_paper.connectable_list.erase(itr);
-            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
-        }
+        // while(1){
+        //     int sz=new_paper.connectable_list.size();
+        //     //cout<< sz <<endl;
+        //     if(sz==0) break;
+        //     int index=mt()%sz;
+        //     auto itr=new_paper.connectable_list.begin()+index;
+        //     new_paper.connectable_list.erase(itr);
+        //     new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
+        // }
         //new_paper.print_out();
+        //cout<< "score: " << new_paper.correct_score() <<endl;
 
         if(best.score<new_paper.score){
             best=new_paper;

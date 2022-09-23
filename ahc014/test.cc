@@ -14,7 +14,7 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-int TEST_CASE=2000;
+int TEST_CASE=100;
 int testcase=0;
 string path = "testcases/";
 vector<string> file_in_paths;
@@ -58,8 +58,8 @@ double start_temp=50.0;
 double end_temp=10.0;
 
 // 乱数の準備
-auto seed=(unsigned)time(NULL);
-//int seed=2;
+// auto seed=(unsigned)time(NULL);
+int seed=1;
 mt19937 mt(seed);
 
 //入力
@@ -86,8 +86,14 @@ struct Pos{
     }
     int manhattan(Pos a){
         //cout<< "manhattan" <<endl;
-        assert(!a.out_of_bounce());
-        assert(!out_of_bounce());
+        if(a.out_of_bounce()){
+            a.print();
+            assert(!a.out_of_bounce());
+        }
+        if(out_of_bounce()){
+            print();
+            assert(!out_of_bounce());
+        }
         return (abs(a.x-x)+abs(a.y-y));
     }
 
@@ -99,6 +105,12 @@ struct Pos{
         Pos rtn;
         rtn.x=x+pos.x;
         rtn.y=y+pos.y;
+        return rtn;
+    }
+    Pos operator-(const Pos pos){
+        Pos rtn;
+        rtn.x=x-pos.x;
+        rtn.y=y-pos.y;
         return rtn;
     }
     void operator+=(const Pos pos){
@@ -137,27 +149,45 @@ struct Rect{
     // }
 };
 
+// struct ConeList{
+//     Pos pos;
+//     int dir, a, b, c, pos_wei;
+
+//     ConeList(){};
+//     ConeList(Pos in_pos, int in_dir, int in_a, int in_b, int in_c){
+//         pos=in_pos;
+//         dir=in_dir;
+//         a=in_a;
+//         b=in_b;
+//         c=in_c;
+//         pos_wei=pos.weight();
+//     }
+
+//     void print(){
+//         pos.print();
+//         cout<< dir SP << a SP << b SP << c SP << "weight: " << pos.weight() <<endl;
+//     }
+
+//     bool operator<(const ConeList &in) const{
+// 		return pos_wei!=in.pos_wei ? pos_wei>in.pos_wei : pos!=in.pos ? pos<in.pos : dir<in.dir;
+// 	};
+// };
+
 struct ConeList{
-    Pos pos;
-    int dir, a, b, c, pos_wei;
+    int a, dir;
 
     ConeList(){};
-    ConeList(Pos in_pos, int in_dir, int in_a, int in_b, int in_c){
-        pos=in_pos;
+    ConeList(int in_a, int in_dir){
         dir=in_dir;
         a=in_a;
-        b=in_b;
-        c=in_c;
-        pos_wei=pos.weight();
     }
 
     void print(){
-        pos.print();
-        cout<< dir SP << a SP << b SP << c SP << "weight: " << pos.weight() <<endl;
+        cout<< "id: " << a SP << "dir: " << dir <<endl;
     }
 
     bool operator<(const ConeList &in) const{
-		return pos_wei!=in.pos_wei ? pos_wei>in.pos_wei : pos!=in.pos ? pos<in.pos : dir<in.dir;
+		return a!=in.a ? a>in.a : dir<in.dir;
 	};
 };
 
@@ -187,7 +217,7 @@ struct Paper{
     vector<vector<int>> inv_board;
     vector<Point> poi;
     int score=0;
-    set<ConeList> connectable_list;
+    vector<ConeList> connectable_list;
     vector<Rect> rectangle;
 
     Paper(){
@@ -283,11 +313,11 @@ struct Paper{
             }
         }
     }
-    void random_search_amap(bool execute){
+    void random_search_amap(){
         int prev_score;
         do{
             prev_score=score;
-            search_connect_all(execute);
+            search_connect_all(true);
         }while(prev_score<score);
     }
     void search_connect_all(bool execute){
@@ -303,48 +333,55 @@ struct Paper{
             }
         }
     }
-    void search_connect(int index, bool execute){
+    void search_connect(int index, bool execute, int direction=-1){
         //cout<< "search_connect" <<endl;
-        int i=index;
-        int random_dir=mt()%8;
-        rep(dir, 8){
-            int j=(random_dir+dir)%8;
-            int a_index=poi[i].next_to[j];
-            int b_index=poi[i].next_to[(j+2)%8];
-            //出発点から伸びる2辺を確認
-            if(a_index>=0 && b_index>=0){
-                //出発点から伸びた2点を確認
-                if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) continue;
-                if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) continue;
-                point_can_be_add(a_index, b_index, i, j, execute);
-                assert(a_index<poi.size());
-                assert(b_index<poi.size());
+        if(direction!=-1){
+            search_connect_direction(index, execute, direction);
+        }else{
+            int random_dir=mt()%8;
+            rep(dir, 8){
+                search_connect_direction(index, execute, (random_dir+dir)%8);
             }
+        }
+    }
+    void search_connect_direction(int c, bool execute, int j){
+        int a_index=poi[c].next_to[j];
+        int b_index=poi[c].next_to[(j+2)%8];
+        //出発点から伸びる2辺を確認
+        if(a_index>=0 && b_index>=0){
+            //出発点から伸びた2点を確認
+            if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return;
+            if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return;
+            if(!(a_index<poi.size())){
+                cout<< a_index SP << poi.size() <<endl;
+                assert(a_index<int(poi.size()));
+            }
+            if(!(b_index<poi.size())){
+                cout<< b_index SP << poi.size() <<endl;
+                assert(b_index<int(poi.size()));
+            }
+            point_can_be_add(a_index, b_index, c, j, execute);
         }
     }
     void point_can_be_add(int a, int b, int c, int dir, bool execute){
         //cout<< "point_can_be_add" <<endl;
-        // if(c>70){
-        //     cout<< "70over" <<endl;
-        // }
-        double x=(poi[a].pos.x+poi[b].pos.x)/2.0;
-        double y=(poi[a].pos.y+poi[b].pos.y)/2.0;
-        x+=x-poi[c].pos.x;
-        y+=y-poi[c].pos.y;
-        Pos pos=Pos(round(x), round(y));
+        //cにベクトルcaとcbを作用させると目的地が出る
+        Pos pos=poi[c].pos+poi[a].pos-poi[c].pos+poi[b].pos-poi[c].pos;
         //方眼紙の領域外なら中断
         if(pos.out_of_bounce()) return;
         //置きたい場所にすでに点があったら中断
-        assert(0<=pos.x);
-        assert(0<=pos.y);
-        assert(pos.x<=n-1);
-        assert(pos.y<=n-1);
         if(inv_board[pos.x][pos.y]!=-1) return;
         //置きたい点と既存の点との間に点があったら中断
         int a_next_index=poi[a].next_to[(dir+2)%8];
         int b_next_index=poi[b].next_to[(dir)%8];
-        assert(a_next_index<int(poi.size()));
-        assert(b_next_index<int(poi.size()));
+        if(!(a_next_index<int(poi.size()))){
+            cout<< a_next_index SP << poi.size() <<endl;
+            assert(a_next_index<int(poi.size()));
+        }
+        if(!(b_next_index<int(poi.size()))){
+            cout<< b_next_index SP << poi.size() <<endl;
+            assert(b_next_index<int(poi.size()));
+        }
         //-1なら隣接点なしなのでOK
         bool a_line=(a_next_index==-1);
         bool b_line=(b_next_index==-1);
@@ -356,7 +393,8 @@ struct Paper{
                 execute_connect(pos, dir, a, b, c);
             }else{
                 //ConeList(pos, dir, a, b, c).print();
-                connectable_list.insert(ConeList(pos, dir, a, b, c));
+                //connectable_list.emplace_back(ConeList(pos, dir, a, b, c));
+                connectable_list.emplace_back(c, dir);
             }
         }
     }
@@ -365,6 +403,7 @@ struct Paper{
         add_point(pos);
         reconnect_line(dir);
         delete_next_to(dir, a, b, c);
+        search_connect(poi.size()-1, false);
     }
     void add_point(Pos position){
         //position.print();
@@ -380,7 +419,7 @@ struct Paper{
         //cout<< "reconnect_line" <<endl;
         dir=(dir+4)%8;
         int add_index=poi.size()-1;
-        vector<int> reconnects;
+        //vector<int> reconnects;
         rep(i, 8){
             if(i==dir || i==(dir+2)%8) continue;
             Pos pos=poi[add_index].pos+d8[i];
@@ -389,23 +428,20 @@ struct Paper{
                 if(next_to_index!=-1){
                     if(poi[next_to_index].next_to[(i+4)%8]<-1){
                         poi[add_index].next_to[i]-=10000;
-                        break;
-                    }else if(poi[next_to_index].next_to[(i+4)%8]>=0){
+                    }else{
                         poi[next_to_index].next_to[(i+4)%8]=add_index;
                         poi[add_index].next_to[i]=next_to_index;
-                        reconnects.emplace_back(next_to_index);
-                        break;
+                        // search_connect_direction(next_to_index, false, (i+2)%8);
+                        // search_connect_direction(next_to_index, false, (i+4)%8);
+                        search_connect(next_to_index, false);
+                        //reconnects.emplace_back(next_to_index);
                     }
-                    //assert(poi[next_to_index].next_to[(i+4)%8]=-1);
-                    poi[next_to_index].next_to[(i+4)%8]=add_index;
-                    poi[add_index].next_to[i]=next_to_index;
                     break;
                 }
                 pos+=d8[i];
             }
         }
         // rep(i, reconnects.size()) search_connect(reconnects[i], false);
-        // search_connect(add_index, false);
     }
     void delete_next_to(int dir, int a, int b, int c){
         //cout<< "delete_next_to" <<endl;
@@ -484,53 +520,28 @@ int solve(){
     base.search_connect_all(false);
     Paper best=base;
 
-    // while(1){
-    //     int flag=1;
-    //     best.connectable_list.clear();
-    //     best.search_connect_all(false);
-    //     while(!best.connectable_list.empty()){
-    //         //cout<< best.connectable_list.size() <<endl;
-    //         ConeList tmp=*best.connectable_list.begin();
-    //         best.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-    //         best.connectable_list.erase(best.connectable_list.begin());
-    //         flag=0;
-    //         break;
-    //     }
-    //     if(flag) break;
-    // }
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
-        //cout<< poi_size SP << best.poi.size() <<endl;
-        //poi_size=best.poi.size();
+
         Paper new_paper=base;
-        // if(mt()%2) new_paper.edge_search_all(n/4-1);
-        // while(1){
-        //     if(0 && mt()%(lp%18+2)){
-        //         new_paper.connectable_list.clear();
-        //         new_paper.search_connect_all(false);
-        //         if(!new_paper.connectable_list.empty()){
-        //             //cout<< best.connectable_list.size() <<endl;
-        //             ConeList tmp=*new_paper.connectable_list.begin();
-        //             new_paper.execute_connect(tmp.pos, tmp.dir, tmp.a, tmp.b, tmp.c);
-        //             //best.connectable_list.erase(best.connectable_list.begin());
-        //         }
-        //     }else{
-        //         //new_paper.random_search_amap(true);
-        //         int sco=new_paper.score;
-        //         new_paper.search_connect_all(true);
-        //         if(sco==new_paper.score) break;
-        //     }
-        // }
-        new_paper.random_search_amap(true);
+        while(1){
+            int sz=new_paper.connectable_list.size();
+            //cout<< sz <<endl;
+            if(sz==0) break;
+            int index=mt()%sz;
+            auto itr=new_paper.connectable_list.begin()+index;
+            new_paper.connectable_list.erase(itr);
+            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
+        }
+        //new_paper.print_out();
+        //cout<< "score: " << new_paper.correct_score() <<endl;
+
         if(best.score<new_paper.score){
             best=new_paper;
         }
-        
-        //if(poi_size==best.poi.size()) break;
-        //cout<< lp <<endl;
     }
 
     std::ofstream ofs(file_out_paths[testcase]);
