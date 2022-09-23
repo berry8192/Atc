@@ -71,6 +71,12 @@ struct Pos{
         rtn.y=y+pos.y;
         return rtn;
     }
+    Pos operator-(const Pos pos){
+        Pos rtn;
+        rtn.x=x-pos.x;
+        rtn.y=y-pos.y;
+        return rtn;
+    }
     void operator+=(const Pos pos){
         x+=pos.x;
         y+=pos.y;
@@ -107,27 +113,45 @@ struct Rect{
     // }
 };
 
+// struct ConeList{
+//     Pos pos;
+//     int dir, a, b, c, pos_wei;
+
+//     ConeList(){};
+//     ConeList(Pos in_pos, int in_dir, int in_a, int in_b, int in_c){
+//         pos=in_pos;
+//         dir=in_dir;
+//         a=in_a;
+//         b=in_b;
+//         c=in_c;
+//         pos_wei=pos.weight();
+//     }
+
+//     void print(){
+//         pos.print();
+//         cout<< dir SP << a SP << b SP << c SP << "weight: " << pos.weight() <<endl;
+//     }
+
+//     bool operator<(const ConeList &in) const{
+// 		return pos_wei!=in.pos_wei ? pos_wei>in.pos_wei : pos!=in.pos ? pos<in.pos : dir<in.dir;
+// 	};
+// };
+
 struct ConeList{
-    Pos pos;
-    int dir, a, b, c, pos_wei;
+    int a, dir;
 
     ConeList(){};
-    ConeList(Pos in_pos, int in_dir, int in_a, int in_b, int in_c){
-        pos=in_pos;
+    ConeList(int in_a, int in_dir){
         dir=in_dir;
         a=in_a;
-        b=in_b;
-        c=in_c;
-        pos_wei=pos.weight();
     }
 
     void print(){
-        pos.print();
-        cout<< dir SP << a SP << b SP << c SP << "weight: " << pos.weight() <<endl;
+        cout<< "id: " << a SP << "dir: " << dir <<endl;
     }
 
     bool operator<(const ConeList &in) const{
-		return pos_wei!=in.pos_wei ? pos_wei>in.pos_wei : pos!=in.pos ? pos<in.pos : dir<in.dir;
+		return a!=in.a ? a>in.a : dir<in.dir;
 	};
 };
 
@@ -157,7 +181,6 @@ struct Paper{
     vector<vector<int>> inv_board;
     vector<Point> poi;
     int score=0;
-    vector<ConeList> connectable_list;
     vector<ConeList> connectable_list;
     vector<Rect> rectangle;
 
@@ -285,15 +308,14 @@ struct Paper{
             }
         }
     }
-    void search_connect_direction(int i, bool execute, int j){
-        int a_index=poi[i].next_to[j];
-        int b_index=poi[i].next_to[(j+2)%8];
+    void search_connect_direction(int c, bool execute, int j){
+        int a_index=poi[c].next_to[j];
+        int b_index=poi[c].next_to[(j+2)%8];
         //出発点から伸びる2辺を確認
         if(a_index>=0 && b_index>=0){
             //出発点から伸びた2点を確認
             if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return;
             if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return;
-            point_can_be_add(a_index, b_index, i, j, execute);
             if(!(a_index<poi.size())){
                 cout<< a_index SP << poi.size() <<endl;
                 assert(a_index<int(poi.size()));
@@ -302,25 +324,16 @@ struct Paper{
                 cout<< b_index SP << poi.size() <<endl;
                 assert(b_index<int(poi.size()));
             }
+            point_can_be_add(a_index, b_index, c, j, execute);
         }
     }
     void point_can_be_add(int a, int b, int c, int dir, bool execute){
         //cout<< "point_can_be_add" <<endl;
-        // if(c>70){
-        //     cout<< "70over" <<endl;
-        // }
-        double x=(poi[a].pos.x+poi[b].pos.x)/2.0;
-        double y=(poi[a].pos.y+poi[b].pos.y)/2.0;
-        x+=x-poi[c].pos.x;
-        y+=y-poi[c].pos.y;
-        Pos pos=Pos(round(x), round(y));
+        //cにベクトルcaとcbを作用させると目的地が出る
+        Pos pos=poi[c].pos+poi[a].pos-poi[c].pos+poi[b].pos-poi[c].pos;
         //方眼紙の領域外なら中断
         if(pos.out_of_bounce()) return;
         //置きたい場所にすでに点があったら中断
-        assert(0<=pos.x);
-        assert(0<=pos.y);
-        assert(pos.x<=n-1);
-        assert(pos.y<=n-1);
         if(inv_board[pos.x][pos.y]!=-1) return;
         //置きたい点と既存の点との間に点があったら中断
         int a_next_index=poi[a].next_to[(dir+2)%8];
@@ -344,7 +357,8 @@ struct Paper{
                 execute_connect(pos, dir, a, b, c);
             }else{
                 //ConeList(pos, dir, a, b, c).print();
-                connectable_list.emplace_back(ConeList(pos, dir, a, b, c));
+                //connectable_list.emplace_back(ConeList(pos, dir, a, b, c));
+                connectable_list.emplace_back(c, dir);
             }
         }
     }
@@ -466,11 +480,10 @@ void solve(){
     Paper base;
     base.init();
     base.search_connect_all(false);
-    cout<< base.connectable_list.size() <<endl;
-    for(auto itr=base.connectable_list.begin();itr!=base.connectable_list.end();itr++){
-        ConeList tmp=*itr;
-        tmp.print();
-    }
+    // cout<< base.connectable_list.size() <<endl;
+    // rep(i, base.connectable_list.size()){
+    //     base.connectable_list[i].print();
+    // }
     Paper best=base;
 
     int lp=0;
@@ -482,14 +495,14 @@ void solve(){
         Paper new_paper=base;
         while(1){
             int sz=new_paper.connectable_list.size();
-            cout<< sz <<endl;
+            //cout<< sz <<endl;
             if(sz==0) break;
             int index=mt()%sz;
             auto itr=new_paper.connectable_list.begin()+index;
             new_paper.connectable_list.erase(itr);
-            new_paper.search_connect(index, true);
+            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
         }
-        new_paper.print_out();
+        //new_paper.print_out();
 
         if(best.score<new_paper.score){
             best=new_paper;
@@ -497,8 +510,8 @@ void solve(){
     }
 
     best.print_out();
-    // cout<< "lp:" << lp <<endl;
-    // cout<< best.score SP << best.correct_score() <<endl;
+    cout<< "lp:" << lp <<endl;
+    cout<< best.score SP << best.correct_score() <<endl;
 }
 
 int main(){
