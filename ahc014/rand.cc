@@ -156,11 +156,11 @@ struct ConeList{
 };
 
 struct Point{
-    vector<int> par;
+    vector<int> depend_on;
     Pos pos;
     int next_to[8]={-1, -1, -1, -1, -1, -1, -1, -1};
     //8bit分をintで持つ
-    int connect=0;
+    //int connect=0;
 
     Point(){};
     Point(Pos position){
@@ -168,8 +168,8 @@ struct Point{
     }
 
     void print(){
-        cout<< "parent: ";
-        rep(i, par.size()) cout<< par[i] SP;
+        cout<< "depend on: ";
+        rep(i, depend_on.size()) cout<< depend_on[i] SP;
         pos.print();
         cout<< " nextto: ";
         rep(i, 8) cout<< next_to[i] SP;
@@ -183,6 +183,7 @@ struct Paper{
     int score=0;
     vector<ConeList> connectable_list;
     vector<Rect> rectangle;
+    set<int> dependings;
 
     Paper(){
     }
@@ -368,6 +369,9 @@ struct Paper{
         reconnect_line(dir);
         delete_next_to(dir, a, b, c);
         search_connect(poi.size()-1, false);
+        poi[a].depend_on.emplace_back(poi.size()-1);
+        poi[b].depend_on.emplace_back(poi.size()-1);
+        poi[c].depend_on.emplace_back(poi.size()-1);
     }
     void add_point(Pos position){
         //position.print();
@@ -418,6 +422,26 @@ struct Paper{
         poi[b].next_to[dir]-=10000;
         poi[b].next_to[(dir+6)%8]-=10000;
         poi[c].next_to[(dir+2)%8]-=10000;
+    }
+    void delete_connect(int index){
+        //cout<< "delete connect" <<endl;
+        search_depending(index);
+        cout<< dependings.size() <<endl;
+    }
+    void search_depending(int index){
+        if(index<0){
+            assert(index>=0);
+        }
+        if(index>=poi.size()){
+            assert(index<poi.size());
+        }
+        rep(i, poi[index].depend_on.size()){
+            int tmp=poi[index].depend_on[i];
+            if(dependings.find(tmp)==dependings.end()){
+                dependings.insert(tmp);
+                search_depending(tmp);
+            }
+        }
     }
 
     int correct_score(){
@@ -480,6 +504,7 @@ void solve(){
     //     base.connectable_list[i].print();
     // }
     Paper best=base;
+    Paper new_paper=base;
 
     int lp=0;
     while (true) { // 時間の許す限り回す
@@ -487,18 +512,26 @@ void solve(){
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
-        Paper new_paper=base;
-        // while(1){
-        //     int sz=new_paper.connectable_list.size();
-        //     //cout<< sz <<endl;
-        //     if(sz==0) break;
-        //     int index=mt()%sz;
-        //     auto itr=new_paper.connectable_list.begin()+index;
-        //     new_paper.connectable_list.erase(itr);
-        //     new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
-        // }
-        //new_paper.print_out();
-        //cout<< "score: " << new_paper.correct_score() <<endl;
+        if(new_paper.poi.size()>m){
+            int index=mt()%new_paper.poi.size();
+            new_paper.delete_connect(index);
+            // rep(i, new_paper.poi.size()){
+            //     new_paper.poi[i].print();
+            //     new_paper.delete_connect(i);
+            // }
+        }
+
+        while(1){
+            int sz=new_paper.connectable_list.size();
+            //cout<< sz <<endl;
+            if(sz==0) break;
+            int index=mt()%sz;
+            auto itr=new_paper.connectable_list.begin()+index;
+            new_paper.connectable_list.erase(itr);
+            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
+        }
+        // new_paper.print_out();
+        // cout<< "score: " << new_paper.correct_score() <<endl;
 
         if(best.score<new_paper.score){
             best=new_paper;
