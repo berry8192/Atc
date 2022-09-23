@@ -159,7 +159,8 @@ struct ConeList{
 };
 
 struct Point{
-    vector<int> depend_on;
+    vector<int> depends;
+    set<int> depend_on;
     Pos pos;
     int next_to[8]={-1, -1, -1, -1, -1, -1, -1, -1};
     bool enable;
@@ -174,7 +175,7 @@ struct Point{
 
     void print(){
         cout<< "depend on: ";
-        rep(i, depend_on.size()) cout<< depend_on[i] SP;
+        for(auto itr = depend_on.begin(); itr != depend_on.end(); ++itr) cout<< *itr SP;
         pos.print();
         cout<< " nextto: ";
         rep(i, 8) cout<< next_to[i] SP;
@@ -344,14 +345,17 @@ struct Paper{
         //置きたい点と既存の点との間に点があったら中断
         int a_next_index=poi[a].next_to[(dir+2)%8];
         int b_next_index=poi[b].next_to[(dir)%8];
-        if(!(a_next_index<int(poi.size()))){
-            cout<< a_next_index SP << poi.size() <<endl;
-            assert(a_next_index<int(poi.size()));
-        }
-        if(!(b_next_index<int(poi.size()))){
-            cout<< b_next_index SP << poi.size() <<endl;
-            assert(b_next_index<int(poi.size()));
-        }
+        //すでに消えた点なら中断
+        if(a_next_index>=int(poi.size())) return;
+        if(b_next_index>=int(poi.size())) return;
+        // if(!(a_next_index<int(poi.size()))){
+        //     cout<< a_next_index SP << poi.size() <<endl;
+        //     assert(a_next_index<int(poi.size()));
+        // }
+        // if(!(b_next_index<int(poi.size()))){
+        //     cout<< b_next_index SP << poi.size() <<endl;
+        //     assert(b_next_index<int(poi.size()));
+        // }
         //-1なら隣接点なしなのでOK
         bool a_line=(a_next_index==-1);
         bool b_line=(b_next_index==-1);
@@ -365,6 +369,7 @@ struct Paper{
                 //ConeList(pos, dir, a, b, c).print();
                 //connectable_list.emplace_back(ConeList(pos, dir, a, b, c));
                 connectable_list.emplace_back(c, dir);
+                //if(c==38 && dir==6) cout<< "in Q" <<endl;
             }
         }
     }
@@ -374,9 +379,16 @@ struct Paper{
         reconnect_line(dir);
         delete_next_to(dir, a, b, c);
         search_connect(poi.size()-1, false);
-        poi[a].depend_on.emplace_back(poi.size()-1);
-        poi[b].depend_on.emplace_back(poi.size()-1);
-        poi[c].depend_on.emplace_back(poi.size()-1);
+        search_connect(a, false);
+        search_connect(b, false);
+        poi[a].depend_on.insert(poi.size()-1);
+        poi[b].depend_on.insert(poi.size()-1);
+        poi[c].depend_on.insert(poi.size()-1);
+        poi[poi.size()-1].depends.emplace_back(a);
+        poi[poi.size()-1].depends.emplace_back(b);
+        poi[poi.size()-1].depends.emplace_back(c);
+        // poi[poi.size()-1].print();
+        // cout<< " score: " << correct_score() <<endl;
     }
     void add_point(Pos position){
         //position.print();
@@ -398,21 +410,20 @@ struct Paper{
             int next_to_index=straight_search_next(add_index, i);
             if(next_to_index!=-1){
                 if(poi[next_to_index].next_to[(i+4)%8]<-1){
-                    poi[add_index].next_to[i]=-imax;
+                    poi[add_index].next_to[i]=next_to_index-10000;
                 }else{
                     poi[next_to_index].next_to[(i+4)%8]=add_index;
                     poi[add_index].next_to[i]=next_to_index;
                     // search_connect_direction(next_to_index, false, (i+2)%8);
                     // search_connect_direction(next_to_index, false, (i+4)%8);
-                    search_connect(next_to_index, false);
                     //reconnects.emplace_back(next_to_index);
                 }
+                search_connect(next_to_index, false);
             }
         }
         // rep(i, reconnects.size()) search_connect(reconnects[i], false);
     }
     int straight_search_next(int index, int direction){
-        int rtn=-1;
         Pos pos=poi[index].pos+d8[direction];
         while(!pos.out_of_bounce()){
             int next_to_index=inv_board[pos.x][pos.y];
@@ -425,41 +436,51 @@ struct Paper{
     }
     void delete_next_to(int dir, int a, int b, int c){
         //cout<< "delete_next_to" <<endl;
-        poi[c].next_to[dir]=-imax;
-        poi[a].next_to[(dir+4)%8]=-imax;
-        poi[a].next_to[(dir+2)%8]=-imax;
+        poi[c].next_to[dir]=a-10000;
+        poi[a].next_to[(dir+4)%8]=c-10000;
+        poi[a].next_to[(dir+2)%8]=poi.size()-1-10000;
         //新規追加の点は一番最後にいる
-        poi[poi.size()-1].next_to[(dir+6)%8]=-imax;
-        poi[poi.size()-1].next_to[(dir+4)%8]=-imax;
-        poi[b].next_to[dir]=-imax;
-        poi[b].next_to[(dir+6)%8]=-imax;
-        poi[c].next_to[(dir+2)%8]=-imax;
+        poi[poi.size()-1].next_to[(dir+6)%8]=a-10000;
+        poi[poi.size()-1].next_to[(dir+4)%8]=b-10000;
+        poi[b].next_to[dir]=poi.size()-1-10000;
+        poi[b].next_to[(dir+6)%8]=c-10000;
+        poi[c].next_to[(dir+2)%8]=b-10000;
     }
     void delete_connect(int index){
         //indexで渡ってきた点は消去しない
-        //cout<< "delete connect" <<endl;
+        //cout<< "delete connect: " << index <<endl;
         dependings.clear();
         search_depending(index);
-        //cout<< dependings.size() <<endl;
+        //cout<< "delete point " << dependings.size() <<endl;
         vector<ConeList> influenced;
         for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
             int delete_index=*itr;
             if(delete_index<m){
+                cout<< delete_index SP << m <<endl;
                 assert(delete_index>=m);
+            }
+            if(delete_index>=int(poi.size())){
+                continue;
+                // cout<< delete_index SP << poi.size() <<endl;
+                // assert(delete_index<int(poi.size()));
             }
             inv_board[poi[delete_index].pos.x][poi[delete_index].pos.y]=-1;
             poi[delete_index].enable=false;
             score-=poi[delete_index].pos.weight();
             rep(i, 8){
                 int next_to_index=poi[delete_index].next_to[i];
+                if(next_to_index<-1) next_to_index+=10000;
                 if(next_to_index>=int(poi.size())){
-                    assert(next_to_index<int(poi.size()));
+                    continue;
+                    //assert(next_to_index<int(poi.size()));
                 }
                 if(next_to_index>=0 && dependings.find(next_to_index)==dependings.end()){
                     //poi[next_to_index].next_to[(i+4)%8]=-1;
                     influenced.emplace_back(next_to_index, (i+4)%8);
                 }
             }
+            poi[delete_index].depend_on.clear();
+            delete_depends(delete_index);
         }
         replace_poi();
         replace_ConeList();
@@ -472,16 +493,19 @@ struct Paper{
         }
     }
     void search_depending(int index){
+        //cout<< "search_depending: " << index <<endl;
         if(index<0){
             assert(index>=0);
         }
         if(index>=poi.size()){
-            assert(index<poi.size());
+            return;
+            //assert(index<poi.size());
         }
-        rep(i, poi[index].depend_on.size()){
-            int tmp=poi[index].depend_on[i];
+        for(auto itr = poi[index].depend_on.begin(); itr != poi[index].depend_on.end(); ++itr){
+            int tmp=*itr;
             if(dependings.find(tmp)==dependings.end()){
                 dependings.insert(tmp);
+                //cout<< tmp SP;
                 search_depending(tmp);
             }
         }
@@ -513,6 +537,14 @@ struct Paper{
             if(dependings.find(replace[i].index)==dependings.end()){
                 rectangle.emplace_back(replace[i]);
             }
+        }
+    }
+    void delete_depends(int index){
+        //cout<< "delete_depends: " << index <<endl;
+        rep(i, poi[index].depends.size()){
+            set<int> depended_point=poi[poi[index].depends[i]].depend_on;
+            //assert(depended_point.find(index)==depended_point.end());
+            depended_point.erase(index);
         }
     }
 
@@ -568,32 +600,38 @@ void solve(){
     start = chrono::system_clock::now();
 
     inpt();
-    Paper base;
-    base.init();
-    base.search_connect_all(false);
+    Paper best;
+    best.init();
+    best.random_search_amap();
+    cout<< "first score" SP << best.correct_score() <<endl;
+    cout<< "m: " << m SP << "points: " << best.poi.size() <<endl;
     // cout<< base.connectable_list.size() <<endl;
     // rep(i, base.connectable_list.size()){
     //     base.connectable_list[i].print();
     // }
-    vector<Rect> best_rect=base.rectangle;
-    int best_score=base.score;
-    Paper new_paper=base;
+    // vector<Rect> best_rect=base.rectangle;
+    // int best_score=base.score;
 
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
+        if(lp==100) break;
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
+        Paper new_paper=best;
+
         if(new_paper.poi.size()>m){
-            int index=mt()%new_paper.poi.size();
+            //int index=mt()%new_paper.poi.size();
+            int index=mt()%m;
             new_paper.delete_connect(index);
             // rep(i, new_paper.poi.size()){
             //     new_paper.poi[i].print();
             //     new_paper.delete_connect(i);
             // }
-            cout<< "deleted " << index <<endl;
-            new_paper.print_out();
+            //cout<< "deleted " << index <<endl;
+            // new_paper.print_out();
+            //cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
         }
 
         while(1){
@@ -601,24 +639,28 @@ void solve(){
             //cout<< sz <<endl;
             if(sz==0) break;
             int index=mt()%sz;
+            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
             auto itr=new_paper.connectable_list.begin()+index;
             new_paper.connectable_list.erase(itr);
-            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
         }
-        cout<< "connected" <<endl;
-        new_paper.print_out();
-        // cout<< "score: " << new_paper.correct_score() <<endl;
+        //cout<< "connected" <<endl;
+        // new_paper.print_out();
+        cout<< "score: " << new_paper.correct_score() <<endl;
 
-        if(best_score<new_paper.score){
-            best_rect=new_paper.rectangle;
-            best_score=new_paper.score;
+        // if(best_score<new_paper.score){
+        //     best_rect=new_paper.rectangle;
+        //     best_score=new_paper.score;
+        // }
+
+        if(best.score<new_paper.score){
+            best=new_paper;
+            cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
         }
     }
 
-    cout<< best_rect.size() <<endl;
-    rep(i, best_rect.size()) best_rect[i].print();
-    cout<< "lp:" << lp <<endl;
-    cout<< best_score SP << round(1000000.0*n*n/m*best_score/s) <<endl;
+    best.print_out();
+    // cout<< "lp:" << lp <<endl;
+    // cout<< best.score SP << best.correct_score() <<endl;
 }
 
 int main(){
