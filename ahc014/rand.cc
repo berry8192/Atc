@@ -95,14 +95,17 @@ struct Rect{
     Pos p2;
     Pos p3;
     Pos p4;
+    ll index;
 
     Rect(){};
-    Rect(Pos point1, Pos point2, Pos point3, Pos point4){
+    Rect(Pos point1, Pos point2, Pos point3, Pos point4, int in_index){
         //cout<< "Rect" <<endl;
         p1=point1;
         p2=point2;
         p3=point3;
         p4=point4;
+        index=in_index;
+
     }
 
     void print(){
@@ -159,12 +162,14 @@ struct Point{
     vector<int> depend_on;
     Pos pos;
     int next_to[8]={-1, -1, -1, -1, -1, -1, -1, -1};
+    bool enable;
     //8bit分をintで持つ
     //int connect=0;
 
     Point(){};
     Point(Pos position){
         pos=position;
+        enable=true;
     }
 
     void print(){
@@ -364,7 +369,7 @@ struct Paper{
         }
     }
     void execute_connect(Pos pos, int dir, int a, int b, int c){
-        rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos));
+        rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos, poi.size()-1));
         add_point(pos);
         reconnect_line(dir);
         delete_next_to(dir, a, b, c);
@@ -390,43 +395,81 @@ struct Paper{
         //vector<int> reconnects;
         rep(i, 8){
             if(i==dir || i==(dir+2)%8) continue;
-            Pos pos=poi[add_index].pos+d8[i];
-            while(!pos.out_of_bounce()){
-                int next_to_index=inv_board[pos.x][pos.y];
-                if(next_to_index!=-1){
-                    if(poi[next_to_index].next_to[(i+4)%8]<-1){
-                        poi[add_index].next_to[i]-=10000;
-                    }else{
-                        poi[next_to_index].next_to[(i+4)%8]=add_index;
-                        poi[add_index].next_to[i]=next_to_index;
-                        // search_connect_direction(next_to_index, false, (i+2)%8);
-                        // search_connect_direction(next_to_index, false, (i+4)%8);
-                        search_connect(next_to_index, false);
-                        //reconnects.emplace_back(next_to_index);
-                    }
-                    break;
+            int next_to_index=straight_search_next(add_index, i);
+            if(next_to_index!=-1){
+                if(poi[next_to_index].next_to[(i+4)%8]<-1){
+                    poi[add_index].next_to[i]=-imax;
+                }else{
+                    poi[next_to_index].next_to[(i+4)%8]=add_index;
+                    poi[add_index].next_to[i]=next_to_index;
+                    // search_connect_direction(next_to_index, false, (i+2)%8);
+                    // search_connect_direction(next_to_index, false, (i+4)%8);
+                    search_connect(next_to_index, false);
+                    //reconnects.emplace_back(next_to_index);
                 }
-                pos+=d8[i];
             }
         }
         // rep(i, reconnects.size()) search_connect(reconnects[i], false);
     }
+    int straight_search_next(int index, int direction){
+        int rtn=-1;
+        Pos pos=poi[index].pos+d8[direction];
+        while(!pos.out_of_bounce()){
+            int next_to_index=inv_board[pos.x][pos.y];
+            if(next_to_index!=-1){
+                return next_to_index;
+            }
+            pos+=d8[direction];
+        }
+        return -1;
+    }
     void delete_next_to(int dir, int a, int b, int c){
         //cout<< "delete_next_to" <<endl;
-        poi[c].next_to[dir]-=10000;
-        poi[a].next_to[(dir+4)%8]-=10000;
-        poi[a].next_to[(dir+2)%8]-=10000;
+        poi[c].next_to[dir]=-imax;
+        poi[a].next_to[(dir+4)%8]=-imax;
+        poi[a].next_to[(dir+2)%8]=-imax;
         //新規追加の点は一番最後にいる
-        poi[poi.size()-1].next_to[(dir+6)%8]-=10000;
-        poi[poi.size()-1].next_to[(dir+4)%8]-=10000;
-        poi[b].next_to[dir]-=10000;
-        poi[b].next_to[(dir+6)%8]-=10000;
-        poi[c].next_to[(dir+2)%8]-=10000;
+        poi[poi.size()-1].next_to[(dir+6)%8]=-imax;
+        poi[poi.size()-1].next_to[(dir+4)%8]=-imax;
+        poi[b].next_to[dir]=-imax;
+        poi[b].next_to[(dir+6)%8]=-imax;
+        poi[c].next_to[(dir+2)%8]=-imax;
     }
     void delete_connect(int index){
+        //indexで渡ってきた点は消去しない
         //cout<< "delete connect" <<endl;
+        dependings.clear();
         search_depending(index);
-        cout<< dependings.size() <<endl;
+        //cout<< dependings.size() <<endl;
+        vector<ConeList> influenced;
+        for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
+            int delete_index=*itr;
+            if(delete_index<m){
+                assert(delete_index>=m);
+            }
+            inv_board[poi[delete_index].pos.x][poi[delete_index].pos.y]=-1;
+            poi[delete_index].enable=false;
+            score-=poi[delete_index].pos.weight();
+            rep(i, 8){
+                int next_to_index=poi[delete_index].next_to[i];
+                if(next_to_index>=int(poi.size())){
+                    assert(next_to_index<int(poi.size()));
+                }
+                if(next_to_index>=0 && dependings.find(next_to_index)==dependings.end()){
+                    //poi[next_to_index].next_to[(i+4)%8]=-1;
+                    influenced.emplace_back(next_to_index, (i+4)%8);
+                }
+            }
+        }
+        replace_poi();
+        replace_ConeList();
+        replace_rectangle();
+        int a, dir;
+        rep(i, influenced.size()){
+            a=influenced[i].a;
+            dir=influenced[i].dir;
+            poi[a].next_to[dir]=straight_search_next(a, dir);
+        }
     }
     void search_depending(int index){
         if(index<0){
@@ -440,6 +483,35 @@ struct Paper{
             if(dependings.find(tmp)==dependings.end()){
                 dependings.insert(tmp);
                 search_depending(tmp);
+            }
+        }
+    }
+    void replace_poi(){
+        vector<Point> replace=poi;
+        poi.clear();
+        rep(i, replace.size()){
+            if(replace[i].enable){
+                poi.emplace_back(replace[i]);
+            }
+        }
+    }
+    void replace_ConeList(){
+        //高速化するなら長さ3721のConeListをpaperに持たせて添え字がindexになるようにする
+        vector<ConeList> replace=connectable_list;
+        connectable_list.clear();
+        rep(i, replace.size()){
+            if(dependings.find(replace[i].a)==dependings.end()){
+                connectable_list.emplace_back(replace[i]);
+            }
+        }
+    }
+    void replace_rectangle(){
+        //高速化するなら長さ3721のRectをpaperに持たせて添え字がindexになるようにする
+        vector<Rect> replace=rectangle;
+        rectangle.clear();
+        rep(i, replace.size()){
+            if(dependings.find(replace[i].index)==dependings.end()){
+                rectangle.emplace_back(replace[i]);
             }
         }
     }
@@ -503,7 +575,8 @@ void solve(){
     // rep(i, base.connectable_list.size()){
     //     base.connectable_list[i].print();
     // }
-    Paper best=base;
+    vector<Rect> best_rect=base.rectangle;
+    int best_score=base.score;
     Paper new_paper=base;
 
     int lp=0;
@@ -519,6 +592,8 @@ void solve(){
             //     new_paper.poi[i].print();
             //     new_paper.delete_connect(i);
             // }
+            cout<< "deleted " << index <<endl;
+            new_paper.print_out();
         }
 
         while(1){
@@ -530,17 +605,20 @@ void solve(){
             new_paper.connectable_list.erase(itr);
             new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
         }
-        // new_paper.print_out();
+        cout<< "connected" <<endl;
+        new_paper.print_out();
         // cout<< "score: " << new_paper.correct_score() <<endl;
 
-        if(best.score<new_paper.score){
-            best=new_paper;
+        if(best_score<new_paper.score){
+            best_rect=new_paper.rectangle;
+            best_score=new_paper.score;
         }
     }
 
-    best.print_out();
+    cout<< best_rect.size() <<endl;
+    rep(i, best_rect.size()) best_rect[i].print();
     cout<< "lp:" << lp <<endl;
-    cout<< best.score SP << best.correct_score() <<endl;
+    cout<< best_score SP << round(1000000.0*n*n/m*best_score/s) <<endl;
 }
 
 int main(){
