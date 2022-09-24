@@ -324,12 +324,14 @@ struct Paper{
             if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return;
             if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return;
             if(!(a_index<poi.size())){
-                cout<< a_index SP << poi.size() <<endl;
-                assert(a_index<int(poi.size()));
+                return;
+                // cout<< a_index SP << poi.size() <<endl;
+                // assert(a_index<int(poi.size()));
             }
             if(!(b_index<poi.size())){
-                cout<< b_index SP << poi.size() <<endl;
-                assert(b_index<int(poi.size()));
+                return;
+                // cout<< b_index SP << poi.size() <<endl;
+                // assert(b_index<int(poi.size()));
             }
             point_can_be_add(a_index, b_index, c, j, execute);
         }
@@ -455,6 +457,8 @@ struct Paper{
         vector<ConeList> influenced;
         for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
             int delete_index=*itr;
+            poi[delete_index].print();
+            cout SP << delete_index <<endl;
             if(delete_index<m){
                 cout<< delete_index SP << m <<endl;
                 assert(delete_index>=m);
@@ -600,52 +604,74 @@ void solve(){
     start = chrono::system_clock::now();
 
     inpt();
-    Paper best;
-    best.init();
-    best.random_search_amap();
-    cout<< "first score" SP << best.correct_score() <<endl;
-    cout<< "m: " << m SP << "points: " << best.poi.size() <<endl;
+    Paper base, best;
+    base.init();
+    base.random_search_amap();
+    best=base;
+    // cout<< "first score" SP << best.correct_score() <<endl;
+    // cout<< "m: " << m SP << "points: " << best.poi.size() <<endl;
     // cout<< base.connectable_list.size() <<endl;
     // rep(i, base.connectable_list.size()){
     //     base.connectable_list[i].print();
     // }
     // vector<Rect> best_rect=base.rectangle;
     // int best_score=base.score;
+    base.print_out();
 
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
-        if(lp==100) break;
+        //if(lp%1000==0) cout<< lp <<endl;
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
-        Paper new_paper=best;
+        Paper new_paper=base;
 
-        if(new_paper.poi.size()>m){
-            //int index=mt()%new_paper.poi.size();
-            int index=mt()%m;
-            new_paper.delete_connect(index);
-            // rep(i, new_paper.poi.size()){
-            //     new_paper.poi[i].print();
-            //     new_paper.delete_connect(i);
-            // }
-            //cout<< "deleted " << index <<endl;
-            // new_paper.print_out();
-            //cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+        rep(i, 1){
+            if(new_paper.poi.size()>m){
+                //int index=mt()%new_paper.poi.size();
+                int index=mt()%m;
+                new_paper.delete_connect(index);
+                // rep(i, new_paper.poi.size()){
+                //     new_paper.poi[i].print();
+                //     new_paper.delete_connect(i);
+                // }
+                // cout<< "deleted " << index <<endl;
+                // new_paper.print_out();
+                // new_paper.print_board();
+                // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+                cout<< "point: " << new_paper.poi.size() <<endl;
+                new_paper.print_out();
+                while(1){
+                    
+                    int x, y;
+                    cin>> x >> y;
+                    new_paper.poi[x].print();
+                    // rep(i, new_paper.poi.size()){
+                    //     if(new_paper.poi[i].pos.x==x && new_paper.poi[i].pos.y==y){
+                    //         new_paper.poi[i].print();
+                    //     }
+                    // }
+                }
+            }
         }
 
-        while(1){
-            int sz=new_paper.connectable_list.size();
-            //cout<< sz <<endl;
-            if(sz==0) break;
-            int index=mt()%sz;
-            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
-            auto itr=new_paper.connectable_list.begin()+index;
-            new_paper.connectable_list.erase(itr);
-        }
-        //cout<< "connected" <<endl;
+        // while(1){
+        //     int sz=new_paper.connectable_list.size();
+        //     //cout<< sz <<endl;
+        //     if(sz==0) break;
+        //     int index=mt()%sz;
+        //     new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
+        //     auto itr=new_paper.connectable_list.begin()+index;
+        //     new_paper.connectable_list.erase(itr);
+        // }
+
+        new_paper.random_search_amap();
+
+        // cout<< "connected" <<endl;
         // new_paper.print_out();
-        cout<< "score: " << new_paper.correct_score() <<endl;
+        // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+        // cout<< "point: " << new_paper.poi.size() <<endl;
 
         // if(best_score<new_paper.score){
         //     best_rect=new_paper.rectangle;
@@ -654,7 +680,7 @@ void solve(){
 
         if(best.score<new_paper.score){
             best=new_paper;
-            cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+            cout<< "lp: " << lp SP << "new score: " << new_paper.correct_score() <<endl;
         }
     }
 
