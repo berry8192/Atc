@@ -324,14 +324,14 @@ struct Paper{
             if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return;
             if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return;
             if(!(a_index<poi.size())){
-                return;
-                // cout<< a_index SP << poi.size() <<endl;
-                // assert(a_index<int(poi.size()));
+                // return;
+                cout<< a_index SP << poi.size() <<endl;
+                assert(a_index<int(poi.size()));
             }
             if(!(b_index<poi.size())){
-                return;
-                // cout<< b_index SP << poi.size() <<endl;
-                // assert(b_index<int(poi.size()));
+                // return;
+                cout<< b_index SP << poi.size() <<endl;
+                assert(b_index<int(poi.size()));
             }
             point_can_be_add(a_index, b_index, c, j, execute);
         }
@@ -350,14 +350,14 @@ struct Paper{
         //すでに消えた点なら中断
         if(a_next_index>=int(poi.size())) return;
         if(b_next_index>=int(poi.size())) return;
-        // if(!(a_next_index<int(poi.size()))){
-        //     cout<< a_next_index SP << poi.size() <<endl;
-        //     assert(a_next_index<int(poi.size()));
-        // }
-        // if(!(b_next_index<int(poi.size()))){
-        //     cout<< b_next_index SP << poi.size() <<endl;
-        //     assert(b_next_index<int(poi.size()));
-        // }
+        if(!(a_next_index<int(poi.size()))){
+            cout<< a_next_index SP << poi.size() <<endl;
+            assert(a_next_index<int(poi.size()));
+        }
+        if(!(b_next_index<int(poi.size()))){
+            cout<< b_next_index SP << poi.size() <<endl;
+            assert(b_next_index<int(poi.size()));
+        }
         //-1なら隣接点なしなのでOK
         bool a_line=(a_next_index==-1);
         bool b_line=(b_next_index==-1);
@@ -453,20 +453,21 @@ struct Paper{
         //cout<< "delete connect: " << index <<endl;
         dependings.clear();
         search_depending(index);
-        //cout<< "delete point " << dependings.size() <<endl;
+        poi[index].depend_on.clear();
+        cout<< "delete point " << dependings.size() <<endl;
         vector<ConeList> influenced;
         for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
             int delete_index=*itr;
-            poi[delete_index].print();
-            cout SP << delete_index <<endl;
+            // poi[delete_index].print();
+            // cout<< delete_index <<endl;
             if(delete_index<m){
                 cout<< delete_index SP << m <<endl;
                 assert(delete_index>=m);
             }
             if(delete_index>=int(poi.size())){
-                continue;
-                // cout<< delete_index SP << poi.size() <<endl;
-                // assert(delete_index<int(poi.size()));
+                // continue;
+                cout<< delete_index SP << poi.size() <<endl;
+                assert(delete_index<int(poi.size()));
             }
             inv_board[poi[delete_index].pos.x][poi[delete_index].pos.y]=-1;
             poi[delete_index].enable=false;
@@ -475,10 +476,10 @@ struct Paper{
                 int next_to_index=poi[delete_index].next_to[i];
                 if(next_to_index<-1) next_to_index+=10000;
                 if(next_to_index>=int(poi.size())){
-                    continue;
-                    //assert(next_to_index<int(poi.size()));
+                    // continue;
+                    assert(next_to_index<int(poi.size()));
                 }
-                if(next_to_index>=0 && dependings.find(next_to_index)==dependings.end()){
+                if(dependings.find(next_to_index)==dependings.end()){
                     //poi[next_to_index].next_to[(i+4)%8]=-1;
                     influenced.emplace_back(next_to_index, (i+4)%8);
                 }
@@ -486,7 +487,8 @@ struct Paper{
             poi[delete_index].depend_on.clear();
             delete_depends(delete_index);
         }
-        replace_poi();
+        //そういえば詰めるとindexがずれる
+        // replace_poi();
         replace_ConeList();
         replace_rectangle();
         int a, dir;
@@ -502,8 +504,8 @@ struct Paper{
             assert(index>=0);
         }
         if(index>=poi.size()){
-            return;
-            //assert(index<poi.size());
+            // return;
+            assert(index<poi.size());
         }
         for(auto itr = poi[index].depend_on.begin(); itr != poi[index].depend_on.end(); ++itr){
             int tmp=*itr;
@@ -545,9 +547,11 @@ struct Paper{
     }
     void delete_depends(int index){
         //cout<< "delete_depends: " << index <<endl;
+        assert(!poi[index].enable);
         rep(i, poi[index].depends.size()){
             set<int> depended_point=poi[poi[index].depends[i]].depend_on;
             //assert(depended_point.find(index)==depended_point.end());
+            //if((depended_point.find(index)!=depended_point.end())) cout<< "depended delete" <<endl;
             depended_point.erase(index);
         }
     }
@@ -628,32 +632,30 @@ void solve(){
         Paper new_paper=base;
 
         rep(i, 1){
-            if(new_paper.poi.size()>m){
-                //int index=mt()%new_paper.poi.size();
-                int index=mt()%m;
-                new_paper.delete_connect(index);
-                // rep(i, new_paper.poi.size()){
-                //     new_paper.poi[i].print();
-                //     new_paper.delete_connect(i);
-                // }
-                // cout<< "deleted " << index <<endl;
-                // new_paper.print_out();
-                // new_paper.print_board();
-                // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
-                cout<< "point: " << new_paper.poi.size() <<endl;
-                new_paper.print_out();
-                while(1){
-                    
-                    int x, y;
-                    cin>> x >> y;
-                    new_paper.poi[x].print();
-                    // rep(i, new_paper.poi.size()){
-                    //     if(new_paper.poi[i].pos.x==x && new_paper.poi[i].pos.y==y){
-                    //         new_paper.poi[i].print();
-                    //     }
-                    // }
-                }
-            }
+            //int index=mt()%new_paper.poi.size();
+            int index=mt()%m;
+            new_paper.delete_connect(index);
+            // rep(i, new_paper.poi.size()){
+            //     new_paper.poi[i].print();
+            //     new_paper.delete_connect(i);
+            // }
+            // cout<< "deleted " << index <<endl;
+            // new_paper.print_out();
+            // new_paper.print_board();
+            // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+            cout<< "point: " << new_paper.poi.size() <<endl;
+            //new_paper.print_out();
+            // while(1){
+                
+            //     int x, y;
+            //     cin>> x >> y;
+            //     new_paper.poi[x].print();
+            //     // rep(i, new_paper.poi.size()){
+            //     //     if(new_paper.poi[i].pos.x==x && new_paper.poi[i].pos.y==y){
+            //     //         new_paper.poi[i].print();
+            //     //     }
+            //     // }
+            // }
         }
 
         // while(1){
