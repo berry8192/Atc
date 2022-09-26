@@ -20,6 +20,7 @@ ll lmax=9223372036854775807;
 double TIME_LIMIT=4900;
 double start_temp=50.0;
 double end_temp=10.0;
+int lp=0;
 
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
@@ -29,6 +30,12 @@ mt19937 mt(seed);
 //入力
 int n, m, s;
 int x[350], y[350];
+
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) cout << pvv[i] SP;
+	cout<< pvv[pvv.size()-1] <<endl;
+}
 
 // 構造体
 struct Pos{
@@ -285,6 +292,7 @@ struct Paper{
         }
     }
     void random_search_amap(){
+        // cout<< lp SP << "random_search_amap" <<endl;
         int prev_score;
         do{
             prev_score=score;
@@ -316,6 +324,16 @@ struct Paper{
         }
     }
     void search_connect_direction(int c, bool execute, int j){
+        // if(lp==261){
+        //     cout<< "index: " << c <<endl;
+        //     poi[c].pos.print();
+        //     cout<< "dir: " << j <<endl;
+        //     rep(i, 8){
+        //         cout<< poi[c].next_to[i] SP;
+        //         if(poi[c].next_to[i]>=0) poi[poi[c].next_to[i]].pos.print();
+        //         cout<< endl;
+        //     }
+        // }
         int a_index=poi[c].next_to[j];
         int b_index=poi[c].next_to[(j+2)%8];
         //出発点から伸びる2辺を確認
@@ -323,12 +341,12 @@ struct Paper{
             //出発点から伸びた2点を確認
             if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return;
             if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return;
-            if(!(a_index<poi.size())){
+            if(!(a_index<int(poi.size()))){
                 // return;
                 cout<< a_index SP << poi.size() <<endl;
                 assert(a_index<int(poi.size()));
             }
-            if(!(b_index<poi.size())){
+            if(!(b_index<int(poi.size()))){
                 // return;
                 cout<< b_index SP << poi.size() <<endl;
                 assert(b_index<int(poi.size()));
@@ -376,8 +394,8 @@ struct Paper{
         }
     }
     void execute_connect(Pos pos, int dir, int a, int b, int c){
-        rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos, poi.size()-1));
         add_point(pos);
+        rectangle.emplace_back(Rect(pos, poi[a].pos, poi[c].pos, poi[b].pos, poi.size()-1));
         reconnect_line(dir);
         delete_next_to(dir, a, b, c);
         search_connect(poi.size()-1, false);
@@ -450,12 +468,74 @@ struct Paper{
     }
     void delete_connect(int index){
         //indexで渡ってきた点は消去しない
-        //cout<< "delete connect: " << index <<endl;
+        // cout<< "delete connect: " << index <<endl;
         dependings.clear();
         search_depending(index);
         poi[index].depend_on.clear();
-        cout<< "delete point " << dependings.size() <<endl;
+        // cout<< "delete point " << dependings.size() <<endl;
+        cout<< "points: " << poi.size() <<endl;
         vector<ConeList> influenced;
+        vector<int> offset(poi.size());
+        for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
+            offset[*itr]=-1;
+        }
+        rep3(i, poi.size(), 1){
+            if(offset[i]==-1){
+                offset[i]=offset[i-1];
+                //cout<< "kesu: " << i <<endl;
+            }else{
+                offset[i]=offset[i-1]+1;
+            }
+        }
+        // PV(offset);
+        rep(i, poi.size()){
+            rep(j, 8){
+                if(poi[i].next_to[j]>=int(poi.size())){
+                    cout<< "pre validation " << poi[i].next_to[j] SP << poi.size() <<endl;
+                    assert(poi[i].next_to[j]<int(poi.size()));
+                }
+            }
+        }
+        rep(i, poi.size()){
+            if(i==0 || offset[i]-offset[i-1]==1){
+                // cout<< "tumeru: " << i <<endl;
+                // poi[i].print();
+                inv_board[poi[i].pos.x][poi[i].pos.y]=offset[i];
+                set<int> replace;
+                for(auto itr = poi[i].depend_on.begin(); itr != poi[i].depend_on.end(); ++itr) {
+                    // cout<< *itr <<endl;
+                    if(*itr>=int(poi.size())){
+                        cout<< *itr SP << poi.size() <<endl;
+                        assert(*itr<int(poi.size()));
+                    }
+                    if(*itr<0){
+                        cout<< *itr <<endl;
+                        assert(*itr>=0);
+                    }
+                    // if(*itr!=offset[*itr]){
+                    replace.insert(offset[*itr]);
+                    // }
+                }
+                poi[i].depend_on=replace;
+                // for(auto itr = replace.begin(); itr != replace.end(); ++itr) {
+                //     cout<< *itr <<endl;
+                // }
+                rep(j, poi[i].depends.size()){
+                    if(poi[i].depends[j]>=int(poi.size())){
+                        cout<< poi[i].depends[j] SP << poi.size() <<endl;
+                        assert(poi[i].depends[j]<int(poi.size()));
+                    }
+                    if(poi[i].depends[j]<0){
+                        cout<< poi[i].depends[j] <<endl;
+                        assert(poi[i].depends[j]>=0);
+                    }
+                    poi[i].depends[j]=offset[poi[i].depends[j]];
+                }
+            }else{
+                inv_board[poi[i].pos.x][poi[i].pos.y]=-1;
+            }
+        }
+        // PV(offset);
         for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
             int delete_index=*itr;
             // poi[delete_index].print();
@@ -469,7 +549,6 @@ struct Paper{
                 cout<< delete_index SP << poi.size() <<endl;
                 assert(delete_index<int(poi.size()));
             }
-            inv_board[poi[delete_index].pos.x][poi[delete_index].pos.y]=-1;
             poi[delete_index].enable=false;
             score-=poi[delete_index].pos.weight();
             rep(i, 8){
@@ -477,20 +556,29 @@ struct Paper{
                 if(next_to_index<-1) next_to_index+=10000;
                 if(next_to_index>=int(poi.size())){
                     // continue;
+                    cout<< next_to_index SP << int(poi.size()) <<endl;
                     assert(next_to_index<int(poi.size()));
                 }
                 if(dependings.find(next_to_index)==dependings.end()){
                     //poi[next_to_index].next_to[(i+4)%8]=-1;
-                    influenced.emplace_back(next_to_index, (i+4)%8);
+                    influenced.emplace_back(offset[next_to_index], (i+4)%8);
                 }
             }
             poi[delete_index].depend_on.clear();
             delete_depends(delete_index);
         }
-        //そういえば詰めるとindexがずれる
-        // replace_poi();
-        replace_ConeList();
+        rep(i, poi.size()){
+            rep(j, 8){
+                if(poi[i].next_to[j]>=int(poi.size())){
+                    cout<< poi[i].next_to[j] SP << poi.size() <<endl;
+                    assert(poi[i].next_to[j]<int(poi.size()));
+                }
+                if(poi[i].next_to[j]>=0) poi[i].next_to[j]=offset[poi[i].next_to[j]];
+            }
+        }
+        replace_ConeList(offset);
         replace_rectangle();
+        replace_poi();
         int a, dir;
         rep(i, influenced.size()){
             a=influenced[i].a;
@@ -503,9 +591,9 @@ struct Paper{
         if(index<0){
             assert(index>=0);
         }
-        if(index>=poi.size()){
+        if(index>=int(poi.size())){
             // return;
-            assert(index<poi.size());
+            assert(index<int(poi.size()));
         }
         for(auto itr = poi[index].depend_on.begin(); itr != poi[index].depend_on.end(); ++itr){
             int tmp=*itr;
@@ -525,13 +613,13 @@ struct Paper{
             }
         }
     }
-    void replace_ConeList(){
+    void replace_ConeList(vector<int> offset){
         //高速化するなら長さ3721のConeListをpaperに持たせて添え字がindexになるようにする
         vector<ConeList> replace=connectable_list;
         connectable_list.clear();
         rep(i, replace.size()){
             if(dependings.find(replace[i].a)==dependings.end()){
-                connectable_list.emplace_back(replace[i]);
+                connectable_list.emplace_back(ConeList(offset[replace[i].a], replace[i].dir));
             }
         }
     }
@@ -620,16 +708,15 @@ void solve(){
     // }
     // vector<Rect> best_rect=base.rectangle;
     // int best_score=base.score;
-    base.print_out();
+    // base.print_out();
 
-    int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
-        //if(lp%1000==0) cout<< lp <<endl;
+        // if(1 || lp%1000==0) cout<< lp <<endl;
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
-        Paper new_paper=base;
+        Paper new_paper=best;
 
         rep(i, 1){
             //int index=mt()%new_paper.poi.size();
@@ -639,11 +726,13 @@ void solve(){
             //     new_paper.poi[i].print();
             //     new_paper.delete_connect(i);
             // }
-            // cout<< "deleted " << index <<endl;
+            cout<< "deleted " << index <<endl;
+            // new_paper.poi[index].print();
+            // cout<<endl;
             // new_paper.print_out();
             // new_paper.print_board();
             // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
-            cout<< "point: " << new_paper.poi.size() <<endl;
+            // cout<< "points: " << new_paper.poi.size() <<endl;
             //new_paper.print_out();
             // while(1){
                 
@@ -658,22 +747,21 @@ void solve(){
             // }
         }
 
-        // while(1){
-        //     int sz=new_paper.connectable_list.size();
-        //     //cout<< sz <<endl;
-        //     if(sz==0) break;
-        //     int index=mt()%sz;
-        //     new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
-        //     auto itr=new_paper.connectable_list.begin()+index;
-        //     new_paper.connectable_list.erase(itr);
-        // }
+        while(1){
+            int sz=new_paper.connectable_list.size();
+            //cout<< sz <<endl;
+            if(sz==0) break;
+            int index=mt()%sz;
+            new_paper.search_connect_direction(new_paper.connectable_list[index].a, true, new_paper.connectable_list[index].dir);
+            auto itr=new_paper.connectable_list.begin()+index;
+            new_paper.connectable_list.erase(itr);
+        }
+        // new_paper.random_search_amap();
 
-        new_paper.random_search_amap();
-
-        // cout<< "connected" <<endl;
+        cout<< "connected" <<endl;
         // new_paper.print_out();
-        // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
-        // cout<< "point: " << new_paper.poi.size() <<endl;
+        cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+        cout<< "points: " << new_paper.poi.size() <<endl;
 
         // if(best_score<new_paper.score){
         //     best_rect=new_paper.rectangle;
@@ -682,7 +770,8 @@ void solve(){
 
         if(best.score<new_paper.score){
             best=new_paper;
-            cout<< "lp: " << lp SP << "new score: " << new_paper.correct_score() <<endl;
+            // cout<< "lp: " << lp SP << "new score: " << new_paper.correct_score() <<endl;
+            // new_paper.print_out();
         }
     }
 
