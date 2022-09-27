@@ -23,8 +23,8 @@ double end_temp=10.0;
 int lp=0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=1;
+auto seed=(unsigned)time(NULL);
+// int seed=1;
 mt19937 mt(seed);
 
 //入力
@@ -547,10 +547,10 @@ struct Paper{
             int delete_index=*itr;
             // poi[delete_index].print();
             // cout<< delete_index <<endl;
-            if(delete_index<m){
-                cout<< delete_index SP << m <<endl;
-                assert(delete_index>=m);
-            }
+            // if(delete_index<m){
+            //     cout<< delete_index SP << m <<endl;
+            //     assert(delete_index>=m);
+            // }
             if(delete_index>=int(poi.size())){
                 // continue;
                 cout<< delete_index SP << poi.size() <<endl;
@@ -714,7 +714,7 @@ void solve(){
     inpt();
     Paper base, best;
     base.init();
-    base.random_search_amap();
+    base.search_connect_all(false);
     best=base;
     // cout<< "first score" SP << best.correct_score() <<endl;
     // cout<< "m: " << m SP << "points: " << best.poi.size() <<endl;
@@ -733,8 +733,9 @@ void solve(){
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
         Paper new_paper=best;
+        // Paper new_paper=base;
 
-        rep(i, 1){
+        rep(i, mt()%(n/3)+1){
             //int index=mt()%new_paper.poi.size();
             int index=mt()%m;
             new_paper.delete_connect(index);
@@ -776,7 +777,7 @@ void solve(){
 
         // cout<< "connected" <<endl;
         // new_paper.print_out();
-        // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+        cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
         // cout<< "points: " << new_paper.poi.size() <<endl;
 
         // if(best_score<new_paper.score){
@@ -786,7 +787,7 @@ void solve(){
 
         if(best.score<new_paper.score){
             best=new_paper;
-            // cout<< "lp: " << lp SP << "new score: " << new_paper.correct_score() <<endl;
+            cout<< "lp: " << lp SP << "new score: " << new_paper.correct_score() <<endl;
             // new_paper.print_out();
         }
     }

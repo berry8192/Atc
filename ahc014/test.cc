@@ -56,6 +56,7 @@ ll lmax=9223372036854775807;
 double TIME_LIMIT=4900;
 double start_temp=50.0;
 double end_temp=10.0;
+int lp=0;
 
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
@@ -70,6 +71,12 @@ template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
 	rep(i, pvv.size()-1) cout << pvv[i] SP;
 	cout<< pvv[pvv.size()-1] <<endl;
+}
+
+template <class T> void PS(T ps) {
+    cout<< "{";
+	for(auto itr = ps.begin(); itr != ps.end(); ++itr) cout<< *itr SP;
+	cout<< "}" <<endl;
 }
 
 // 構造体
@@ -508,10 +515,12 @@ struct Paper{
         search_depending(index);
         poi[index].depend_on.clear();
         // cout<< "delete point " << dependings.size() <<endl;
+        // cout<< "points: " << poi.size() <<endl;
         vector<ConeList> influenced;
         vector<int> offset(poi.size());
         for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
             offset[*itr]=-1;
+            delete_depends(*itr);
         }
         rep3(i, poi.size(), 1){
             if(offset[i]==-1){
@@ -587,9 +596,13 @@ struct Paper{
             score-=poi[delete_index].pos.weight();
             rep(i, 8){
                 int next_to_index=poi[delete_index].next_to[i];
+                if(next_to_index==-1) continue;
                 if(next_to_index<-1) next_to_index+=10000;
                 if(next_to_index>=int(poi.size())){
                     // continue;
+                    cout<< "delete index: " << delete_index <<endl;
+                    rep(j, 8) cout<< j SP << poi[delete_index].next_to[j] <<endl;
+                    cout<< next_to_index SP << int(poi.size()) <<endl;
                     assert(next_to_index<int(poi.size()));
                 }
                 if(dependings.find(next_to_index)==dependings.end()){
@@ -598,7 +611,6 @@ struct Paper{
                 }
             }
             poi[delete_index].depend_on.clear();
-            delete_depends(delete_index);
         }
         rep(i, poi.size()){
             rep(j, 8){
@@ -606,7 +618,11 @@ struct Paper{
                     cout<< poi[i].next_to[j] SP << poi.size() <<endl;
                     assert(poi[i].next_to[j]<int(poi.size()));
                 }
-                if(poi[i].next_to[j]>=0) poi[i].next_to[j]=offset[poi[i].next_to[j]];
+                if(poi[i].next_to[j]>=0){
+                    poi[i].next_to[j]=offset[poi[i].next_to[j]];
+                }else if(poi[i].next_to[j]<-1){
+                    poi[i].next_to[j]=offset[poi[i].next_to[j]+10000]-10000;
+                }
             }
         }
         replace_ConeList(offset);
@@ -668,12 +684,15 @@ struct Paper{
     }
     void delete_depends(int index){
         //cout<< "delete_depends: " << index <<endl;
-        assert(!poi[index].enable);
+        // assert(!poi[index].enable);
         rep(i, poi[index].depends.size()){
             set<int> depended_point=poi[poi[index].depends[i]].depend_on;
             //assert(depended_point.find(index)==depended_point.end());
             //if((depended_point.find(index)!=depended_point.end())) cout<< "depended delete" <<endl;
+            // cout<< index <<endl;
+            // PS(depended_point);
             depended_point.erase(index);
+            // PS(depended_point);
         }
     }
 
@@ -747,7 +766,7 @@ int solve(){
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
-        Paper new_paper=base;
+        Paper new_paper=best;
 
         int index=mt()%m;
         new_paper.delete_connect(index);
