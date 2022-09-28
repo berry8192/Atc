@@ -203,6 +203,7 @@ struct Paper{
     vector<ConeList> connectable_list;
     vector<Rect> rectangle;
     set<int> dependings;
+    vector<int> offset;
 
     Paper(){
     }
@@ -481,7 +482,7 @@ struct Paper{
         // cout<< "delete point " << dependings.size() <<endl;
         // cout<< "points: " << poi.size() <<endl;
         vector<ConeList> influenced;
-        vector<int> offset(poi.size());
+        offset.resize(poi.size());
         for(auto itr = dependings.begin(); itr != dependings.end(); ++itr) {
             offset[*itr]=-1;
             delete_depends(*itr);
@@ -589,7 +590,7 @@ struct Paper{
                 }
             }
         }
-        replace_ConeList(offset);
+        replace_ConeList();
         replace_rectangle();
         replace_poi();
         int a, dir;
@@ -626,7 +627,7 @@ struct Paper{
             }
         }
     }
-    void replace_ConeList(vector<int> offset){
+    void replace_ConeList(){
         //高速化するなら長さ3721のConeListをpaperに持たせて添え字がindexになるようにする
         vector<ConeList> replace=connectable_list;
         connectable_list.clear();
@@ -641,7 +642,8 @@ struct Paper{
         vector<Rect> replace=rectangle;
         rectangle.clear();
         rep(i, replace.size()){
-            if(dependings.find(replace[i].index)==dependings.end()){
+            if(dependings.find(offset[replace[i].index])==dependings.end()){
+                replace[i].index=offset[replace[i].index];
                 rectangle.emplace_back(replace[i]);
             }
         }
@@ -729,41 +731,27 @@ void solve(){
     while (true) { // 時間の許す限り回す
         lp++;
         // if(1 || lp%1000==0) cout<< lp <<endl;
+        // if(lp==5) break;
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
 
         Paper new_paper=best;
-        // Paper new_paper=base;
+
+        // cout<< "connected" <<endl;
+        // new_paper.print_out();
 
         rep(i, mt()%(n/3)+1){
-            //int index=mt()%new_paper.poi.size();
             int index=mt()%m;
             new_paper.delete_connect(index);
-            // rep(i, new_paper.poi.size()){
-            //     new_paper.poi[i].print();
-            //     new_paper.delete_connect(i);
-            // }
-            // cout<< "deleted " << index <<endl;
-            // new_paper.poi[index].print();
-            // cout<<endl;
+            // cout<< "deleted" <<endl;
             // new_paper.print_out();
-            // new_paper.print_board();
-            // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
-            // cout<< "points: " << new_paper.poi.size() <<endl;
-            //new_paper.print_out();
-            // while(1){
-                
-            //     int x, y;
-            //     cin>> x >> y;
-            //     new_paper.poi[x].print();
-            //     // rep(i, new_paper.poi.size()){
-            //     //     if(new_paper.poi[i].pos.x==x && new_paper.poi[i].pos.y==y){
-            //     //         new_paper.poi[i].print();
-            //     //     }
-            //     // }
-            // }
         }
 
+        // cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
+        // cout<< "points: " << new_paper.poi.size() <<endl;
+        
+        new_paper.connectable_list.clear();
+        new_paper.search_connect_all(false);
         while(1){
             int sz=new_paper.connectable_list.size();
             //cout<< sz <<endl;
@@ -773,17 +761,7 @@ void solve(){
             auto itr=new_paper.connectable_list.begin()+index;
             new_paper.connectable_list.erase(itr);
         }
-        // new_paper.random_search_amap();
-
-        // cout<< "connected" <<endl;
-        // new_paper.print_out();
-        cout<< "lp: " << lp SP << "score: " << new_paper.correct_score() <<endl;
-        // cout<< "points: " << new_paper.poi.size() <<endl;
-
-        // if(best_score<new_paper.score){
-        //     best_rect=new_paper.rectangle;
-        //     best_score=new_paper.score;
-        // }
+        //new_paper.print_out();
 
         if(best.score<new_paper.score){
             best=new_paper;
