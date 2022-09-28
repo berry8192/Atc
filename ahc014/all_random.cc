@@ -397,9 +397,9 @@ struct Paper{
                         poi[add_index].next_to[i]=next_to_index;
                         // search_connect_direction(next_to_index, false, (i+2)%8);
                         // search_connect_direction(next_to_index, false, (i+4)%8);
-                        search_connect(next_to_index, false);
                         //reconnects.emplace_back(next_to_index);
                     }
+                    search_connect(next_to_index, false);
                     break;
                 }
                 pos+=d8[i];
@@ -499,6 +499,7 @@ void solve(){
         // }
         // new_paper.print_out();
         // cout<< "score: " << new_paper.correct_score() <<endl;
+        new_paper.search_connect((lp/8)%m, true, lp%8);
         new_paper.random_search_amap();
 
         if(best.score<new_paper.score){
