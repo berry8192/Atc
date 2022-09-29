@@ -53,8 +53,8 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=4900;
-double FIRST_HALF_TIME_LIMIT=3000;
+double TIME_LIMIT=1900;
+double FIRST_HALF_TIME_LIMIT=1500;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -386,21 +386,27 @@ struct Paper{
         }
     }
     bool search_connect_direction(int c, bool execute, int j){
+        if(score<0) return false;
         int a_index=poi[c].next_to[j];
         int b_index=poi[c].next_to[(j+2)%8];
         //出発点から伸びる2辺を確認
         if(a_index>=0 && b_index>=0){
+            if(!(a_index<poi.size())){
+                score=-1;
+                return false;
+                // cout<< a_index SP << poi.size() <<endl;
+                // assert(a_index<int(poi.size()));
+            }
+            if(!(b_index<poi.size())){
+                score=-1;
+                return false;
+                // cout<< b_index SP << poi.size() <<endl;
+                // assert(b_index<int(poi.size()));
+            }
             //出発点から伸びた2点を確認
             if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return false;
             if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return false;
-            if(!(a_index<poi.size())){
-                cout<< a_index SP << poi.size() <<endl;
-                assert(a_index<int(poi.size()));
-            }
-            if(!(b_index<poi.size())){
-                cout<< b_index SP << poi.size() <<endl;
-                assert(b_index<int(poi.size()));
-            }
+            
             return point_can_be_add(a_index, b_index, c, j, execute);
         }
         return false;
@@ -511,25 +517,6 @@ struct Paper{
         poi[b].next_to[(dir+6)%8]-=10000;
         poi[c].next_to[(dir+2)%8]-=10000;
     }
-    // ScoreProcess memo_clist(){
-    //     cout<< "expect_score: " << highscore <<endl;
-    //     cout<< "highscore_point_index: " << highscore_point <<endl;
-    //     cout<< "point info: " <<endl;
-    //     poi[highscore_point].madein.print();
-    //     spro.score=highscore;
-    //     dfs_memo_clist(highscore_point);
-    //     return spro;
-    // }
-    // void dfs_memo_clist(int index){
-    //     cout<< "dfs index: " << index <<endl;
-    //     cout<< "point info: " <<endl;
-    //     poi[index].madein.print();
-    //     if(index<m) return;
-    //     Process proc=poi[index].madein;
-    //     int val=inv_board[proc.pos.x][proc.pos.y];
-    //     spro.plist.emplace_back(proc);
-    //     dfs_memo_clist(val);
-    // }
     void select_history(){
         // cout<< "expect_score: " << highscore <<endl;
         // cout<< "highscore_point_index: " << highscore_point <<endl;
@@ -630,21 +617,12 @@ int solve(){
 
     sort(all(score_process));
     // cout<< "score_process size: " << score_process.size() <<endl;
+    // rep(i, score_process.size()){
+    //     cout<< score_process[i].score SP;
+    //     score_process[i].plist[score_process[i].plist.size()-1].pos.print();
+    //     cout<< endl;
+    // }
     Paper best=base;
-    rep(i, 1){
-            // score_process[i].print();
-            bool created=true;
-            repr(j, score_process[i].plist.size()){
-                Process pro=score_process[i].plist[j];
-                int index=base.inv_board[pro.pos.x][pro.pos.y];
-                if(base.search_connect_direction(index, true, pro.dir)){
-                    created=true;
-                }else{
-                    created=false;
-                }
-                // draft.print_out();
-            }
-        }
 
     while (true) { // 時間の許す限り回す
         lp++;
@@ -654,12 +632,23 @@ int solve(){
         
         Paper new_paper=base;
 
+        int ptype=mt()%100;
+        ptype=1;
+        //cout<<"highscore " << ptype <<endl;
+        if(ptype!=0){
+            repr(j, score_process[ptype].plist.size()){
+                Process pro=score_process[ptype].plist[j];
+                int index=base.inv_board[pro.pos.x][pro.pos.y];
+                base.search_connect_direction(index, true, pro.dir);
+            }
+        }
+
+        //cout<<"random "<<endl;
         new_paper.random_search_amap();
 
         if(best.score<new_paper.score){
             best=new_paper;
         }
-        break;
     }
 
     std::ofstream ofs(file_out_paths[testcase]);

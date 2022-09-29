@@ -18,7 +18,7 @@ ll lmax=9223372036854775807;
 
 //焼きなましの定数
 double TIME_LIMIT=4900;
-double FIRST_HALF_TIME_LIMIT=3000;
+double FIRST_HALF_TIME_LIMIT=1500;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -350,21 +350,27 @@ struct Paper{
         }
     }
     bool search_connect_direction(int c, bool execute, int j){
+        if(score<0) return false;
         int a_index=poi[c].next_to[j];
         int b_index=poi[c].next_to[(j+2)%8];
         //出発点から伸びる2辺を確認
         if(a_index>=0 && b_index>=0){
+            if(!(a_index<poi.size())){
+                score=-1;
+                return false;
+                // cout<< a_index SP << poi.size() <<endl;
+                // assert(a_index<int(poi.size()));
+            }
+            if(!(b_index<poi.size())){
+                score=-1;
+                return false;
+                // cout<< b_index SP << poi.size() <<endl;
+                // assert(b_index<int(poi.size()));
+            }
             //出発点から伸びた2点を確認
             if(poi[a_index].next_to[(j+4)%8]<-1 || poi[b_index].next_to[(j+6)%8]<-1) return false;
             if(poi[a_index].next_to[(j+2)%8]<-1 || poi[b_index].next_to[j]<-1) return false;
-            if(!(a_index<poi.size())){
-                cout<< a_index SP << poi.size() <<endl;
-                assert(a_index<int(poi.size()));
-            }
-            if(!(b_index<poi.size())){
-                cout<< b_index SP << poi.size() <<endl;
-                assert(b_index<int(poi.size()));
-            }
+            
             return point_can_be_add(a_index, b_index, c, j, execute);
         }
         return false;
@@ -568,22 +574,12 @@ void solve(){
 
     sort(all(score_process));
     // cout<< "score_process size: " << score_process.size() <<endl;
+    // rep(i, score_process.size()){
+    //     cout<< score_process[i].score SP;
+    //     score_process[i].plist[score_process[i].plist.size()-1].pos.print();
+    //     cout<< endl;
+    // }
     Paper best=base;
-    Paper base2=base;
-    rep(i, 1){
-            // score_process[i].print();
-            bool created=true;
-            repr(j, score_process[i].plist.size()){
-                Process pro=score_process[i].plist[j];
-                int index=base.inv_board[pro.pos.x][pro.pos.y];
-                if(base.search_connect_direction(index, true, pro.dir)){
-                    created=true;
-                }else{
-                    created=false;
-                }
-                // draft.print_out();
-            }
-        }
 
     while (true) { // 時間の許す限り回す
         lp++;
@@ -591,16 +587,25 @@ void solve(){
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
         
-        Paper new_paper;
-        if(lp%2) new_paper=base;
-        else new_paper=base2;
+        Paper new_paper=base;
 
+        int ptype=mt()%100;
+        ptype=1;
+        //cout<<"highscore " << ptype <<endl;
+        if(ptype!=0){
+            repr(j, score_process[ptype].plist.size()){
+                Process pro=score_process[ptype].plist[j];
+                int index=base.inv_board[pro.pos.x][pro.pos.y];
+                base.search_connect_direction(index, true, pro.dir);
+            }
+        }
+
+        //cout<<"random "<<endl;
         new_paper.random_search_amap();
 
         if(best.score<new_paper.score){
             best=new_paper;
         }
-        break;
     }
 
     best.print_out();
