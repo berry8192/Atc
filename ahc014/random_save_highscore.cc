@@ -475,25 +475,6 @@ struct Paper{
         poi[b].next_to[(dir+6)%8]-=10000;
         poi[c].next_to[(dir+2)%8]-=10000;
     }
-    // ScoreProcess memo_clist(){
-    //     cout<< "expect_score: " << highscore <<endl;
-    //     cout<< "highscore_point_index: " << highscore_point <<endl;
-    //     cout<< "point info: " <<endl;
-    //     poi[highscore_point].madein.print();
-    //     spro.score=highscore;
-    //     dfs_memo_clist(highscore_point);
-    //     return spro;
-    // }
-    // void dfs_memo_clist(int index){
-    //     cout<< "dfs index: " << index <<endl;
-    //     cout<< "point info: " <<endl;
-    //     poi[index].madein.print();
-    //     if(index<m) return;
-    //     Process proc=poi[index].madein;
-    //     int val=inv_board[proc.pos.x][proc.pos.y];
-    //     spro.plist.emplace_back(proc);
-    //     dfs_memo_clist(val);
-    // }
     void select_history(){
         // cout<< "expect_score: " << highscore <<endl;
         // cout<< "highscore_point_index: " << highscore_point <<endl;
@@ -571,11 +552,6 @@ void solve(){
     inpt();
     Paper base;
     base.init();
-    // base.search_connect_all(false);
-    // cout<< base.connectable_list.size() <<endl;
-    // rep(i, base.connectable_list.size()){
-    //     base.connectable_list[i].print();
-    // }
 
     int lp=0;
     while (true) { // 時間の許す限り回す
@@ -591,8 +567,23 @@ void solve(){
     }
 
     sort(all(score_process));
-    cout<< "score_process size: " << score_process.size() <<endl;
+    // cout<< "score_process size: " << score_process.size() <<endl;
     Paper best=base;
+    Paper base2=base;
+    rep(i, 1){
+            // score_process[i].print();
+            bool created=true;
+            repr(j, score_process[i].plist.size()){
+                Process pro=score_process[i].plist[j];
+                int index=base.inv_board[pro.pos.x][pro.pos.y];
+                if(base.search_connect_direction(index, true, pro.dir)){
+                    created=true;
+                }else{
+                    created=false;
+                }
+                // draft.print_out();
+            }
+        }
 
     while (true) { // 時間の許す限り回す
         lp++;
@@ -600,40 +591,19 @@ void solve(){
         current = chrono::system_clock::now(); // 現在時刻
         if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
         
-        Paper new_paper=base;
-        Paper draft=new_paper;
-    
-        rep(i, 1){
-            // score_process[i].print();
-            bool created=true;
-            repr(j, score_process[i].plist.size()){
-                Process pro=score_process[i].plist[j];
-                int index=draft.inv_board[pro.pos.x][pro.pos.y];
-                if(draft.search_connect_direction(index, true, pro.dir)){
-                    created=true;
-                }else{
-                    created=false;
-                }
-                // draft.print_out();
-            }
-            if(created){
-                new_paper=draft;
-                cout<< "created" <<endl;
-            }else{
-                cout<< "not created" <<endl;
-            }
-        }
-        new_paper.print_out();
-        new_paper.random_search_amap();
-        new_paper.print_out();
+        Paper new_paper;
+        if(lp%2) new_paper=base;
+        else new_paper=base2;
 
-        // if(best.score<new_paper.score){
-        //     best=new_paper;
-        // }
+        new_paper.random_search_amap();
+
+        if(best.score<new_paper.score){
+            best=new_paper;
+        }
         break;
     }
 
-    //best.print_out();
+    best.print_out();
     // cout<< "lp:" << lp <<endl;
     // cout<< best.score SP << best.correct_score() <<endl;
 }

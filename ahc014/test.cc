@@ -54,6 +54,7 @@ ll lmax=9223372036854775807;
 
 //焼きなましの定数
 double TIME_LIMIT=4900;
+double FIRST_HALF_TIME_LIMIT=3000;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -131,6 +132,7 @@ struct Pos{
 	};
 };
 Pos d8[]={{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
+set<Pos> used_process;
 
 struct Rect{
     Pos p1;
@@ -210,7 +212,8 @@ struct ScoreProcess{
     int score;
 
     ScoreProcess(){};
-    ScoreProcess(int sco){
+    ScoreProcess(int sco, vector<Process> in_plist){
+        plist=in_plist;
         score=sco;
     }
 
@@ -220,7 +223,7 @@ struct ScoreProcess{
     }
 
     bool operator<(const ScoreProcess &in) const{
-		return score<in.score;
+		return score>in.score;
 	};
 };
 
@@ -256,6 +259,7 @@ struct Paper{
     vector<ConeList> history;
     vector<int> use_history;
     vector<Process> process;
+    set<Pos> used_process;
 
     Paper(){
     }
@@ -446,8 +450,13 @@ struct Paper{
         search_connect(poi.size()-1, false);
         poi[poi.size()-1].par={a, b, c};
         if(highscore<pos.weight()){
-            highscore=pos.weight();
-            highscore_point=poi.size()-1;
+            auto itr=used_process.find(pos);
+            // Pos olpos=*itr;
+            if(itr==used_process.end()){
+                highscore=pos.weight();
+                highscore_point=poi.size()-1;
+                used_process.insert(pos);
+            }
             //cout<< "new highscore: " << highscore <<endl;
         }
         history.emplace_back(c, dir);
@@ -601,43 +610,57 @@ int solve(){
     std::chrono::system_clock::time_point start, current;
     start = chrono::system_clock::now();
 
+    vector<ScoreProcess> score_process;
     inpt();
     Paper base;
     base.init();
-    // base.search_connect_all(false);
-    // cout<< base.connectable_list.size() <<endl;
-    // rep(i, base.connectable_list.size()){
-    //     base.connectable_list[i].print();
-    // }
-    Paper best=base;
 
     int lp=0;
     while (true) { // 時間の許す限り回す
         lp++;
-        if(lp==2) break;
+        //if(lp==2) break;
         current = chrono::system_clock::now(); // 現在時刻
-        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > FIRST_HALF_TIME_LIMIT) break;
 
         Paper new_paper=base;
         new_paper.random_search_amap();
         new_paper.select_history();
-        repr(i, new_paper.process.size()){
-            Process pro=new_paper.process[i];
-            int index=base.inv_board[pro.pos.x][pro.pos.y];
-            // pro.pos.print();
-            // cout<< " dir: " << pro.dir << " index: " << index SP;
-            // base.poi[index].pos.print();
-            // cout<< endl;
-            base.search_connect_direction(index, true, pro.dir);
+        score_process.emplace_back(new_paper.highscore, new_paper.process);
+    }
+
+    sort(all(score_process));
+    // cout<< "score_process size: " << score_process.size() <<endl;
+    Paper best=base;
+    rep(i, 1){
+            // score_process[i].print();
+            bool created=true;
+            repr(j, score_process[i].plist.size()){
+                Process pro=score_process[i].plist[j];
+                int index=base.inv_board[pro.pos.x][pro.pos.y];
+                if(base.search_connect_direction(index, true, pro.dir)){
+                    created=true;
+                }else{
+                    created=false;
+                }
+                // draft.print_out();
+            }
         }
-        //base.print_out();
-        //new_paper.print_out();
+
+    while (true) { // 時間の許す限り回す
+        lp++;
+        //if(lp==2) break;
+        current = chrono::system_clock::now(); // 現在時刻
+        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+        
+        Paper new_paper=base;
+
+        new_paper.random_search_amap();
 
         if(best.score<new_paper.score){
             best=new_paper;
         }
+        break;
     }
-    best=base;
 
     std::ofstream ofs(file_out_paths[testcase]);
     if (!ofs){
