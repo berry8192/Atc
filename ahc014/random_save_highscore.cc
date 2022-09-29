@@ -356,13 +356,13 @@ struct Paper{
         //出発点から伸びる2辺を確認
         if(a_index>=0 && b_index>=0){
             if(!(a_index<poi.size())){
-                score=-1;
+                score=-100000;
                 return false;
                 // cout<< a_index SP << poi.size() <<endl;
                 // assert(a_index<int(poi.size()));
             }
             if(!(b_index<poi.size())){
-                score=-1;
+                score=-100000;
                 return false;
                 // cout<< b_index SP << poi.size() <<endl;
                 // assert(b_index<int(poi.size()));
@@ -589,8 +589,8 @@ void solve(){
         
         Paper new_paper=base;
 
-        int ptype=mt()%100;
-        ptype=1;
+        int ptype=mt()%(score_process.size()/5);
+        //ptype=1;
         //cout<<"highscore " << ptype <<endl;
         if(ptype!=0){
             repr(j, score_process[ptype].plist.size()){
@@ -601,10 +601,12 @@ void solve(){
         }
 
         //cout<<"random "<<endl;
-        new_paper.random_search_amap();
+        if(new_paper.score>0){
+            new_paper.random_search_amap();
 
-        if(best.score<new_paper.score){
-            best=new_paper;
+            if(best.score<new_paper.score){
+                best=new_paper;
+            }
         }
     }
 
