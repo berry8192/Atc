@@ -2,7 +2,6 @@
 // #pragma GCC optimize("O3")
 
 #include <bits/stdc++.h>
-#include <experimental/filesystem>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
@@ -12,41 +11,6 @@
 #define ll long long
 
 using namespace std;
-namespace fs = std::filesystem;
-
-int TEST_CASE=100;
-int testcase=0;
-string path = "testcases/";
-vector<string> file_in_paths;
-vector<string> file_out_paths;
-
-void setup_input(){
-    rep(i, TEST_CASE){
-        int no=i+10000;
-        string tmp="testcases/"+to_string(no).substr(1, 4)+".txt";
-        file_in_paths.push_back(tmp);
-        file_out_paths.push_back(tmp.substr(0, 15)+"out");
-    }
-    sort(all(file_in_paths));
-    sort(all(file_out_paths));
-}
-
-string getDatetimeStr() {
-    time_t t = time(nullptr);
-    const tm* localTime = localtime(&t);
-    std::stringstream s;
-    s << localTime->tm_year + 1900;
-    // setw(),setfill()で0詰め
-    s << setw(2) << setfill('0') << localTime->tm_mon + 1;
-    s << setw(2) << setfill('0') << localTime->tm_mday;
-    s << setw(2) << setfill('0') << localTime->tm_hour;
-    s << setw(2) << setfill('0') << localTime->tm_min;
-    s << setw(2) << setfill('0') << localTime->tm_sec;
-    // std::stringにして値を返す
-    return s.str();
-}
-
-std::ofstream gofs("testcases/"+getDatetimeStr());
 
 // 定数周り
 int imax=2147483647;
@@ -579,16 +543,9 @@ int output_validation(Paper paper){
 
 void inpt(){
     //cout<< "inpt" <<endl;
-    std::ifstream ifs(file_in_paths[testcase]);
-    if (!ifs){
-        std::cout << file_in_paths[testcase] << " 読み込み失敗" << std::endl;
-        exit(1);
-    }
-    cout<< "opened " << file_in_paths[testcase] <<endl;
-
     s=0;
-    ifs>> n >> m;
-    rep(i, m) ifs>> x[i] >> y[i];
+    cin>> n >> m;
+    rep(i, m) cin>> x[i] >> y[i];
     rep(i, n){
         rep(j, n){
             s+=Pos(i, j).weight();
@@ -596,11 +553,12 @@ void inpt(){
     }
 }
 
-int solve(){
+void solve(){
     //開始時間の計測
     std::chrono::system_clock::time_point start, current;
     start = chrono::system_clock::now();
 
+    vector<ScoreProcess> score_process;
     inpt();
     Paper base;
     base.init();
@@ -620,6 +578,24 @@ int solve(){
 
         Paper new_paper=base;
         new_paper.random_search_amap();
+        // score_process.emplace_back(new_paper.memo_clist());
+        // score_process[0].print();
+        // rep(i, score_process[0].plist.size()){
+        //     Process lpro=score_process[0].plist[i];
+        //     base.search_connect_direction(base.inv_board[lpro.pos.x][lpro.pos.y], true, lpro.dir);
+        // }
+        // cout<< "correct score: " << base.correct_score() <<endl;
+        
+        // vector<int> history=new_paper.select_history();
+        // PV(history);
+        // rep(i, new_paper.poi.size()){
+        //     int index=i;
+        //     if(history[index]==0) continue;
+        //     ConeList clist=new_paper.history[index];
+        //     new_paper.poi[clist.a].pos.print();
+        //     cout<< clist.dir <<endl;
+        //     base.search_connect_direction(clist.a, true, clist.dir);
+        // }
         new_paper.select_history();
         repr(i, new_paper.process.size()){
             Process pro=new_paper.process[i];
@@ -630,62 +606,30 @@ int solve(){
             // cout<< endl;
             base.search_connect_direction(index, true, pro.dir);
         }
-        //base.print_out();
+        base.print_out();
         //new_paper.print_out();
 
         if(best.score<new_paper.score){
             best=new_paper;
         }
     }
-    best=base;
-
-    std::ofstream ofs(file_out_paths[testcase]);
-    if (!ofs){
-        std::cout << file_out_paths[testcase] << " 書き込み失敗" << std::endl;
-        return -imax;
-    }
 
     //best.print_out();
-    ofs<< best.rectangle.size() <<endl;
-    rep(i, best.rectangle.size()){
-        ofs<< best.rectangle[i].p1.x SP;
-        ofs<< best.rectangle[i].p1.y SP;
-        ofs<< best.rectangle[i].p2.x SP;
-        ofs<< best.rectangle[i].p2.y SP;
-        ofs<< best.rectangle[i].p3.x SP;
-        ofs<< best.rectangle[i].p3.y SP;
-        ofs<< best.rectangle[i].p4.x SP;
-        ofs<< best.rectangle[i].p4.y <<endl;
-    }
-    //cout<< "lp:" << lp <<endl;
-    cout<< best.score SP << best.correct_score() <<endl;
-    return best.correct_score();
-}
-
-ll test(){
-    ll point=0;
-    
-    rep(i, TEST_CASE){
-        point+=solve();
-        testcase++;
-    }
-
-    return point;
+    // cout<< "lp:" << lp <<endl;
+    // cout<< best.score SP << best.correct_score() <<endl;
 }
 
 int main(){
-    setup_input();
-    ll score_sum=test();
-    cout<< "score sum:" << score_sum <<endl;
-
-    gofs<< "TIME_LIMIT: " << TIME_LIMIT <<endl;
-    gofs<< "start_temp: " << start_temp <<endl;
-    gofs<< "end_temp: " << end_temp <<endl;
-    gofs<< "seed: " << seed <<endl;
-    gofs<< "TEST_CASES: " << TEST_CASE <<endl;
-    gofs<< "score sum: " << score_sum <<endl;
-    gofs<< "average: " << 1.0*score_sum/TEST_CASE <<endl;
+    solve();
 }
 // todo
 //得点計算を実装して焼けるようにする
 //最悪ビームサーチでいい
+//新たに追加された頂点を探索するようにするDFSっぽく
+//ある頂点から伸びる辺を全削除
+//ある頂点と接続している頂点につながっていた頂点から伸びる辺を全削除？
+//頑張れば既存頂点から達成できるポイントを全網羅できるかと思ったけど頂点がふえていくので怪しい
+//なるべく壁に近い頂点を生成できる操作を優先する？
+//どこかが結ばれると結べなくなる点があるので注意
+
+//頂点削除にも転用できそう
