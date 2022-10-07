@@ -1,0 +1,12 @@
+/home/berry/prj/Atc/rust_test/hello_rust/target/debug/deps/proconio-1bd59462dd6507d4.rmeta: /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/lib.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/marker.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/read.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/mod.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/line.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/once.rs
+
+/home/berry/prj/Atc/rust_test/hello_rust/target/debug/deps/libproconio-1bd59462dd6507d4.rlib: /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/lib.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/marker.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/read.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/mod.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/line.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/once.rs
+
+/home/berry/prj/Atc/rust_test/hello_rust/target/debug/deps/proconio-1bd59462dd6507d4.d: /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/lib.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/marker.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/read.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/mod.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/line.rs /home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/once.rs
+
+/home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/lib.rs:
+/home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/marker.rs:
+/home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/read.rs:
+/home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/mod.rs:
+/home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/line.rs:
+/home/berry/.cargo/registry/src/github.com-1ecc6299db9ec823/proconio-0.3.8/src/source/once.rs:
