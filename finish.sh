@@ -8,6 +8,7 @@ echo "git push -u origin $1"
 git push -u origin $1
 echo "cd /home/berry/prj/Atc"
 cd /home/berry/prj/Atc
+sleep 1
 
 echo "waiting PRmerge"
 read tmp
