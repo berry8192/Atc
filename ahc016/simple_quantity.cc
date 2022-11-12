@@ -52,15 +52,22 @@ struct Query{
 };
 
 // 構造体
+struct Data{
+    bitset<4950> b_set;
+    string str;
+    vector<int> v_quan;
+    vector<vector<int>> board;
+};
+
 struct Graphs{
     int n, vertex, diff;
-	vector<bitset<4950>> g;
+	vector<Data> data;
     vector<double> simple_variance;
 
 	void init(){
         n=calc_v_size();
         vertex=n*(n-1)/2;
-        g.resize(m);
+        data.resize(m);
         simple_variance.resize(m);
     }
     int calc_v_size(){
