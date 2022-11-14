@@ -17,7 +17,6 @@ using namespace std;
 // 定数周り
 int imax=2147483647;
 ll lmax=9223372036854775807;
-bool debug_mode=false;
 
 //焼きなましの定数
 double TIME_LIMIT=4900;
@@ -26,8 +25,8 @@ double end_temp=10.0;
 int lp=0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=1;
+auto seed=(unsigned)time(NULL);
+// int seed=1;
 mt19937 mt(seed);
 
 //入力
@@ -55,7 +54,7 @@ struct Query{
 struct Data{
     bitset<4950> b_set;
     string str;
-    vector<int> v_quan;
+    vector<int> v_quantity;
     vector<vector<int>> board;
 };
 
@@ -67,12 +66,15 @@ struct Graphs{
 	void init(){
         n=calc_v_size();
         vertex=n*(n-1)/2;
+        // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
         simple_variance.resize(m);
     }
     int calc_v_size(){
-        // mのサイズそのまま
-        return m;
+        // int tmp=int(m*(1.0+eps*0.01)*(1.0+eps*0.01)*2);
+        int tmp=mt()%97+4;
+        // cout<< "calc_v_size: " << tmp <<endl;
+        return min(100, max(4, tmp));
     }
 
     void simple_create_graph(){
@@ -80,7 +82,7 @@ struct Graphs{
         int bit_quantity=0;
         rep(i, m){
             rep(j, bit_quantity){
-                g[i].set(j);
+                data[i].b_set.set(j);
             }
             simple_variance[i]=(bit_quantity*(100-eps)+(vertex-bit_quantity)*eps)/100.0;
             bit_quantity+=diff;
@@ -95,11 +97,13 @@ struct Graphs{
     //     }
     // }
     Query gen_query(){
+        // cout<< "gen_query()" <<endl;
         Query rtn;
-        rtn.ans=mt()%n;
-        bitset<4950> tmp=g[rtn.ans];
+        rtn.ans=mt()%m;
+        bitset<4950> tmp=data[rtn.ans].b_set;
         rep(i, vertex){
             if(eps>mt()%100) tmp.flip(i);
+
             if(tmp[i]) rtn.h+='1';
             else rtn.h+='0';
         }
@@ -107,6 +111,7 @@ struct Graphs{
     }
 
     int guess(string s){
+        // cout<< "guess()" <<endl;
         bitset<4950> h(s);
         int bit_quantity=h.count();
         // int ans=round(1.0*bit_quantity/diff);
@@ -125,10 +130,6 @@ struct Graphs{
 void inpt(){
     //cout<< "inpt" <<endl;
     cin>> m;
-    if(m>100){
-        m-=100;
-        debug_mode=true;
-    }
     cin>> in_eps;
     eps=stoi(in_eps.substr(2));
     // cout<< eps <<endl;
@@ -148,7 +149,7 @@ void solve(){
     cout<< graphs.n <<endl;
     rep(i, m){
         rep(j, graphs.vertex){
-            cout<< graphs.g[i][j];
+            cout<< graphs.data[i].b_set[j];
         }
         cout<<endl;
     }
@@ -156,17 +157,60 @@ void solve(){
     rep(i, QUESTIONS){
         string h;
         int ans;
-        if(debug_mode){
-            Query query=graphs.gen_query();
-            h=query.h;
-            ans=query.ans;
-        }else{
-            cin>> h;
-        }
+        cin>> h;
         cout << graphs.guess(h) <<endl;
     }
 }
 
+void test(int lp){
+    //開始時間の計測
+    std::chrono::system_clock::time_point start, current;
+    start = chrono::system_clock::now();
+
+    std::ofstream ofs("log.csv");
+    if (!ofs){
+        std::cout << "書き込み失敗" << std::endl;
+        exit(1);
+    }
+    ofs<< "m, eps, err, n, score" <<endl;
+
+    rep(i, lp){
+        m=mt()%91+10;
+        eps=mt()%41;
+        // cout<< "m: " << m <<endl;
+        // cout<< "eps: " << eps <<endl;
+        int err=0;
+
+        // inpt();
+
+        Graphs graphs;
+        graphs.init();
+        graphs.simple_create_graph();
+
+        // cout<< graphs.n <<endl;
+        rep(i, m){
+            // rep(j, graphs.vertex){
+            //     cout<< graphs.data[i].b_set[j];
+            // }
+            // cout<< graphs.data[i].str <<endl;
+            // cout<<endl;
+        }
+
+        rep(i, QUESTIONS){
+            string h;
+            int ans;
+            Query query=graphs.gen_query();
+            h=query.h;
+            ans=query.ans;
+            int submit=graphs.guess(h);
+            if(ans!=submit) err++;
+        }
+        // cout<< "err: " << err <<endl;
+        ofs<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
+    }
+}
+
 int main(){
-    solve();
+    // solve();
+    test(10000);
 }
