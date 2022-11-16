@@ -62,21 +62,28 @@ struct Graphs{
     int n, vertex, diff;
 	vector<Data> data;
     vector<double> simple_variance;
+    vector<vector<int>> graph_edit_distance;
 
 	void init(){
-        n=calc_v_size();
+        // n=calc_v_simple_size();
         vertex=n*(n-1)/2;
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
         simple_variance.resize(m);
+        graph_edit_distance.resize(m, vector<int>(m));
     }
-    int calc_v_size(){
+
+    int calc_v_simple_size(){
         // int tmp=int(m*(1.0+eps*0.01)*(1.0+eps*0.01)*2);
         int tmp=mt()%97+4;
+        // cout<< "calc_v_simple_size: " << tmp <<endl;
+        return min(100, max(4, tmp));
+    }
+    int calc_v_annealing_size(){
+        int tmp=m*(1.0+eps*0.01); // とりあえず適当な感じにしておく
         // cout<< "calc_v_size: " << tmp <<endl;
         return min(100, max(4, tmp));
     }
-
     void simple_create_graph(){
         diff=vertex/m;
         int bit_quantity=0;
@@ -88,14 +95,19 @@ struct Graphs{
             bit_quantity+=diff;
         }
     }
-    // void print_graph(){
-    //     rep(i, m){
-    //         rep(j, vertex){
-    //             cout<< g[i][j];
-    //         }
-    //         cout<<endl;
-    //     }
-    // }
+    void annealing_graph(){
+        // oxの配置を焼きなまして編集距離がそれぞれ離れるようにグラフを構築する
+
+    }
+    void output_graph(){
+        // rep(i, m){
+        //     rep(j, vertex){
+        //         cout<< data.[i][j];
+        //     }
+        //     cout<<endl;
+        // }
+    }
+
     Query gen_query(){
         // cout<< "gen_query()" <<endl;
         Query rtn;
@@ -185,16 +197,9 @@ void test(int lp){
 
         Graphs graphs;
         graphs.init();
-        graphs.simple_create_graph();
-
-        // cout<< graphs.n <<endl;
-        rep(i, m){
-            // rep(j, graphs.vertex){
-            //     cout<< graphs.data[i].b_set[j];
-            // }
-            // cout<< graphs.data[i].str <<endl;
-            // cout<<endl;
-        }
+        // graphs.simple_create_graph();
+        graphs.annealing_graph();
+        graphs.output_graph();
 
         rep(i, QUESTIONS){
             string h;
