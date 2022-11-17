@@ -19,10 +19,9 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=4900;
+double TIME_LIMIT=4500;
 double start_temp=50.0;
 double end_temp=10.0;
-int lp=0;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -62,15 +61,17 @@ struct Graphs{
     int n, vertex, diff;
 	vector<Data> data;
     vector<double> simple_variance;
+    vector<int> min_edit_distance;
     vector<vector<int>> graph_edit_distance;
 
 	void init(){
-        // n=calc_v_simple_size();
+        n=calc_v_annealing_size();
         vertex=n*(n-1)/2;
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
         simple_variance.resize(m);
-        graph_edit_distance.resize(m, vector<int>(m));
+        min_edit_distance.resize(m,9999);
+        graph_edit_distance.resize(m, vector<int>(m, -1));
     }
 
     int calc_v_simple_size(){
@@ -84,8 +85,9 @@ struct Graphs{
         // cout<< "calc_v_size: " << tmp <<endl;
         return min(100, max(4, tmp));
     }
+
     void simple_create_graph(){
-        diff=vertex/m;
+        diff=vertex/(m-1);
         int bit_quantity=0;
         rep(i, m){
             rep(j, bit_quantity){
@@ -97,15 +99,77 @@ struct Graphs{
     }
     void annealing_graph(){
         // oxの配置を焼きなまして編集距離がそれぞれ離れるようにグラフを構築する
+        std::chrono::system_clock::time_point start, current;
+        start = chrono::system_clock::now();
 
+        // とりあえず初期解をつくる
+        simple_create_graph();
+        rep(i, m) init_v_quantity(i);
+        rep(i, m){
+            rep3(j, m, i+1){
+                int distance=calc_edit_distance(i, j);
+                min_edit_distance[i]=min(min_edit_distance[i], distance);
+                min_edit_distance[j]=min(min_edit_distance[j], distance);
+                // graph_edit_distance[i][j]=distance;
+                // graph_edit_distance[j][i]=distance;
+            }
+        }
+        output_graph();//
+
+        while (true){
+            current = chrono::system_clock::now();
+            if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+            rep(i, m){
+                int before_distance=min_edit_distance[i];
+                int new_distance=9999;
+                int turn_bit_index=mt()%vertex;
+                data[i].b_set.flip(turn_bit_index);
+                init_v_quantity(i);
+                rep(j, m){
+                    if(i==j) continue;
+                    new_distance=min(new_distance, calc_edit_distance(i, j)+1);
+                }
+                if(min_edit_distance[i]<=new_distance){
+                    //改善したので変更を受け入れる
+                    min_edit_distance[i]=new_distance;
+                }else{
+                    // 改善しなかったら元に戻す
+                    data[i].b_set.flip(turn_bit_index);
+                    init_v_quantity(i);
+                }
+            }
+        }
+        output_graph();//
+        rep(i, m) PV(data[i].v_quantity);//
+        rep(i, m) cout<< min_edit_distance[i] <<endl;//
+    }
+    void init_v_quantity(int index){
+        int lp=0;
+        data[index].v_quantity=vector<int>(m);
+        rep(i, m-1){
+            rep3(j, m, i+1){
+                if(data[index].b_set.test(lp)){
+                    // cout<< index SP << i SP << j <<endl;
+                    data[index].v_quantity[i]++;
+                    data[index].v_quantity[j]++;
+                }
+                lp++;
+            }
+        }
+        sort(all(data[index].v_quantity));
+    }
+    int calc_edit_distance(int index1, int index2){
+        int rtn=0;
+        rep(i, m) rtn+=abs(data[index1].v_quantity[i]-data[index2].v_quantity[i]);
+        return rtn;
     }
     void output_graph(){
-        // rep(i, m){
-        //     rep(j, vertex){
-        //         cout<< data.[i][j];
-        //     }
-        //     cout<<endl;
-        // }
+        rep(i, m){
+            rep(j, vertex){
+                cout<< data[i].b_set[j];
+            }
+            cout<<endl;
+        }
     }
 
     Query gen_query(){
@@ -148,14 +212,12 @@ void inpt(){
 }
 
 void solve(){
-    //開始時間の計測
-    std::chrono::system_clock::time_point start, current;
-    start = chrono::system_clock::now();
-
     inpt();
 
     Graphs graphs;
     graphs.init();
+    graphs.annealing_graph();
+    return;
     graphs.simple_create_graph();
 
     cout<< graphs.n <<endl;
@@ -216,6 +278,6 @@ void test(int lp){
 }
 
 int main(){
-    // solve();
-    test(10000);
+    solve();
+    // test(10000);
 }
