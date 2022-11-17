@@ -19,7 +19,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=4500;
+double TIME_LIMIT=450;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -52,15 +52,15 @@ struct Query{
 // 構造体
 struct Data{
     bitset<4950> b_set;
-    string str;
     vector<int> v_quantity;
-    vector<vector<int>> board;
+    vector<double> graph_variance;
+    // string str;
+    // vector<vector<int>> board;
 };
 
 struct Graphs{
     int n, vertex, diff;
 	vector<Data> data;
-    vector<double> simple_variance;
     vector<int> min_edit_distance;
     vector<vector<int>> graph_edit_distance;
 
@@ -69,8 +69,8 @@ struct Graphs{
         vertex=n*(n-1)/2;
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
-        simple_variance.resize(m);
-        min_edit_distance.resize(m,9999);
+        rep(i, m) data[i].graph_variance.resize(m);
+        min_edit_distance.resize(m, 9999);
         graph_edit_distance.resize(m, vector<int>(m, -1));
     }
 
@@ -93,7 +93,7 @@ struct Graphs{
             rep(j, bit_quantity){
                 data[i].b_set.set(j);
             }
-            simple_variance[i]=(bit_quantity*(100-eps)+(vertex-bit_quantity)*eps)/100.0;
+            // graph_variance[i]=(bit_quantity*(100-eps)+(vertex-bit_quantity)*eps)/100.0;
             bit_quantity+=diff;
         }
     }
@@ -139,6 +139,7 @@ struct Graphs{
                 }
             }
         }
+        calc_variance();
         // output_graph();//
         // rep(i, m) PV(data[i].v_quantity);//
         // rep(i, m) cout<< min_edit_distance[i] <<endl;//
@@ -158,11 +159,43 @@ struct Graphs{
         }
         sort(all(data[index].v_quantity));
     }
+    vector<int> clac_v_quantity_from_string(string s){
+        int lp=0;
+        vector<int> rtn(m);
+        rep(i, m-1){
+            rep3(j, m, i+1){
+                if(s[lp]=='1'){
+                    // cout<< index SP << i SP << j <<endl;
+                    rtn[i]++;
+                    rtn[j]++;
+                }
+                lp++;
+            }
+        }
+        sort(all(rtn));
+        return rtn;
+    }
     int calc_edit_distance(int index1, int index2){
         int rtn=0;
         rep(i, m) rtn+=abs(data[index1].v_quantity[i]-data[index2].v_quantity[i]);
         return rtn;
     }
+    int calc_edit_distance_string(int index1, vector<int> v){
+        int rtn=0;
+        rep(i, m){
+            int tmp=data[index1].graph_variance[i]-v[i];
+            rtn+=tmp*tmp;
+        }
+        return rtn;
+    }
+    void calc_variance(){
+        rep(i, m){
+            rep(j, m){
+                data[i].graph_variance[j]=(data[i].v_quantity[j]*(100-eps)+(n-1-data[i].v_quantity[j])*eps)/100.0;
+            }
+        }
+    }
+
     void output_graph(){
         rep(i, m){
             rep(j, vertex){
@@ -174,15 +207,14 @@ struct Graphs{
 
     int guess(string s){
         // cout<< "guess()" <<endl;
-        bitset<4950> h(s);
-        int bit_quantity=h.count();
-        // int ans=round(1.0*bit_quantity/diff);
+        vector<int> h=clac_v_quantity_from_string(s);
         int ans=0;
-        double diff=9999.0;
+        double diff=99999999.0;
         rep(i, m){
-            if(diff>abs(bit_quantity-simple_variance[i])){
+            int tmp=calc_edit_distance_string(i, h);
+            if(diff>tmp){
                 ans=i;
-                diff=bit_quantity-simple_variance[i];
+                diff=tmp;
             }
         }
         return ans;
@@ -239,22 +271,23 @@ void test(int lp){
         std::cout << "書き込み失敗" << std::endl;
         exit(1);
     }
-    ofs<< "m, eps, err, n, score" <<endl;
+    // ofs<< "m, eps, err, n, score" <<endl;
 
     rep(i, lp){
         m=mt()%91+10;
         eps=mt()%41;
         // cout<< "m: " << m <<endl;
         // cout<< "eps: " << eps <<endl;
+        ofs<< m SP << "0." << eps <<endl;
         int err=0;
 
         // inpt();
 
         Graphs graphs;
         graphs.init();
-        // graphs.simple_create_graph();
         graphs.annealing_graph();
-        graphs.output_graph();
+        cout<< graphs.n <<endl; //
+        graphs.output_graph(); //
 
         rep(i, QUESTIONS){
             string h;
@@ -262,15 +295,32 @@ void test(int lp){
             Query query=graphs.gen_query();
             h=query.h;
             ans=query.ans;
+            ofs<< ans <<endl; //
+            // cout<< h <<endl; //
             int submit=graphs.guess(h);
+            cout<< submit <<endl; //
             if(ans!=submit) err++;
         }
+        ofs<< "1" <<endl; // seed
         // cout<< "err: " << err <<endl;
-        ofs<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
+        // ofs<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
     }
+}
+
+void ex(){
+    inpt();
+
+    Graphs graphs;
+    graphs.init();
+    graphs.annealing_graph();
+    
+    graphs.output_graph();
+    rep(i, m) PV(graphs.data[i].v_quantity);//
+    rep(i, m) cout<< graphs.min_edit_distance[i] <<endl;//
 }
 
 int main(){
     solve();
-    // test(10000);
+    // test(1);
+    // ex();
 }
