@@ -19,7 +19,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=450;
+double TIME_LIMIT=45;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -64,8 +64,9 @@ struct Graphs{
     vector<int> min_edit_distance;
     vector<vector<int>> graph_edit_distance;
 
-	void init(){
-        n=calc_v_annealing_size();
+	void init(int in_n=-1){
+        if(n==-1) n=calc_v_annealing_size();
+        else n=in_n;
         vertex=n*(n-1)/2;
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
@@ -308,19 +309,56 @@ void test(int lp){
 }
 
 void ex(){
-    inpt();
+    std::ofstream ofs("log.csv");
+    if (!ofs){
+        std::cout << "書き込み失敗" << std::endl;
+        exit(1);
+    }
 
-    Graphs graphs;
-    graphs.init();
-    graphs.annealing_graph();
-    
-    graphs.output_graph();
-    rep(i, m) PV(graphs.data[i].v_quantity);//
-    rep(i, m) cout<< graphs.min_edit_distance[i] <<endl;//
+    rep3(i, 101, 10){
+        rep3(j, 41, 0){
+            int max_k;
+            int max_score=-1;
+            rep3(k, 101, 4){
+                cout<< "(i, j, k)=" << i SP << j SP << k SP;
+                int err=0;
+                m=i;
+                eps=j;
+                Graphs graphs;
+                graphs.init(k);
+                graphs.annealing_graph();
+                // cout<< graphs.n <<endl; //
+                // graphs.output_graph(); //
+
+                rep(i, QUESTIONS){
+                    string h;
+                    int ans;
+                    Query query=graphs.gen_query();
+                    h=query.h;
+                    ans=query.ans;
+                    // ofs<< ans <<endl; //
+                    // cout<< h <<endl; //
+                    int submit=graphs.guess(h);
+                    // cout<< submit <<endl; //
+                    if(ans!=submit) err++;
+                }
+                int tmp=round(1000000000.0*pow(0.9, err)/graphs.n);
+                cout<< tmp <<endl;
+                if(max_score<tmp){
+                    max_score=tmp;
+                    max_k=k;
+                }
+            }
+            cout<< max_k <<endl;
+            if(j!=40) ofs<< max_k << ", ";
+            else ofs<< max_k <<endl;
+        }
+    }
+
 }
 
 int main(){
-    solve();
+    // solve();
     // test(1);
-    // ex();
+    ex();
 }
