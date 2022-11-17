@@ -19,7 +19,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=45;
+double TIME_LIMIT=450;
 double start_temp=50.0;
 double end_temp=10.0;
 
@@ -65,7 +65,7 @@ struct Graphs{
     vector<vector<int>> graph_edit_distance;
 
 	void init(int in_n=-1){
-        if(n==-1) n=calc_v_annealing_size();
+        if(in_n==-1) n=calc_v_annealing_size();
         else n=in_n;
         vertex=n*(n-1)/2;
         // cout<< "vertex: " << vertex <<endl;
@@ -117,9 +117,11 @@ struct Graphs{
         }
         // output_graph();//
 
+        int stop_streak=0;
         while (true){
             current = chrono::system_clock::now();
             if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+            int stop_flag=0;
             rep(i, m){
                 int before_distance=min_edit_distance[i];
                 int new_distance=9999;
@@ -133,12 +135,16 @@ struct Graphs{
                 if(min_edit_distance[i]<=new_distance){
                     //改善したので変更を受け入れる
                     min_edit_distance[i]=new_distance;
+                    stop_flag=1;
                 }else{
                     // 改善しなかったら元に戻す
                     data[i].b_set.flip(turn_bit_index);
                     init_v_quantity(i);
                 }
             }
+            stop_streak++;
+            if(stop_flag) stop_streak=0;
+            if(stop_streak>100) break;
         }
         calc_variance();
         // output_graph();//
@@ -184,8 +190,8 @@ struct Graphs{
     int calc_edit_distance_string(int index1, vector<int> v){
         int rtn=0;
         rep(i, m){
-            int tmp=data[index1].graph_variance[i]-v[i];
-            rtn+=tmp*tmp;
+            int tmp=abs(data[index1].graph_variance[i]-v[i]);
+            rtn+=tmp;
         }
         return rtn;
     }
@@ -279,7 +285,8 @@ void test(int lp){
         eps=mt()%41;
         // cout<< "m: " << m <<endl;
         // cout<< "eps: " << eps <<endl;
-        ofs<< m SP << "0." << eps <<endl;
+        if(eps<10) ofs<< m SP << "0.0" << eps <<endl;
+        else ofs<< m SP << "0." << eps <<endl;
         int err=0;
 
         // inpt();
@@ -304,7 +311,7 @@ void test(int lp){
         }
         ofs<< "1" <<endl; // seed
         // cout<< "err: " << err <<endl;
-        // ofs<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
+        // cout<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
     }
 }
 
@@ -320,7 +327,7 @@ void ex(){
             int max_k;
             int max_score=-1;
             rep3(k, 101, 4){
-                cout<< "(i, j, k)=" << i SP << j SP << k SP;
+                cout<< "(i j k) = (" << i SP << j SP << k << ")" SP;
                 int err=0;
                 m=i;
                 eps=j;
@@ -343,7 +350,7 @@ void ex(){
                     if(ans!=submit) err++;
                 }
                 int tmp=round(1000000000.0*pow(0.9, err)/graphs.n);
-                cout<< tmp <<endl;
+                cout<< err SP <<tmp <<endl;
                 if(max_score<tmp){
                     max_score=tmp;
                     max_k=k;
