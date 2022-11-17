@@ -114,7 +114,7 @@ struct Graphs{
                 // graph_edit_distance[j][i]=distance;
             }
         }
-        output_graph();//
+        // output_graph();//
 
         while (true){
             current = chrono::system_clock::now();
@@ -139,9 +139,9 @@ struct Graphs{
                 }
             }
         }
-        output_graph();//
-        rep(i, m) PV(data[i].v_quantity);//
-        rep(i, m) cout<< min_edit_distance[i] <<endl;//
+        // output_graph();//
+        // rep(i, m) PV(data[i].v_quantity);//
+        // rep(i, m) cout<< min_edit_distance[i] <<endl;//
     }
     void init_v_quantity(int index){
         int lp=0;
@@ -172,20 +172,6 @@ struct Graphs{
         }
     }
 
-    Query gen_query(){
-        // cout<< "gen_query()" <<endl;
-        Query rtn;
-        rtn.ans=mt()%m;
-        bitset<4950> tmp=data[rtn.ans].b_set;
-        rep(i, vertex){
-            if(eps>mt()%100) tmp.flip(i);
-
-            if(tmp[i]) rtn.h+='1';
-            else rtn.h+='0';
-        }
-        return rtn;
-    }
-
     int guess(string s){
         // cout<< "guess()" <<endl;
         bitset<4950> h(s);
@@ -200,6 +186,20 @@ struct Graphs{
             }
         }
         return ans;
+    }
+
+    Query gen_query(){
+        // cout<< "gen_query()" <<endl;
+        Query rtn;
+        rtn.ans=mt()%m;
+        bitset<4950> tmp=data[rtn.ans].b_set;
+        rep(i, vertex){
+            if(eps>mt()%100) tmp.flip(i);
+
+            if(tmp[i]) rtn.h+='1';
+            else rtn.h+='0';
+        }
+        return rtn;
     }
 };
 
@@ -217,16 +217,9 @@ void solve(){
     Graphs graphs;
     graphs.init();
     graphs.annealing_graph();
-    return;
-    graphs.simple_create_graph();
 
     cout<< graphs.n <<endl;
-    rep(i, m){
-        rep(j, graphs.vertex){
-            cout<< graphs.data[i].b_set[j];
-        }
-        cout<<endl;
-    }
+    graphs.output_graph();
 
     rep(i, QUESTIONS){
         string h;
