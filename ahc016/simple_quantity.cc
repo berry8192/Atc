@@ -19,9 +19,9 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=450;
-double start_temp=50.0;
-double end_temp=10.0;
+double TIME_LIMIT=4500;
+double start_temp;
+double end_temp=0.0;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -59,20 +59,32 @@ struct Data{
 };
 
 struct Graphs{
-    int n, vertex, diff;
+    int n, vertex, diff, turn_fig;
+    double min_min_edit_distance;
 	vector<Data> data;
-    vector<int> min_edit_distance;
-    vector<vector<int>> graph_edit_distance;
+    vector<double> min_edit_distance;
+    vector<vector<double>> graph_edit_distance;
 
 	void init(int in_n=-1){
         if(in_n==-1) n=calc_v_annealing_size();
         else n=in_n;
         vertex=n*(n-1)/2;
+        turn_fig=m*vertex/1000+1;
+        // cout<< "n: " << n <<endl;
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
-        rep(i, m) data[i].graph_variance.resize(m);
+        rep(i, m) data[i].graph_variance.resize(n);
         min_edit_distance.resize(m, 9999);
-        graph_edit_distance.resize(m, vector<int>(m, -1));
+        graph_edit_distance.resize(m, vector<double>(m, -1));
+        start_temp=0.0;
+        
+        // とりあえず初期解をつくる
+        simple_create_graph();
+        rep(i, m) init_v_quantity(i);
+        calc_all_distances();
+        calc_min_min_edit_distance();
+        // print_graph_info(); //
+        // cout<< min_min_edit_distance <<endl;
     }
 
     int calc_v_simple_size(){
@@ -84,78 +96,27 @@ struct Graphs{
     int calc_v_annealing_size(){
         int tmp=m*(1.0+eps*0.01); // とりあえず適当な感じにしておく
         // cout<< "calc_v_size: " << tmp <<endl;
-        return min(100, max(4, tmp));
+        return min(100, max(4, m));
     }
 
     void simple_create_graph(){
-        diff=vertex/(m-1);
-        int bit_quantity=0;
+        // cout<< "simple_create_graph: " << diff <<endl;
         rep(i, m){
+            int bit_quantity=round(vertex*i/(m-1));
             rep(j, bit_quantity){
                 data[i].b_set.set(j);
             }
+            // rep(j, vertex) cout<< data[i].b_set[j];
+            // cout<< endl;
             // graph_variance[i]=(bit_quantity*(100-eps)+(vertex-bit_quantity)*eps)/100.0;
             bit_quantity+=diff;
         }
     }
-    void annealing_graph(){
-        // oxの配置を焼きなまして編集距離がそれぞれ離れるようにグラフを構築する
-        std::chrono::system_clock::time_point start, current;
-        start = chrono::system_clock::now();
-
-        // とりあえず初期解をつくる
-        simple_create_graph();
-        rep(i, m) init_v_quantity(i);
-        rep(i, m){
-            rep3(j, m, i+1){
-                int distance=calc_edit_distance(i, j);
-                min_edit_distance[i]=min(min_edit_distance[i], distance);
-                min_edit_distance[j]=min(min_edit_distance[j], distance);
-                // graph_edit_distance[i][j]=distance;
-                // graph_edit_distance[j][i]=distance;
-            }
-        }
-        // output_graph();//
-
-        int stop_streak=0;
-        while (true){
-            current = chrono::system_clock::now();
-            if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
-            int stop_flag=0;
-            rep(i, m){
-                int before_distance=min_edit_distance[i];
-                int new_distance=9999;
-                int turn_bit_index=mt()%vertex;
-                data[i].b_set.flip(turn_bit_index);
-                init_v_quantity(i);
-                rep(j, m){
-                    if(i==j) continue;
-                    new_distance=min(new_distance, calc_edit_distance(i, j)+1);
-                }
-                if(min_edit_distance[i]<=new_distance){
-                    //改善したので変更を受け入れる
-                    min_edit_distance[i]=new_distance;
-                    stop_flag=1;
-                }else{
-                    // 改善しなかったら元に戻す
-                    data[i].b_set.flip(turn_bit_index);
-                    init_v_quantity(i);
-                }
-            }
-            stop_streak++;
-            if(stop_flag) stop_streak=0;
-            if(stop_streak>100) break;
-        }
-        calc_variance();
-        // output_graph();//
-        // rep(i, m) PV(data[i].v_quantity);//
-        // rep(i, m) cout<< min_edit_distance[i] <<endl;//
-    }
     void init_v_quantity(int index){
         int lp=0;
-        data[index].v_quantity=vector<int>(m);
-        rep(i, m-1){
-            rep3(j, m, i+1){
+        data[index].v_quantity=vector<int>(n);
+        rep(i, n-1){
+            rep3(j, n, i+1){
                 if(data[index].b_set.test(lp)){
                     // cout<< index SP << i SP << j <<endl;
                     data[index].v_quantity[i]++;
@@ -165,12 +126,15 @@ struct Graphs{
             }
         }
         sort(all(data[index].v_quantity));
+        rep(i, n){
+            data[index].graph_variance[i]=(data[index].v_quantity[i]*(100-eps)+(n-1-data[index].v_quantity[i])*eps)/100.0;
+        }
     }
     vector<int> clac_v_quantity_from_string(string s){
         int lp=0;
-        vector<int> rtn(m);
-        rep(i, m-1){
-            rep3(j, m, i+1){
+        vector<int> rtn(n);
+        rep(i, n-1){
+            rep3(j, n, i+1){
                 if(s[lp]=='1'){
                     // cout<< index SP << i SP << j <<endl;
                     rtn[i]++;
@@ -182,25 +146,44 @@ struct Graphs{
         sort(all(rtn));
         return rtn;
     }
-    int calc_edit_distance(int index1, int index2){
-        int rtn=0;
-        rep(i, m) rtn+=abs(data[index1].v_quantity[i]-data[index2].v_quantity[i]);
+    double calc_edit_distance(int index1, int index2){
+        double rtn=0;
+        rep(i, n) rtn+=abs(data[index1].graph_variance[i]-data[index2].graph_variance[i]);
         return rtn;
     }
-    int calc_edit_distance_string(int index1, vector<int> v){
-        int rtn=0;
-        rep(i, m){
-            int tmp=abs(data[index1].graph_variance[i]-v[i]);
+    double calc_edit_distance_string(int index1, vector<int> v){
+        double rtn=0;
+        rep(i, n){
+            double tmp=abs(data[index1].graph_variance[i]-v[i]);
             rtn+=tmp;
         }
         return rtn;
     }
-    void calc_variance(){
+    void calc_all_distances(){
+        rep(i, m) min_edit_distance[i]=9999;
         rep(i, m){
-            rep(j, m){
-                data[i].graph_variance[j]=(data[i].v_quantity[j]*(100-eps)+(n-1-data[i].v_quantity[j])*eps)/100.0;
+            rep3(j, m, i+1){
+                double distance=calc_edit_distance(i, j);
+                min_edit_distance[i]=min(min_edit_distance[i], distance);
+                min_edit_distance[j]=min(min_edit_distance[j], distance);
+                graph_edit_distance[i][j]=distance;
+                graph_edit_distance[j][i]=distance;
             }
         }
+    }
+    void calc_min_min_edit_distance(){
+        double mi=9999.9;
+        rep(i, m){
+            mi+=min(mi, min_edit_distance[i]);
+        }
+        min_min_edit_distance=mi;
+    }
+    void calc_logsum_edit_distance(){
+        double mi=0.0;
+        rep(i, m){
+            mi+=log2(min_edit_distance[i]);
+        }
+        min_min_edit_distance=mi;
     }
 
     void output_graph(){
@@ -211,6 +194,22 @@ struct Graphs{
             cout<<endl;
         }
     }
+    void print_graph_info(){
+        cout<< "-------v_quantity---------" <<endl;
+        rep(i, m) PV(data[i].v_quantity);//
+        cout<< "-------graph_variance---------" <<endl;
+        rep(i, m) PV(data[i].graph_variance);//
+        double mi=9999.0, ma=-1.0;
+        double ave=0;
+        cout<< "-------min_edit_distance--------" <<endl;
+        rep(i, m){
+            cout<< min_edit_distance[i] <<endl;//
+            mi=min(mi, min_edit_distance[i]);
+            ma=max(ma, min_edit_distance[i]);
+            ave+=min_edit_distance[i];
+        }
+        cout<< "(min, max, ave)=(" << mi << ", " << ma << ", " << ave/m << ")" <<endl;
+    }
 
     int guess(string s){
         // cout<< "guess()" <<endl;
@@ -218,7 +217,7 @@ struct Graphs{
         int ans=0;
         double diff=99999999.0;
         rep(i, m){
-            int tmp=calc_edit_distance_string(i, h);
+            double tmp=calc_edit_distance_string(i, h);
             if(diff>tmp){
                 ans=i;
                 diff=tmp;
@@ -250,12 +249,61 @@ void inpt(){
     // cout<< eps <<endl;
 }
 
+Graphs annealing_graph(int in_n=-1){
+    //開始時間の計測
+    std::chrono::system_clock::time_point start, current;
+    start = chrono::system_clock::now();
+
+    Graphs best;
+    if(in_n==-1) best.init();
+    else best.init(in_n);
+
+    //焼きなまし
+    int lp=0;
+    while (true) { // 時間の許す限り回す
+        lp++;
+        //cout<< lp <<endl;
+        current = chrono::system_clock::now(); // 現在時刻
+        double d_time=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+        if (d_time > TIME_LIMIT) break;
+
+        Graphs now=best;
+        int stop_streak=0, stop_flag=0, index=mt()%(m-2)+1;
+
+        vector<int> turn_bit_index;
+        rep(j, round(now.turn_fig*(TIME_LIMIT-d_time)/TIME_LIMIT)+1) turn_bit_index.push_back(mt()%now.vertex);
+        rep(j, turn_bit_index.size()) now.data[index].b_set.flip(turn_bit_index[j]);
+        // cout<< turn_bit_index.size() <<endl;
+        now.init_v_quantity(index);
+        now.calc_all_distances();
+        now.calc_min_min_edit_distance();
+
+        // 温度関数
+        double temp = start_temp + (end_temp - start_temp) * d_time / TIME_LIMIT;
+        // 遷移確率関数(最大化の場合)
+        // cout<< now.min_min_edit_distance SP << best.min_min_edit_distance <<endl;
+        double prob = exp((now.min_min_edit_distance-best.min_min_edit_distance)/temp);
+
+        if (prob > (mt()%imax)/(double)imax){
+            //改善したので変更を受け入れる
+            best=now;
+            stop_flag=1;
+        }
+        stop_streak++;
+        if(stop_flag) stop_streak=0;
+        if(stop_streak>10000) break;
+    }
+    cout<< "lp: " << lp <<endl; //
+    // output_graph();//
+    // rep(i, m) PV(data[i].v_quantity);//
+    // rep(i, m) cout<< min_edit_distance[i] <<endl;//
+    return best;
+}
+
 void solve(){
     inpt();
 
-    Graphs graphs;
-    graphs.init();
-    graphs.annealing_graph();
+    Graphs graphs=annealing_graph();
 
     cout<< graphs.n <<endl;
     graphs.output_graph();
@@ -269,10 +317,6 @@ void solve(){
 }
 
 void test(int lp){
-    //開始時間の計測
-    std::chrono::system_clock::time_point start, current;
-    start = chrono::system_clock::now();
-
     std::ofstream ofs("log.csv");
     if (!ofs){
         std::cout << "書き込み失敗" << std::endl;
@@ -283,6 +327,9 @@ void test(int lp){
     rep(i, lp){
         m=mt()%91+10;
         eps=mt()%41;
+        m=20;
+        eps=0;
+        int in_n=5;
         // cout<< "m: " << m <<endl;
         // cout<< "eps: " << eps <<endl;
         if(eps<10) ofs<< m SP << "0.0" << eps <<endl;
@@ -291,12 +338,11 @@ void test(int lp){
 
         // inpt();
 
-        Graphs graphs;
-        graphs.init();
-        graphs.annealing_graph();
-        cout<< graphs.n <<endl; //
-        graphs.output_graph(); //
-
+        Graphs graphs=annealing_graph(in_n);
+        cout<< graphs.n <<endl;
+        graphs.output_graph();
+        // graphs.print_graph_info(); //
+        // return;
         rep(i, QUESTIONS){
             string h;
             int ans;
@@ -331,9 +377,7 @@ void ex(){
                 int err=0;
                 m=i;
                 eps=j;
-                Graphs graphs;
-                graphs.init(k);
-                graphs.annealing_graph();
+                Graphs graphs=annealing_graph();
                 // cout<< graphs.n <<endl; //
                 // graphs.output_graph(); //
 
@@ -361,11 +405,44 @@ void ex(){
             else ofs<< max_k <<endl;
         }
     }
+}
 
+void ex2(){
+    std::ofstream ofs("log.csv");
+    if (!ofs){
+        std::cout << "書き込み失敗" << std::endl;
+        exit(1);
+    }
+
+    inpt();
+
+    rep3(k, 101, 4){
+        cout<< "(m eps n) = (" << m SP << eps SP << k << ")" SP;
+        int err=0;
+        Graphs graphs=annealing_graph();
+        // cout<< graphs.n <<endl; //
+        // graphs.output_graph(); //
+
+        rep(i, QUESTIONS){
+            string h;
+            int ans;
+            Query query=graphs.gen_query();
+            h=query.h;
+            ans=query.ans;
+            // ofs<< ans <<endl; //
+            // cout<< h <<endl; //
+            int submit=graphs.guess(h);
+            // cout<< submit <<endl; //
+            if(ans!=submit) err++;
+        }
+        int tmp=round(1000000000.0*pow(0.9, err)/graphs.n);
+        cout<< err SP <<tmp <<endl;
+    }
 }
 
 int main(){
     // solve();
-    // test(1);
-    ex();
+    test(1);
+    // ex();
+    // ex2();
 }
