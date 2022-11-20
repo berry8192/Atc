@@ -64,7 +64,7 @@ struct Graphs{
     double min_min_edit_distance;
 	vector<Data> data;
     vector<double> min_edit_distance;
-    vector<vector<double>> graph_edit_distance;
+    // vector<vector<double>> graph_edit_distance;
 
 	void init(int in_n=-1){
         if(in_n==-1) n=calc_v_annealing_size();
@@ -76,7 +76,7 @@ struct Graphs{
         data.resize(m);
         rep(i, m) data[i].graph_variance.resize(n);
         min_edit_distance.resize(m, 99999999);
-        graph_edit_distance.resize(m, vector<double>(m, -1));
+        // graph_edit_distance.resize(m, vector<double>(m, -1));
         start_temp=0.0;
         
         // とりあえず初期解をつくる
@@ -98,6 +98,7 @@ struct Graphs{
         int tmp=6+sqrt(m)*1/*+(m*m)*0.001*/+(eps*eps)*0.05+m*eps*0.03; // とりあえず適当な感じにしておく
         if(eps<=8) tmp=tmp*pow(0.95, 9-eps+m*0.01);
         if(eps==0) tmp-=1;
+        if(tmp>=120) tmp=4;
         // cout<< "calc_v_size: " << tmp <<endl;
         return min(100, max(4, tmp));
     }
@@ -106,7 +107,8 @@ struct Graphs{
         // cout<< "simple_create_graph: " << diff <<endl;
         rep(i, m){
             int bit_quantity=round(vertex*i/(m-1));
-            rep(j, bit_quantity){
+            // bit_quantity=(bit_quantity*bit_quantity)/vertex;
+            rep(j, min(vertex, bit_quantity)){
                 data[i].b_set.set(j);
             }
             // rep(j, vertex) cout<< data[i].b_set[j];
@@ -173,8 +175,8 @@ struct Graphs{
                 double distance=calc_edit_distance(i, j);
                 min_edit_distance[i]=min(min_edit_distance[i], distance);
                 min_edit_distance[j]=min(min_edit_distance[j], distance);
-                graph_edit_distance[i][j]=distance;
-                graph_edit_distance[j][i]=distance;
+                // graph_edit_distance[i][j]=distance;
+                // graph_edit_distance[j][i]=distance;
             }
         }
     }
@@ -344,9 +346,11 @@ void test(int lp){
     rep(i, lp){
         m=mt()%91+10;
         eps=mt()%41;
-        // m=80;
-        // eps=20;
-        // int in_n=95;
+        // m=10+10*i;
+        // eps=i*4;
+        m=50;
+        eps=40;
+        int in_n=4;
 
         // cout<< "m: " << m <<endl;
         // cout<< "eps: " << eps <<endl;
@@ -356,10 +360,10 @@ void test(int lp){
 
         // inpt();
 
-        Graphs graphs=annealing_graph();
-        cout<< graphs.n <<endl;
-        graphs.output_graph();
-        graphs.print_graph_info(); //
+        Graphs graphs=annealing_graph(in_n);
+        // cout<< graphs.n <<endl;
+        // graphs.output_graph();
+        // graphs.print_graph_info(); //
         // return; //
 
         rep(i, QUESTIONS){
@@ -371,15 +375,15 @@ void test(int lp){
             ofs<< ans <<endl; //
             // cout<< h <<endl; //
             int submit=graphs.guess(h);
-            cout<< submit <<endl; //
+            // cout<< submit <<endl; //
             if(ans!=submit) err++;
         }
         ofs<< "1" <<endl; // seed
         // cout<< "err: " << err <<endl;
-        // cout<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
+        cout<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
         sco+=round(1000000000.0*pow(0.9, err)/graphs.n);
     }
-    // cout<< sco/lp <<endl;
+    cout<< sco/lp <<endl;
 }
 
 void ex(){
@@ -470,7 +474,7 @@ void ex3(){
 
 int main(){
     solve();
-    // test(1);
+    // test(10);
     // ex();
     // ex2();
     // ex3();
