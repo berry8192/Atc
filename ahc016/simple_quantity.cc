@@ -17,9 +17,10 @@ using namespace std;
 // 定数周り
 int imax=2147483647;
 ll lmax=9223372036854775807;
+// int liner={4,}
 
 //焼きなましの定数
-double TIME_LIMIT=4500;
+double TIME_LIMIT=4900;
 double start_temp;
 double end_temp=0.0;
 
@@ -74,7 +75,7 @@ struct Graphs{
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
         rep(i, m) data[i].graph_variance.resize(n);
-        min_edit_distance.resize(m, 9999);
+        min_edit_distance.resize(m, 99999999);
         graph_edit_distance.resize(m, vector<double>(m, -1));
         start_temp=0.0;
         
@@ -82,7 +83,7 @@ struct Graphs{
         simple_create_graph();
         rep(i, m) init_v_quantity(i);
         calc_all_distances();
-        calc_min_min_edit_distance();
+        calc_sum_min_edit_distance();
         // print_graph_info(); //
         // cout<< min_min_edit_distance <<endl;
     }
@@ -94,9 +95,9 @@ struct Graphs{
         return min(100, max(4, tmp));
     }
     int calc_v_annealing_size(){
-        int tmp=m*(1.0+eps*0.01); // とりあえず適当な感じにしておく
+        int tmp=4+log10(m*m)*2*(eps*eps)*0.03; // とりあえず適当な感じにしておく
         // cout<< "calc_v_size: " << tmp <<endl;
-        return min(100, max(4, m));
+        return min(100, max(4, tmp));
     }
 
     void simple_create_graph(){
@@ -148,19 +149,23 @@ struct Graphs{
     }
     double calc_edit_distance(int index1, int index2){
         double rtn=0;
-        rep(i, n) rtn+=abs(data[index1].graph_variance[i]-data[index2].graph_variance[i]);
+        rep(i, n){
+            double tmp=abs(data[index1].graph_variance[i]-data[index2].graph_variance[i]);
+            rtn+=tmp*tmp;
+        }
+        // rep(i, n) rtn+=abs(data[index1].v_quantity[i]-data[index2].v_quantity[i]);
         return rtn;
     }
     double calc_edit_distance_string(int index1, vector<int> v){
         double rtn=0;
         rep(i, n){
             double tmp=abs(data[index1].graph_variance[i]-v[i]);
-            rtn+=tmp;
+            rtn+=tmp*tmp;
         }
         return rtn;
     }
     void calc_all_distances(){
-        rep(i, m) min_edit_distance[i]=9999;
+        rep(i, m) min_edit_distance[i]=99999999;
         rep(i, m){
             rep3(j, m, i+1){
                 double distance=calc_edit_distance(i, j);
@@ -171,19 +176,24 @@ struct Graphs{
             }
         }
     }
-    void calc_min_min_edit_distance(){
-        double mi=9999.9;
+    void calc_sum_min_edit_distance(bool near_limit=false){
+        double su=0.0;
+        // near_limit=false;
+        // if(near_limit){
+        //     su=20000;
+        //     rep(i, m){
+        //         su=min(su, min_edit_distance[i])+10000;
+        //         // su+=sqrt(min_edit_distance[i]);
+        //         // su+=min_edit_distance[i];
+        //     }
+        // }
         rep(i, m){
-            mi+=min(mi, min_edit_distance[i]);
+            su+=log2(min_edit_distance[i]+0.1);
+            // su+=sqrt(min_edit_distance[i]);
+            // su+=min_edit_distance[i];
         }
-        min_min_edit_distance=mi;
-    }
-    void calc_logsum_edit_distance(){
-        double mi=0.0;
-        rep(i, m){
-            mi+=log2(min_edit_distance[i]);
-        }
-        min_min_edit_distance=mi;
+        // cout<< su <<endl;
+        min_min_edit_distance=su;
     }
 
     void output_graph(){
@@ -195,20 +205,20 @@ struct Graphs{
         }
     }
     void print_graph_info(){
-        cout<< "-------v_quantity---------" <<endl;
-        rep(i, m) PV(data[i].v_quantity);//
-        cout<< "-------graph_variance---------" <<endl;
-        rep(i, m) PV(data[i].graph_variance);//
-        double mi=9999.0, ma=-1.0;
+        // cout<< "-------v_quantity---------" <<endl;
+        // rep(i, m) PV(data[i].v_quantity);//
+        // cout<< "-------graph_variance---------" <<endl;
+        // rep(i, m) PV(data[i].graph_variance);//
+        double mi=99999999.0, ma=-1.0;
         double ave=0;
-        cout<< "-------min_edit_distance--------" <<endl;
+        // cout<< "-------min_edit_distance--------" <<endl;
         rep(i, m){
-            cout<< min_edit_distance[i] <<endl;//
+            // cout<< min_edit_distance[i] <<endl;//
             mi=min(mi, min_edit_distance[i]);
             ma=max(ma, min_edit_distance[i]);
             ave+=min_edit_distance[i];
         }
-        cout<< "(min, max, ave)=(" << mi << ", " << ma << ", " << ave/m << ")" <<endl;
+        // cout<< "(min, max, ave)=(" << mi << ", " << ma << ", " << ave/m << ")" <<endl;
     }
 
     int guess(string s){
@@ -268,7 +278,8 @@ Graphs annealing_graph(int in_n=-1){
         if (d_time > TIME_LIMIT) break;
 
         Graphs now=best;
-        int stop_streak=0, stop_flag=0, index=mt()%(m-2)+1;
+        // int stop_streak=0, stop_flag=0;
+        int index=mt()%(m-2)+1;
 
         vector<int> turn_bit_index;
         rep(j, round(now.turn_fig*(TIME_LIMIT-d_time)/TIME_LIMIT)+1) turn_bit_index.push_back(mt()%now.vertex);
@@ -276,7 +287,7 @@ Graphs annealing_graph(int in_n=-1){
         // cout<< turn_bit_index.size() <<endl;
         now.init_v_quantity(index);
         now.calc_all_distances();
-        now.calc_min_min_edit_distance();
+        now.calc_sum_min_edit_distance(TIME_LIMIT-d_time<100);
 
         // 温度関数
         double temp = start_temp + (end_temp - start_temp) * d_time / TIME_LIMIT;
@@ -287,15 +298,18 @@ Graphs annealing_graph(int in_n=-1){
         if (prob > (mt()%imax)/(double)imax){
             //改善したので変更を受け入れる
             best=now;
-            stop_flag=1;
+            // stop_flag=1;
         }
-        stop_streak++;
-        if(stop_flag) stop_streak=0;
-        if(stop_streak>10000) break;
+        // stop_streak++;
+        // if(stop_flag) stop_streak=0;
+        // if(stop_streak>10000) break;
     }
-    cout<< "lp: " << lp <<endl; //
+    // cout<< "lp: " << lp <<endl; //
     // output_graph();//
     // rep(i, m) PV(data[i].v_quantity);//
+    // double mi_dis=9999.0;
+    // rep(i, m) mi_dis=min(mi_dis, best.min_edit_distance[i]);
+    // cout<< "mi_dis: " << mi_dis <<endl;
     // rep(i, m) cout<< min_edit_distance[i] <<endl;//
     return best;
 }
@@ -324,12 +338,14 @@ void test(int lp){
     }
     // ofs<< "m, eps, err, n, score" <<endl;
 
+    double sco=0.0;
     rep(i, lp){
         m=mt()%91+10;
         eps=mt()%41;
-        m=20;
-        eps=0;
-        int in_n=5;
+        // m=80;
+        // eps=20;
+        // int in_n=95;
+
         // cout<< "m: " << m <<endl;
         // cout<< "eps: " << eps <<endl;
         if(eps<10) ofs<< m SP << "0.0" << eps <<endl;
@@ -338,11 +354,12 @@ void test(int lp){
 
         // inpt();
 
-        Graphs graphs=annealing_graph(in_n);
+        Graphs graphs=annealing_graph();
         cout<< graphs.n <<endl;
         graphs.output_graph();
-        // graphs.print_graph_info(); //
-        // return;
+        graphs.print_graph_info(); //
+        // return; //
+
         rep(i, QUESTIONS){
             string h;
             int ans;
@@ -358,7 +375,9 @@ void test(int lp){
         ofs<< "1" <<endl; // seed
         // cout<< "err: " << err <<endl;
         // cout<< m << ", " << eps << ", " << err << ", " << graphs.n << ", " << round(1000000000.0*pow(0.9, err)/graphs.n) <<endl;
+        sco+=round(1000000000.0*pow(0.9, err)/graphs.n);
     }
+    // cout<< sco/lp <<endl;
 }
 
 void ex(){
@@ -368,41 +387,28 @@ void ex(){
         exit(1);
     }
 
-    rep3(i, 101, 10){
+    for(int i=10;i<101;i+=5){
         rep3(j, 41, 0){
-            int max_k;
-            int max_score=-1;
-            rep3(k, 101, 4){
-                cout<< "(i j k) = (" << i SP << j SP << k << ")" SP;
-                int err=0;
-                m=i;
-                eps=j;
-                Graphs graphs=annealing_graph();
-                // cout<< graphs.n <<endl; //
-                // graphs.output_graph(); //
+            int err=0;
+            m=i;
+            eps=j;
+            Graphs graphs=annealing_graph();
+            // cout<< graphs.n <<endl; //
+            // graphs.output_graph(); //
 
-                rep(i, QUESTIONS){
-                    string h;
-                    int ans;
-                    Query query=graphs.gen_query();
-                    h=query.h;
-                    ans=query.ans;
-                    // ofs<< ans <<endl; //
-                    // cout<< h <<endl; //
-                    int submit=graphs.guess(h);
-                    // cout<< submit <<endl; //
-                    if(ans!=submit) err++;
-                }
-                int tmp=round(1000000000.0*pow(0.9, err)/graphs.n);
-                cout<< err SP <<tmp <<endl;
-                if(max_score<tmp){
-                    max_score=tmp;
-                    max_k=k;
-                }
+            rep(i, QUESTIONS){
+                string h;
+                int ans;
+                Query query=graphs.gen_query();
+                h=query.h;
+                ans=query.ans;
+                // ofs<< ans <<endl; //
+                // cout<< h <<endl; //
+                int submit=graphs.guess(h);
+                // cout<< submit <<endl; //
+                if(ans!=submit) err++;
             }
-            cout<< max_k <<endl;
-            if(j!=40) ofs<< max_k << ", ";
-            else ofs<< max_k <<endl;
+            int tmp=round(1000000000.0*pow(0.9, err)/graphs.n);
         }
     }
 }
@@ -440,9 +446,30 @@ void ex2(){
     }
 }
 
+void ex3(){
+    std::ofstream ofs("log.csv");
+    if (!ofs){
+        std::cout << "書き込み失敗" << std::endl;
+        exit(1);
+    }
+
+    Graphs graphs=annealing_graph();
+
+    rep3(i, 101, 4){
+        m=i;
+        rep3(j, 41, 0){
+            eps=j;
+            int tmp=graphs.calc_v_annealing_size();
+            if(j!=40) ofs<< tmp << ", ";
+            else ofs<< tmp <<endl;
+        }
+    }
+}
+
 int main(){
     // solve();
-    test(1);
+    // test(1);
     // ex();
     // ex2();
+    ex3();
 }
