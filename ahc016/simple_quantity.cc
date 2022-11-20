@@ -70,7 +70,7 @@ struct Graphs{
         if(in_n==-1) n=calc_v_annealing_size();
         else n=in_n;
         vertex=n*(n-1)/2;
-        turn_fig=m*vertex/1000+1;
+        turn_fig=m*vertex/1500+1;
         // cout<< "n: " << n <<endl;
         // cout<< "vertex: " << vertex <<endl;
         data.resize(m);
@@ -95,7 +95,9 @@ struct Graphs{
         return min(100, max(4, tmp));
     }
     int calc_v_annealing_size(){
-        int tmp=4+log10(m*m)*2*(eps*eps)*0.03; // とりあえず適当な感じにしておく
+        int tmp=6+sqrt(m)*1/*+(m*m)*0.001*/+(eps*eps)*0.05+m*eps*0.03; // とりあえず適当な感じにしておく
+        if(eps<=8) tmp=tmp*pow(0.95, 9-eps+m*0.01);
+        if(eps==0) tmp-=1;
         // cout<< "calc_v_size: " << tmp <<endl;
         return min(100, max(4, tmp));
     }
@@ -453,23 +455,23 @@ void ex3(){
         exit(1);
     }
 
-    Graphs graphs=annealing_graph();
+    Graphs graphs;
 
-    rep3(i, 101, 4){
-        m=i;
-        rep3(j, 41, 0){
-            eps=j;
+    for(int i=0;i<41;i+=1){
+        eps=i;
+        for(int j=10;j<101;j+=5){
+            m=j;
             int tmp=graphs.calc_v_annealing_size();
-            if(j!=40) ofs<< tmp << ", ";
+            if(j!=100) ofs<< tmp << ", ";
             else ofs<< tmp <<endl;
         }
     }
 }
 
 int main(){
-    // solve();
+    solve();
     // test(1);
     // ex();
     // ex2();
-    ex3();
+    // ex3();
 }
