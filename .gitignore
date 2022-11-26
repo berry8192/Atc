@@ -2,3 +2,6 @@ a.out
 a-plus-b*
 testcases
 log.*
+Cargo.lock
+Cargo.toml
+target
