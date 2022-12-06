@@ -45,6 +45,30 @@ template <class T> void PS(T ps) {
 	cout<< "}" <<endl;
 }
 
+template <typename T>
+class SafeVector : public std::vector<T>
+{
+public:
+  // int 型の引数を1つ取るコンストラクタ
+  SafeVector(int idx = 0)
+  {
+    this->resize(idx);
+  }
+
+  // 添え字演算子をオーバーロード
+  T& operator[](int idx)
+  {
+    // 配列外参照の場合は、異常終了する
+    if (idx < 0 || idx >= this->size())
+    {
+      throw std::out_of_range("SafeVector: Index out of range");
+    }
+
+    return std::vector<T>::operator[](idx);
+  }
+};
+
+
 struct Query{
     string h;
     int ans;
@@ -53,18 +77,18 @@ struct Query{
 // 構造体
 struct Data{
     bitset<4950> b_set;
-    vector<int> v_quantity;
-    vector<double> graph_variance;
+    SafeVector<int> v_quantity;
+    SafeVector<double> graph_variance;
     // string str;
-    // vector<vector<int>> board;
+    // SafeVector<SafeVector<int>> board;
 };
 
 struct Graphs{
     int n, vertex, diff, turn_fig;
     double min_min_edit_distance;
-	vector<Data> data;
-    vector<double> min_edit_distance;
-    // vector<vector<double>> graph_edit_distance;
+	SafeVector<Data> data;
+    SafeVector<double> min_edit_distance;
+    // SafeVector<SafeVector<double>> graph_edit_distance;
 
 	void init(int in_n=-1){
         if(in_n==-1) n=calc_v_annealing_size();
@@ -76,7 +100,7 @@ struct Graphs{
         data.resize(m);
         rep(i, m) data[i].graph_variance.resize(n);
         min_edit_distance.resize(m, 99999999);
-        // graph_edit_distance.resize(m, vector<double>(m, -1));
+        // graph_edit_distance.resize(m, SafeVector<double>(m, -1));
         start_temp=0.0;
         
         // とりあえず初期解をつくる
@@ -119,7 +143,7 @@ struct Graphs{
     }
     void init_v_quantity(int index){
         int lp=0;
-        data[index].v_quantity=vector<int>(n);
+        data[index].v_quantity=SafeVector<int>(size_t(n));
         rep(i, n-1){
             rep3(j, n, i+1){
                 if(data[index].b_set.test(lp)){
@@ -135,9 +159,9 @@ struct Graphs{
             data[index].graph_variance[i]=(data[index].v_quantity[i]*(100-eps)+(n-1-data[index].v_quantity[i])*eps)/100.0;
         }
     }
-    vector<int> clac_v_quantity_from_string(string s){
+    SafeVector<int> clac_v_quantity_from_string(string s){
         int lp=0;
-        vector<int> rtn(n);
+        SafeVector<int> rtn(n);
         rep(i, n-1){
             rep3(j, n, i+1){
                 if(s[lp]=='1'){
@@ -160,7 +184,7 @@ struct Graphs{
         // rep(i, n) rtn+=abs(data[index1].v_quantity[i]-data[index2].v_quantity[i]);
         return rtn;
     }
-    double calc_edit_distance_string(int index1, vector<int> v){
+    double calc_edit_distance_string(int index1, SafeVector<int> v){
         double rtn=0;
         rep(i, n){
             double tmp=abs(data[index1].graph_variance[i]-v[i]);
@@ -227,7 +251,7 @@ struct Graphs{
 
     int guess(string s){
         // cout<< "guess()" <<endl;
-        vector<int> h=clac_v_quantity_from_string(s);
+        SafeVector<int> h=clac_v_quantity_from_string(s);
         int ans=0;
         double diff=99999999.0;
         rep(i, m){
@@ -285,7 +309,7 @@ Graphs annealing_graph(int in_n=-1){
         // int stop_streak=0, stop_flag=0;
         int index=mt()%(m-2)+1;
 
-        vector<int> turn_bit_index;
+        SafeVector<int> turn_bit_index;
         rep(j, round(now.turn_fig*(TIME_LIMIT-d_time)/TIME_LIMIT)+1) turn_bit_index.push_back(mt()%now.vertex);
         rep(j, turn_bit_index.size()) now.data[index].b_set.flip(turn_bit_index[j]);
         // cout<< turn_bit_index.size() <<endl;
@@ -348,9 +372,9 @@ void test(int lp){
         eps=mt()%41;
         // m=10+10*i;
         // eps=i*4;
-        m=50;
-        eps=40;
-        int in_n=4;
+        // m=50;
+        // eps=40;
+        // int in_n=4;
 
         // cout<< "m: " << m <<endl;
         // cout<< "eps: " << eps <<endl;
@@ -360,7 +384,7 @@ void test(int lp){
 
         // inpt();
 
-        Graphs graphs=annealing_graph(in_n);
+        Graphs graphs=annealing_graph();
         // cout<< graphs.n <<endl;
         // graphs.output_graph();
         // graphs.print_graph_info(); //
