@@ -61,7 +61,9 @@ public:
     // 配列外参照の場合は、異常終了する
     if (idx < 0 || idx >= this->size())
     {
-      throw std::out_of_range("SafeVector: Index out of range");
+        cout<< "index limit: " << this->size() <<endl;
+        cout<< "given index: " << idx <<endl;
+      throw std::out_of_range("配列外参照してます");
     }
 
     return std::vector<T>::operator[](idx);
@@ -385,6 +387,7 @@ void test(int lp){
         // inpt();
 
         Graphs graphs=annealing_graph();
+        cout<< graphs.data[0].v_quantity[-1] <<endl;
         // cout<< graphs.n <<endl;
         // graphs.output_graph();
         // graphs.print_graph_info(); //
@@ -497,8 +500,8 @@ void ex3(){
 }
 
 int main(){
-    solve();
-    // test(10);
+    // solve();
+    test(10);
     // ex();
     // ex2();
     // ex3();
