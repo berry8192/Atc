@@ -28,28 +28,27 @@ template <class T>void PVV(T pvv) {
 	}
 }
 
+//乱数の準備
+int seed=(unsigned)time(NULL), cnt, scnt, lp=0;
+mt19937 mt(seed);
+
 struct poi{
-	int v;
 	int h;
 	int w;
 
 	bool operator<(const poi &in) const{
-		return v<in.v;
+		return h*1000+w<in.h*1000+in.w;
 	};
 };
 
 int main(){
 	std::chrono::system_clock::time_point start, current;
     start = chrono::system_clock::now();
-	
-    //乱数の準備
-    int seed=(unsigned)time(NULL), cnt, scnt, lp=0;
-	set<poi> st;
-    mt19937 mt(seed);
 
 	int n;
 	vector<vector<int>> v;
 	vector<int> shu;
+	set<poi> st;
 	cin>> n;
 	v.resize(n);
 	shu.resize(n*n);
@@ -72,7 +71,6 @@ int main(){
 			}
 			if(cnt==4){
 				poi tmp;
-				tmp.v=v[i][j];
 				tmp.h=i;
 				tmp.w=j;
 				st.insert(tmp);
@@ -80,7 +78,7 @@ int main(){
 		}
 	}
 
-	while (true) {
+	while (!st.empty()) {
 		// PVV(v);
 		if(st.empty()) break;
 		lp++;
@@ -96,24 +94,29 @@ int main(){
 		poi p2;
 		st.erase(st.begin());
 		if(st.size()<2){
-			p2.h=mt()%(n-2)+1;
-			p2.w=mt()%(n-2)+1;
+			p2.h=mt()%n;
+			p2.w=mt()%n;
 		}else{
 			auto itr=st.end();
 			itr--;
 			p2=*itr;
 			st.erase(itr);
 		}
-		cout<< v[p1.h][p1.w] SP << v[p2.h][p2.w] <<endl;
+		// cout<< v[p1.h][p1.w] SP << v[p2.h][p2.w] <<endl;
 		swap(v[p1.h][p1.w], v[p2.h][p2.w]);
 		scnt=0;
 		vector<int> ah, aw;
+		int ddh, ddw;
 		rep(i, 9){
 			cnt=0;
 			int dh=p1.h+dh8[i], dw=p1.w+dw8[i];
 			if(dh==0 || dh==n-1 || dw==0 || dw==n-1) continue;
+			if(st.find(poi({dh, dw}))!=st.end()) scnt--;
 			rep(j, 8){
-				if(v[dh][dw]<v[dh+dh8[j]][dw+dw8[j]]) cnt++;
+				ddh=dh+dh8[j];
+				ddw=dw+dw8[j];
+				if(dh<0 || dh>n-1 || dw<0 || dw>n-1) continue;
+				if(v[dh][dw]<v[ddh][ddw]) cnt++;
 			}
 			if(cnt==4){
 				scnt++;
@@ -125,8 +128,12 @@ int main(){
 			cnt=0;
 			int dh=p2.h+dh8[i], dw=p2.w+dw8[i];
 			if(dh==0 || dh==n-1 || dw==0 || dw==n-1) continue;
+			if(st.find(poi({dh, dw}))!=st.end()) scnt--;
 			rep(j, 8){
-				if(v[dh][dw]<v[dh+dh8[j]][dw+dw8[j]]) cnt++;
+				ddh=dh+dh8[j];
+				ddw=dw+dw8[j];
+				if(dh<0 || dh>n-1 || dw<0 || dw>n-1) continue;
+				if(v[dh][dw]<v[ddh][ddw]) cnt++;
 			}
 			if(cnt==4){
 				scnt++;
@@ -134,12 +141,11 @@ int main(){
 				aw.push_back(dw);
 			}
 		}
-		if(17-scnt<mt()%18){
+		if(scnt>0){
 			swap(v[p1.h][p1.w], v[p2.h][p2.w]);
 		}else{
 			rep(i, ah.size()){
 				poi tmp;
-				tmp.v=v[ah[i]][aw[i]];
 				tmp.h=ah[i];
 				tmp.w=aw[i];
 				st.insert(tmp);
@@ -147,23 +153,22 @@ int main(){
 		}
 	}
 	
-	cout<< st.size() <<endl;
-	rep3(i, n-1, 1){
-		rep3(j, n-1, 1){
-			cnt=0;
-			rep(k, 8){
-				if(v[i][j]<v[i+dh8[k]][j+dw8[k]]) cnt++;
-			}
-			if(cnt==4){
-				poi tmp;
-				tmp.v=v[i][j];
-				tmp.h=i;
-				tmp.w=j;
-				st.insert(tmp);
-			}
-		}
-	}
-	cout<< st.size() <<endl;
+	// cout<< st.size() <<endl;
+	// rep3(i, n-1, 1){
+	// 	rep3(j, n-1, 1){
+	// 		cnt=0;
+	// 		rep(k, 8){
+	// 			if(v[i][j]<v[i+dh8[k]][j+dw8[k]]) cnt++;
+	// 		}
+	// 		if(cnt==4){
+	// 			poi tmp;
+	// 			tmp.h=i;
+	// 			tmp.w=j;
+	// 			st.insert(tmp);
+	// 		}
+	// 	}
+	// }
+	// cout<< st.size() <<endl;
 	
 	PVV(v);
 
