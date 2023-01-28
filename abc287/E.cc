@@ -44,7 +44,7 @@ int main(){
 		mlen=max(mlen, int(s[i].size()));
 	}
 
-	// ローリングハッシュ
+	// ローリングハッシュ?
 	vector<map<ll, int>> v(mlen);
 	vector<vector<ll>> w(n);
 	vector<map<ll, int>> v2(mlen);
