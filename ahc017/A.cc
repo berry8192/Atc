@@ -69,18 +69,29 @@ int n, m, d, k;
 SafeVector<int> u, v, w;
 
 // 構造体
+typedef pair<int, int> P;
+struct edge{int to; int cost;};
+
 struct City{
-    SafeVector<SafeVector<int>> dist;
+    SafeVector<SafeVector<int>> base_dist, dist;
+    SafeVector<SafeVector<edge>> graph;
     SafeVector<int> ans;
     ll dist_sum=0;
 
     void init(){
+        // cout<< "init" <<endl;
+        base_dist.resize(n);
         dist.resize(n);
+        graph.resize(n);
         ans.resize(m);
+        rep(i, n) base_dist[i].resize(n, INF);
         rep(i, n) dist[i].resize(n, INF);
         rep(i, m){
-            dist[u[i]][v[i]]=w[i];
-            dist[v[i]][u[i]]=w[i];
+            // ワーシャルフロイドの時は使う
+            // dist[u[i]][v[i]]=w[i];
+            // dist[v[i]][u[i]]=w[i];
+            graph[u[i]].push_back({v[i], w[i]});
+            graph[v[i]].push_back({u[i], w[i]});
         }
     }
 
@@ -93,10 +104,33 @@ struct City{
             }
         }
     }
-    void calc_dist_sum(){
+    void dijkstra(int start, SafeVector<SafeVector<int>>& calc_dist){
+        // cout<< "dijkstra " << start <<endl;
+        priority_queue< P, vector<P>, greater<P> > que;
+        calc_dist[start][start] = 0;
+        que.push(P(0, start));
+        while(que.size()){
+            int d = que.top().first;
+            int u = que.top().second;
+            que.pop();
+            if(calc_dist[start][u] < d) continue;
+            for(int i=0;i<graph[u].size();++i){
+                int v = graph[u][i].to;
+                int cost = graph[u][i].cost;
+                if(calc_dist[start][v] > d + cost){
+                    calc_dist[start][v] = d + cost;
+                    que.push(P(calc_dist[start][v], v));
+                }
+            }
+        }
+    }
+    void dijkstra_all(SafeVector<SafeVector<int>>& calc_dist){
+        rep(i, n) dijkstra(i, calc_dist);
+    }
+    void calc_dist_sum(SafeVector<SafeVector<int>>& calc_dist){
         rep(i, n){
             rep3(j, n, i+1){
-                dist_sum+=dist[i][j];
+                dist_sum+=calc_dist[i][j];
             }
         }
     }
@@ -107,7 +141,9 @@ struct City{
             lp++;
         }
     }
+    ll calc_score(){
 
+    }
     void print_ans(){
         rep(i, m) cout<< ans[i] SP;
         cout<< endl;
@@ -116,7 +152,7 @@ struct City{
 
 
 void inpt(){
-    //cout<< "inpt" <<endl;
+    // cout<< "inpt" <<endl;
     cin>> n >> m >> d >> k;
     u.resize(m);
     v.resize(m);
@@ -129,14 +165,16 @@ void inpt(){
 }
 
 int main(){
+    // cout<< "main" <<endl;
     inpt();
     City city;
     city.init();
     // city.floyd_warshall();
-    // city.calc_dist_sum();
-    // cout<< city.dist_sum <<endl;
-    city.init_ans();
-    city.print_ans();
+    city.dijkstra_all(city.dist);
+    city.calc_dist_sum(city.dist);
+    cout<< city.dist_sum <<endl;
+    // city.init_ans();
+    // city.print_ans();
 
     return 0;
 }
