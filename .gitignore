@@ -1,6 +1,7 @@
 a.out
 a-plus-b*
 testcases
+test_results
 *log.*
 Cargo.lock
 Cargo.toml

@@ -13,6 +13,7 @@
 using namespace std;
 
 // 定数周り
+int INF=1000000000;
 int imax=2147483647;
 ll lmax=9223372036854775807;
 
@@ -68,6 +69,50 @@ int n, m, d, k;
 SafeVector<int> u, v, w;
 
 // 構造体
+struct City{
+    SafeVector<SafeVector<int>> dist;
+    SafeVector<int> ans;
+    ll dist_sum=0;
+
+    void init(){
+        dist.resize(n);
+        ans.resize(m);
+        rep(i, n) dist[i].resize(n, INF);
+        rep(i, m){
+            dist[u[i]][v[i]]=w[i];
+            dist[v[i]][u[i]]=w[i];
+        }
+    }
+
+    void floyd_warshall() {
+        for (int k=0;k<n;k++){
+            for (int i=0;i<n;i++){
+                for (int j=0;j<n;j++){
+                    dist[i][j]=min(dist[i][j], dist[i][k]+dist[k][j]);
+                }
+            }
+        }
+    }
+    void calc_dist_sum(){
+        rep(i, n){
+            rep3(j, n, i+1){
+                dist_sum+=dist[i][j];
+            }
+        }
+    }
+    void init_ans(){
+        int lp=0;
+        while(lp<m){
+            ans[lp]=lp%d+1;
+            lp++;
+        }
+    }
+
+    void print_ans(){
+        rep(i, m) cout<< ans[i] SP;
+        cout<< endl;
+    }
+};
 
 
 void inpt(){
@@ -76,10 +121,22 @@ void inpt(){
     u.resize(m);
     v.resize(m);
     w.resize(m);
-    rep(i, m) cin>> u[i] >> v[i] >> w[i];
+    rep(i, m){
+        cin>> u[i] >> v[i] >> w[i];
+        u[i]--;
+        v[i]--;
+    }
 }
 
 int main(){
     inpt();
+    City city;
+    city.init();
+    // city.floyd_warshall();
+    // city.calc_dist_sum();
+    // cout<< city.dist_sum <<endl;
+    city.init_ans();
+    city.print_ans();
+
     return 0;
 }
