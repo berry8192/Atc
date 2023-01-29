@@ -39,44 +39,19 @@ template <class T> void PS(T ps) {
 	cout<< "}" <<endl;
 }
 
-template <typename T>
-class SafeVector : public std::vector<T>
-{
-    public:
-    // int 型の引数を1つ取るコンストラクタ
-    SafeVector(int idx = 0)
-    {
-        this->resize(idx);
-    }
-
-    // 添え字演算子をオーバーロード
-    T& operator[](int idx)
-    {
-        // 配列外参照の場合は、異常終了する
-        if (idx < 0 || idx >= this->size())
-        {
-            cout<< "index limit: " << this->size() <<endl;
-            cout<< "given index: " << idx <<endl;
-        throw std::out_of_range("配列外参照してます");
-        }
-
-        return std::vector<T>::operator[](idx);
-    }
-};
-
 //入力
 int n, m, d, k;
-SafeVector<int> u, v, w;
+vector<int> u, v, w;
 
 // 構造体
 typedef pair<int, int> P;
-struct edge{int to; int cost;};
+struct edge{int id; int to; int cost;};
 
 struct City{
-    SafeVector<SafeVector<int>> base_dist, dist;
-    SafeVector<SafeVector<edge>> graph;
-    SafeVector<int> ans;
-    ll dist_sum=0;
+    vector<vector<int>> base_dist, dist;
+    vector<vector<edge>> graph;
+    vector<int> ans;
+    double complain;
 
     void init(){
         // cout<< "init" <<endl;
@@ -84,14 +59,14 @@ struct City{
         dist.resize(n);
         graph.resize(n);
         ans.resize(m);
-        rep(i, n) base_dist[i].resize(n, INF);
-        rep(i, n) dist[i].resize(n, INF);
+        rep(i, n) base_dist[i].resize(n);
+        rep(i, n) dist[i].resize(n);
         rep(i, m){
             // ワーシャルフロイドの時は使う
             // dist[u[i]][v[i]]=w[i];
             // dist[v[i]][u[i]]=w[i];
-            graph[u[i]].push_back({v[i], w[i]});
-            graph[v[i]].push_back({u[i], w[i]});
+            graph[u[i]].push_back({i, v[i], w[i]});
+            graph[v[i]].push_back({i, u[i], w[i]});
         }
     }
 
@@ -104,35 +79,40 @@ struct City{
             }
         }
     }
-    void dijkstra(int start, SafeVector<SafeVector<int>>& calc_dist){
+    void dijkstra(int start, int day, vector<int>& calc_dist){
         // cout<< "dijkstra " << start <<endl;
         priority_queue< P, vector<P>, greater<P> > que;
-        calc_dist[start][start] = 0;
+        fill(all(calc_dist), INF);
+        calc_dist[start] = 0;
         que.push(P(0, start));
         while(que.size()){
-            int d = que.top().first;
-            int u = que.top().second;
+            int dd = que.top().first;
+            int uu = que.top().second;
             que.pop();
-            if(calc_dist[start][u] < d) continue;
-            for(int i=0;i<graph[u].size();++i){
-                int v = graph[u][i].to;
-                int cost = graph[u][i].cost;
-                if(calc_dist[start][v] > d + cost){
-                    calc_dist[start][v] = d + cost;
-                    que.push(P(calc_dist[start][v], v));
+            if(calc_dist[uu] < dd) continue;
+            for(int i=0;i<graph[uu].size();++i){
+                if(ans[graph[uu][i].id]==day) continue;
+                int vv = graph[uu][i].to;
+                int cost = graph[uu][i].cost;
+                if(calc_dist[vv] > dd + cost){
+                    calc_dist[vv] = dd + cost;
+                    que.push(P(calc_dist[vv], vv));
                 }
             }
         }
     }
-    void dijkstra_all(SafeVector<SafeVector<int>>& calc_dist){
-        rep(i, n) dijkstra(i, calc_dist);
+    void dijkstra_all(int day, vector<vector<int>>& calc_dist){
+        rep(i, n) dijkstra(i, day, calc_dist[i]);
     }
-    void calc_dist_sum(SafeVector<SafeVector<int>>& calc_dist){
+    ll calc_dist_sum(vector<vector<int>>& calc_dist){
+        ll dist_sum=0;
         rep(i, n){
             rep3(j, n, i+1){
                 dist_sum+=calc_dist[i][j];
             }
         }
+        dist_sum*=2;
+        return dist_sum;
     }
     void init_ans(){
         int lp=0;
@@ -142,7 +122,19 @@ struct City{
         }
     }
     ll calc_score(){
-
+        // vector<vector<int>> block(d);
+        // rep(i, m) block[ans[i]-1].push_back(i-1);
+        ll complain_sum=0, base_sum=calc_dist_sum(base_dist);
+        rep3(i, d+1, 1){
+            dijkstra_all(i, dist);
+            // cout<< calc_dist_sum(dist) SP << base_sum <<endl;
+            double day_complain=calc_dist_sum(dist)-base_sum;
+            // day_complain/=n*(n-1);
+            cout<< "day:" << i SP;
+            printf("%.3lf\n", day_complain);
+            complain_sum+=day_complain;
+        }
+        return round(1000.0*complain_sum/(d*n*(n-1)));
     }
     void print_ans(){
         rep(i, m) cout<< ans[i] SP;
@@ -170,11 +162,11 @@ int main(){
     City city;
     city.init();
     // city.floyd_warshall();
-    city.dijkstra_all(city.dist);
-    city.calc_dist_sum(city.dist);
-    cout<< city.dist_sum <<endl;
-    // city.init_ans();
-    // city.print_ans();
+    // cout<< city.dist_sum <<endl;
+    city.init_ans();
+    city.print_ans();
+    city.dijkstra_all(0, city.base_dist);
+    cout<< city.calc_score() <<endl;
 
     return 0;
 }
