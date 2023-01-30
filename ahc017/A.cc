@@ -39,6 +39,16 @@ template <class T> void PS(T ps) {
 	cout<< "}" <<endl;
 }
 
+template <class T> T v_inv(T pvv) {
+    vector<pair<int, int>> pa;
+	// rep(i, pvv.size()) pa.push_back(make_pair(-pvv[i], i)); // 昇順の場合
+	rep(i, pvv.size()) pa.push_back(make_pair(-pvv[i], i));
+    sort(all(pa));
+    vector<int> rtn;
+    rep(i, pa.size()) rtn.push_back(pa[i].second);
+    return rtn;
+}
+
 //入力
 int n, m, d, k;
 vector<int> u, v, w;
@@ -51,8 +61,7 @@ struct City{
     vector<vector<int>> base_dist, dist;
     vector<vector<int>> edge_inv;
     vector<vector<edge>> graph;
-    vector<int> ans, edge_used;
-    double complain;
+    vector<int> ans, edge_used, edge_priority;
 
     void init(){
         // cout<< "init" <<endl;
@@ -124,6 +133,7 @@ struct City{
             // PV(edge_used);
         }
         // cout<< "dijkstra_base_end" <<endl;
+        edge_priority=v_inv(edge_used);
     }
     void dijkstra_all(int day, vector<vector<int>>& calc_dist){
         rep(i, n){
@@ -194,7 +204,8 @@ int main(){
     city.init_ans();
     city.print_ans();
     city.dijkstra_base();
-    // PV(city.edge_used);
+    PV(city.edge_used);
+    PV(city.edge_priority);
     cout<< city.calc_score() <<endl;
 
     return 0;
