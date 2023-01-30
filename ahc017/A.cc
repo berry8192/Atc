@@ -49,24 +49,27 @@ struct edge{int id; int to; int cost;};
 
 struct City{
     vector<vector<int>> base_dist, dist;
+    vector<vector<int>> edge_inv;
     vector<vector<edge>> graph;
-    vector<int> ans;
+    vector<int> ans, edge_used;
     double complain;
 
     void init(){
         // cout<< "init" <<endl;
-        base_dist.resize(n);
-        dist.resize(n);
+        base_dist.resize(n, vector<int>(n));
+        dist.resize(n, vector<int>(n));
+        edge_inv.resize(n, vector<int>(n, -1));
         graph.resize(n);
         ans.resize(m);
-        rep(i, n) base_dist[i].resize(n);
-        rep(i, n) dist[i].resize(n);
+        edge_used.resize(m);
         rep(i, m){
             // ワーシャルフロイドの時は使う
             // dist[u[i]][v[i]]=w[i];
             // dist[v[i]][u[i]]=w[i];
             graph[u[i]].push_back({i, v[i], w[i]});
             graph[v[i]].push_back({i, u[i], w[i]});
+            edge_inv[u[i]][v[i]]=i;
+            edge_inv[v[i]][u[i]]=i;
         }
     }
 
@@ -79,10 +82,11 @@ struct City{
             }
         }
     }
-    void dijkstra(int start, int day, vector<int>& calc_dist){
+    void dijkstra(int start, int day, vector<int>& calc_dist, vector<int>& prev){
         // cout<< "dijkstra " << start <<endl;
         priority_queue< P, vector<P>, greater<P> > que;
         fill(all(calc_dist), INF);
+        // fill(all(prev), -1);
         calc_dist[start] = 0;
         que.push(P(0, start));
         while(que.size()){
@@ -91,18 +95,41 @@ struct City{
             que.pop();
             if(calc_dist[uu] < dd) continue;
             for(int i=0;i<graph[uu].size();++i){
+                // ここはedge型に一旦移すと速いはず
                 if(ans[graph[uu][i].id]==day) continue;
                 int vv = graph[uu][i].to;
                 int cost = graph[uu][i].cost;
                 if(calc_dist[vv] > dd + cost){
                     calc_dist[vv] = dd + cost;
+                    prev[vv] = uu;
                     que.push(P(calc_dist[vv], vv));
                 }
             }
         }
     }
+    void get_path(const vector<int> &prev, int t) {
+        for (int cur = t; prev[cur] != -1; cur = prev[cur]) {
+            int tmp=edge_inv[cur][prev[cur]];
+            // cout<< cur << "->" << prev[cur] SP << tmp SP;
+            if(-1<tmp) edge_used[tmp]++;
+        }
+        // cout<< endl;
+    }
+    void dijkstra_base(){
+        // cout<< "dijkstra_base" <<endl;
+        rep(i, n){
+            vector<int> prev(n, -1);
+            dijkstra(i, 0, base_dist[i], prev);
+            rep(j, n) get_path(prev, j);
+            // PV(edge_used);
+        }
+        // cout<< "dijkstra_base_end" <<endl;
+    }
     void dijkstra_all(int day, vector<vector<int>>& calc_dist){
-        rep(i, n) dijkstra(i, day, calc_dist[i]);
+        rep(i, n){
+            vector<int> prev(n, -1);
+            dijkstra(i, day, calc_dist[i], prev);
+        }
     }
     ll calc_dist_sum(vector<vector<int>>& calc_dist){
         ll dist_sum=0;
@@ -131,7 +158,7 @@ struct City{
             double day_complain=calc_dist_sum(dist)-base_sum;
             // day_complain/=n*(n-1);
             cout<< "day:" << i SP;
-            printf("%.3lf\n", day_complain);
+            printf("%.3lf\n", day_complain/n/(n-1));
             complain_sum+=day_complain;
         }
         return round(1000.0*complain_sum/(d*n*(n-1)));
@@ -161,11 +188,13 @@ int main(){
     inpt();
     City city;
     city.init();
+    // rep(i, n) PV(city.edge_inv[i]);
     // city.floyd_warshall();
     // cout<< city.dist_sum <<endl;
     city.init_ans();
     city.print_ans();
-    city.dijkstra_all(0, city.base_dist);
+    city.dijkstra_base();
+    // PV(city.edge_used);
     cout<< city.calc_score() <<endl;
 
     return 0;
