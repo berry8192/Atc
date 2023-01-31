@@ -39,29 +39,69 @@ template <class T> void PS(T ps) {
 	cout<< "}" <<endl;
 }
 
-template <class T> T v_inv(T pvv) {
-    vector<pair<int, int>> pa;
+vector<int> v_inv(vector<ll> pvv) {
+    vector<pair<ll, int>> pa;
 	// rep(i, pvv.size()) pa.push_back(make_pair(-pvv[i], i)); // 昇順の場合
 	rep(i, pvv.size()) pa.push_back(make_pair(-pvv[i], i));
     sort(all(pa));
     vector<int> rtn;
-    rep(i, pa.size()) rtn.push_back(pa[i].second);
+    rep(i, pa.size()){
+        rtn.push_back(pa[i].second);
+    }
     return rtn;
+}
+
+vector<int> rankOfArray(vector<ll> arr) {
+    vector<ll> sorted = arr;
+    sort(sorted.begin(), sorted.end(), greater<ll>());
+    unordered_map<ll, int> rankMap;
+    for (int i = 0; i < sorted.size(); i++) {
+        if (!rankMap.count(sorted[i])) {
+            rankMap[sorted[i]] = i;
+        }
+    }
+    vector<int> result(arr.size());
+    for (int i = 0; i < arr.size(); i++) {
+        result[i] = rankMap[arr[i]];
+    }
+    return result;
+}
+
+void preview_edge(int mm, vector<int> vv){
+    vector<int> pv(mm, 1);
+    rep(i, vv.size()) pv[vv[i]]=i+2;
+    PV(pv);
 }
 
 //入力
 int n, m, d, k;
-vector<int> u, v, w;
+vector<int> u, v, w, x, y;
+int leftmost_v_idx, left_max=1001;
 
 // 構造体
 typedef pair<int, int> P;
-struct edge{int id; int to; int cost;};
+struct edge{
+    int id;
+    int to;
+    int cost;
+    double rad; // -PI<rad<PI
+
+    bool operator<(const edge &in) const{
+		return rad<in.rad;
+	};
+};
+
+// struct polygon{
+//     vector<int> edge_id;
+// };
 
 struct City{
     vector<vector<int>> base_dist, dist;
     vector<vector<int>> edge_inv;
     vector<vector<edge>> graph;
-    vector<int> ans, edge_used, edge_priority;
+    vector<int> ans, edge_priority;
+    vector<ll> edge_used_fig;
+    bitset<3000> outside_edge;
 
     void init(){
         // cout<< "init" <<endl;
@@ -69,17 +109,21 @@ struct City{
         dist.resize(n, vector<int>(n));
         edge_inv.resize(n, vector<int>(n, -1));
         graph.resize(n);
-        ans.resize(m);
-        edge_used.resize(m);
+        ans.resize(m, -1);
+        edge_used_fig.resize(m);
         rep(i, m){
             // ワーシャルフロイドの時は使う
             // dist[u[i]][v[i]]=w[i];
             // dist[v[i]][u[i]]=w[i];
-            graph[u[i]].push_back({i, v[i], w[i]});
-            graph[v[i]].push_back({i, u[i], w[i]});
+            double rad=atan2(y[v[i]]-y[u[i]], x[v[i]]-x[u[i]]);
+            double radr=atan2(y[u[i]]-y[v[i]], x[u[i]]-x[v[i]]);
+            // cout<< rad SP << radr <<endl;
+            graph[u[i]].push_back({i, v[i], w[i], rad});
+            graph[v[i]].push_back({i, u[i], w[i], radr});
             edge_inv[u[i]][v[i]]=i;
             edge_inv[v[i]][u[i]]=i;
         }
+        rep(i, n) sort(all(graph[i]));
     }
 
     void floyd_warshall() {
@@ -90,6 +134,15 @@ struct City{
                 }
             }
         }
+    }
+    void search_outside_edge(){
+        vector<int> tmp;
+        rep(i, graph[leftmost_v_idx].size()){
+            tmp.push_back(graph[leftmost_v_idx][i].id);
+            cout<< graph[leftmost_v_idx][i].rad SP << x[graph[leftmost_v_idx][i].to] SP << y[graph[leftmost_v_idx][i].to] <<endl;
+        }
+        preview_edge(m, tmp);
+        
     }
     void dijkstra(int start, int day, vector<int>& calc_dist, vector<int>& prev){
         // cout<< "dijkstra " << start <<endl;
@@ -120,7 +173,7 @@ struct City{
         for (int cur = t; prev[cur] != -1; cur = prev[cur]) {
             int tmp=edge_inv[cur][prev[cur]];
             // cout<< cur << "->" << prev[cur] SP << tmp SP;
-            if(-1<tmp) edge_used[tmp]++;
+            if(-1<tmp) edge_used_fig[tmp]++;
         }
         // cout<< endl;
     }
@@ -133,7 +186,8 @@ struct City{
             // PV(edge_used);
         }
         // cout<< "dijkstra_base_end" <<endl;
-        edge_priority=v_inv(edge_used);
+        // rep(i, m) edge_used_fig[i]*=-w[i];
+        edge_priority=v_inv(edge_used_fig);
     }
     void dijkstra_all(int day, vector<vector<int>>& calc_dist){
         rep(i, n){
@@ -151,12 +205,12 @@ struct City{
         dist_sum*=2;
         return dist_sum;
     }
+    void pickup_NGlist(){
+        // 出発してきた辺の隣の添え字の辺を伝うdfsを書く
+
+    }
     void init_ans(){
-        int lp=0;
-        while(lp<m){
-            ans[lp]=lp%d+1;
-            lp++;
-        }
+        rep(i, m) ans[i]=i%d+1;
     }
     ll calc_score(){
         // vector<vector<int>> block(d);
@@ -186,10 +240,20 @@ void inpt(){
     u.resize(m);
     v.resize(m);
     w.resize(m);
+    x.resize(n);
+    y.resize(n);
     rep(i, m){
         cin>> u[i] >> v[i] >> w[i];
         u[i]--;
         v[i]--;
+    }
+    rep(i, n){
+        cin>> x[i] >> y[i];
+        // 最も右にある点を取得
+        if(x[i]<left_max){
+            left_max=x[i];
+            leftmost_v_idx=i;
+        }
     }
 }
 
@@ -198,14 +262,27 @@ int main(){
     inpt();
     City city;
     city.init();
+    city.search_outside_edge();
+    return 0;
     // rep(i, n) PV(city.edge_inv[i]);
     // city.floyd_warshall();
     // cout<< city.dist_sum <<endl;
     city.init_ans();
-    city.print_ans();
+    // city.print_ans();
     city.dijkstra_base();
-    PV(city.edge_used);
-    PV(city.edge_priority);
+    sort(all(city.edge_used_fig));
+    // PV(city.edge_used_fig);
+    // PV(city.edge_priority);
+    rep(i, m){
+        // if(city.edge_priority[i]>1130){
+        //     cout<< "1 ";
+        // }else if(city.edge_priority[i]<11){
+        //     cout<< "2 ";
+        // }else{
+        //     cout<< "3 ";
+        // }
+        // cout<< city.edge_priority[i]/((m+d-1)/d)+1 SP;
+    }
     cout<< city.calc_score() <<endl;
 
     return 0;
