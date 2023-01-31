@@ -135,14 +135,41 @@ struct City{
             }
         }
     }
-    void search_outside_edge(){
-        vector<int> tmp;
-        rep(i, graph[leftmost_v_idx].size()){
-            tmp.push_back(graph[leftmost_v_idx][i].id);
-            cout<< graph[leftmost_v_idx][i].rad SP << x[graph[leftmost_v_idx][i].to] SP << y[graph[leftmost_v_idx][i].to] <<endl;
+    // dfs(どの頂点idから来たか、どの頂点idに行くか)
+    void outside_dfs(int from, int to){
+        // cout<< from SP << to <<endl;
+        int esz=graph[to].size();
+        int before_edge_id=edge_inv[from][to];
+        // cout<< "from edge of: " << before_edge_id <<endl;
+        rep(i, esz){
+            if(graph[to][i].id==before_edge_id){
+                int use_idx=(i+1)%esz;
+                edge use_edge=graph[to][use_idx];
+                if(outside_edge[use_edge.id]) return;
+                outside_edge.set(use_edge.id);
+                // testv.push_back(use_edge.id);
+                outside_dfs(to, use_edge.to);
+                return;
+            }
         }
-        preview_edge(m, tmp);
-        
+    }
+    void search_outside_edge(){
+        // vector<int> tmp;
+        // rep(i, graph[leftmost_v_idx].size()){
+        //     tmp.push_back(graph[leftmost_v_idx][i].id);
+        //     cout<< graph[leftmost_v_idx][i].rad SP << x[graph[leftmost_v_idx][i].to] SP << y[graph[leftmost_v_idx][i].to] <<endl;
+        // }
+        // preview_edge(m, tmp);
+        int next_vertex=graph[leftmost_v_idx][0].to;
+        outside_edge.set(graph[leftmost_v_idx][0].id);
+        // testv.push_back(graph[leftmost_v_idx][0].id);
+        outside_dfs(leftmost_v_idx, next_vertex);
+        // vector<int> tmp;
+        // rep(i, m){
+        //     if(outside_edge[i]) tmp.push_back(i);
+        // }
+        // preview_edge(m, testv);
+        // preview_edge(m, tmp);
     }
     void dijkstra(int start, int day, vector<int>& calc_dist, vector<int>& prev){
         // cout<< "dijkstra " << start <<endl;
