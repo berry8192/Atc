@@ -27,6 +27,11 @@ double end_temp=0.0;
 int seed=1;
 mt19937 mt(seed);
 
+//入力
+int n, m, d, k;
+vector<int> u, v, w, x, y;
+int leftmost_v_idx, left_max=1001;
+
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
 	rep(i, pvv.size()-1) cout << pvv[i] SP;
@@ -67,16 +72,11 @@ vector<int> rankOfArray(vector<ll> arr) {
     return result;
 }
 
-void preview_edge(int mm, vector<int> vv){
-    vector<int> pv(mm, 1);
+void preview_edge(vector<int> vv){
+    vector<int> pv(m, 1);
     rep(i, vv.size()) pv[vv[i]]=i+2;
     PV(pv);
 }
-
-//入力
-int n, m, d, k;
-vector<int> u, v, w, x, y;
-int leftmost_v_idx, left_max=1001;
 
 // 構造体
 typedef pair<int, int> P;
@@ -135,41 +135,38 @@ struct City{
             }
         }
     }
-    // dfs(どの頂点idから来たか、どの頂点idに行くか)
-    void outside_dfs(int from, int to){
-        // cout<< from SP << to <<endl;
+    // dfs(どの頂点idから来たか、どのidの辺を使うか)
+    void outside_dfs(int from, int edge_idx, vector<int>& path){
+        int before_edge_id=graph[from][edge_idx].id; // 使った辺のid
+        if(!path.empty() && path[0]==before_edge_id) return;
+        path.push_back(before_edge_id);
+        int to=graph[from][edge_idx].to;
         int esz=graph[to].size();
-        int before_edge_id=edge_inv[from][to];
         // cout<< "from edge of: " << before_edge_id <<endl;
         rep(i, esz){
             if(graph[to][i].id==before_edge_id){
                 int use_idx=(i+1)%esz;
                 edge use_edge=graph[to][use_idx];
-                if(outside_edge[use_edge.id]) return;
-                outside_edge.set(use_edge.id);
                 // testv.push_back(use_edge.id);
-                outside_dfs(to, use_edge.to);
+                outside_dfs(to, use_idx, path);
                 return;
             }
         }
     }
     void search_outside_edge(){
-        // vector<int> tmp;
-        // rep(i, graph[leftmost_v_idx].size()){
-        //     tmp.push_back(graph[leftmost_v_idx][i].id);
-        //     cout<< graph[leftmost_v_idx][i].rad SP << x[graph[leftmost_v_idx][i].to] SP << y[graph[leftmost_v_idx][i].to] <<endl;
-        // }
-        // preview_edge(m, tmp);
-        int next_vertex=graph[leftmost_v_idx][0].to;
-        outside_edge.set(graph[leftmost_v_idx][0].id);
-        // testv.push_back(graph[leftmost_v_idx][0].id);
-        outside_dfs(leftmost_v_idx, next_vertex);
-        // vector<int> tmp;
-        // rep(i, m){
-        //     if(outside_edge[i]) tmp.push_back(i);
-        // }
-        // preview_edge(m, testv);
-        // preview_edge(m, tmp);
+        // 一番左側の頂点の一番左下を向いた辺がスタート地点
+        vector<int> tmp;
+        outside_dfs(leftmost_v_idx, 0, tmp);
+        rep(i, tmp.size()){
+            // cout<< tmp[i] <<endl;
+            outside_edge.set(tmp[i]);
+        }
+        // preview_edge(tmp);
+    }
+    void search_polygon(int from, int edge_idx){
+        vector<int> tmp;
+        outside_dfs(from, edge_idx, tmp);
+        preview_edge(tmp);
     }
     void dijkstra(int start, int day, vector<int>& calc_dist, vector<int>& prev){
         // cout<< "dijkstra " << start <<endl;
@@ -289,8 +286,7 @@ int main(){
     inpt();
     City city;
     city.init();
-    city.search_outside_edge();
-    return 0;
+    // city.search_outside_edge();
     // rep(i, n) PV(city.edge_inv[i]);
     // city.floyd_warshall();
     // cout<< city.dist_sum <<endl;
@@ -300,17 +296,9 @@ int main(){
     sort(all(city.edge_used_fig));
     // PV(city.edge_used_fig);
     // PV(city.edge_priority);
-    rep(i, m){
-        // if(city.edge_priority[i]>1130){
-        //     cout<< "1 ";
-        // }else if(city.edge_priority[i]<11){
-        //     cout<< "2 ";
-        // }else{
-        //     cout<< "3 ";
-        // }
-        // cout<< city.edge_priority[i]/((m+d-1)/d)+1 SP;
-    }
-    cout<< city.calc_score() <<endl;
+    city.search_polygon(166, 1);
+    city.search_polygon(50, 4);
+    // cout<< city.calc_score() <<endl;
 
     return 0;
 }
