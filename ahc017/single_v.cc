@@ -62,6 +62,7 @@ struct edge{
 vector<vector<edge>> g;
 vector<int> ans;
 vector<vector<int>> vd;
+vector<int> dd;
 void inpt(){
     // cout<< "inpt" <<endl;
     cin>> n >> m >> d >> k;
@@ -69,7 +70,8 @@ void inpt(){
     v.resize(m);
     w.resize(m);
     ans.resize(m, -1);
-    vd.resize(m, vector<int>(d));
+    vd.resize(n, vector<int>(d));
+    dd.resize(d);
     g.resize(n);
     rep(i, m){
         cin>> u[i] >> v[i] >> w[i];
@@ -80,23 +82,25 @@ void inpt(){
     }
 }
 
-int dd=0;
+int rot=0;
 void dfs(int x){
     // cout<< x <<endl;
     rep(i, g[x].size()){
         if(ans[g[x][i].id]!=-1) continue;
-        int mi=999;
+        int mi=99999;
         int mid;
         rep(lp, d){
-            int j=(lp+dd)%d;
-            if(vd[x][j]+vd[g[x][i].to][j]<mi){
-                mi=vd[x][j]+vd[g[x][i].to][j];
+            int j=(lp+rot)%d;
+            //cout<<vd[x][j]+vd[g[x][i].to][j] SP;
+            if(vd[x][j]+vd[g[x][i].to][j]+dd[j]<mi){
+                mi=vd[x][j]+vd[g[x][i].to][j]+dd[j];
                 mid=j;
             }
         }
-        dd++;
-        // cout<< mid <<endl;
+        rot++;
+        // << mid <<endl;
         ans[g[x][i].id]=mid;
+        dd[mid]++;
         vd[x][mid]++;
         vd[g[x][i].to][mid]++;
         dfs(g[x][i].to);
