@@ -54,12 +54,12 @@ int n, m, d, k;
 vector<int> u, v, w;
 
 // 構造体
-struct edge{
+struct Edge{
     int to;
     int id;
 };
 
-vector<vector<edge>> g;
+vector<vector<Edge>> g;
 vector<int> ans;
 vector<vector<int>> vd;
 vector<int> dd;

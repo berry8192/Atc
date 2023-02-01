@@ -54,17 +54,17 @@ int n, m, d, k;
 vector<int> u, v, w;
 
 // 構造体
-struct edge{
+struct Edge{
     int from;
     int to;
     int id;
     
-	bool operator<(const edge &in) const{
+	bool operator<(const Edge &in) const{
 		return from!=in.from ? from<in.from : to<in.to;
 	};
 };
 
-vector<edge> vv;
+vector<Edge> vv;
 vector<int> ans;
 void inpt(){
     // cout<< "inpt" <<endl;

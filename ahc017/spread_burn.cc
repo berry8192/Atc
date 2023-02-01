@@ -55,7 +55,7 @@ vector<int> u, v, w;
 vector<double> xx, yy;
 
 // 構造体
-struct edge{
+struct Edge{
     int id;
     int from;
     int to;
@@ -63,7 +63,7 @@ struct edge{
     double y;
     double rad;
 
-    double distance(edge &in){
+    double distance(Edge &in){
         double dis=sqrt((x-in.x)*(x-in.x)+(y-in.y)*(y-in.y));
         double ang=min(abs(rad-in.rad), M_PI-abs(rad-in.rad));
         ang=2.0-ang;
@@ -71,7 +71,7 @@ struct edge{
     }
 };
 
-vector<edge> vv;
+vector<Edge> vv;
 vector<int> ans, cnt;
 vector<set<int>> st;
 vector<double> sco;

@@ -80,15 +80,26 @@ void preview_edge(vector<int> vv){
 
 // 構造体
 typedef pair<int, int> P;
-struct edge{
+struct Edge{
     int id;
     int to;
     int cost;
     double rad; // -PI<rad<PI
 
-    bool operator<(const edge &in) const{
+    bool operator<(const Edge &in) const{
 		return rad<in.rad;
 	};
+};
+
+// 最初の出発辺が入ってしまうのでcost計算やパス一覧を見るときに呼ぶ側で無視する
+struct Path{
+    vector<int> forw, reve;
+    int for_cost=0, rev_cost=0;
+
+    void calc_cost_sum(){
+        rep3(i, forw.size(), 1) for_cost+=w[forw[i]];
+        rep3(i, reve.size(), 1) rev_cost+=w[reve[i]];
+    }
 };
 
 // struct polygon{
@@ -96,12 +107,14 @@ struct edge{
 // };
 
 struct City{
-    vector<vector<int>> base_dist, dist;
-    vector<vector<int>> edge_inv;
-    vector<vector<edge>> graph;
-    vector<int> ans, edge_priority;
-    vector<ll> edge_used_fig;
-    bitset<3000> outside_edge;
+    vector<vector<int>> base_dist, dist; // [n][n] 通行止めがない状態の2頂点間の距離、2頂点間の距離計算用
+    vector<vector<int>> edge_inv; // [n][n] 始点と終点から辺idを出す
+    vector<vector<Edge>> graph; // [n][3~10] 辺をEdgeの隣接リストで持っている
+    vector<int> ans, edge_priority; // [m] 辺が何日目に通行止めになるかの出力用、辺が何番目に多く使われているか
+    vector<ll> edge_used_fig; // [m] 辺が全頂点対の最短距離として何回使われているか //頂点からの距離で割ってもいいかも
+    bitset<3000> outside_edge; // 辺が外周の辺であるかどうか
+    vector<Path> path; // [m] 迂回ルートを保存
+    vector<vector<bool>> nglist; // [m][d] ダメな日を保存 //愚直
 
     void init(){
         // cout<< "init" <<endl;
@@ -111,6 +124,7 @@ struct City{
         graph.resize(n);
         ans.resize(m, -1);
         edge_used_fig.resize(m);
+        path.resize(m);
         rep(i, m){
             // ワーシャルフロイドの時は使う
             // dist[u[i]][v[i]]=w[i];
@@ -146,7 +160,7 @@ struct City{
         rep(i, esz){
             if(graph[to][i].id==before_edge_id){
                 int use_idx=(i+1)%esz;
-                edge use_edge=graph[to][use_idx];
+                Edge use_edge=graph[to][use_idx];
                 // testv.push_back(use_edge.id);
                 outside_dfs(to, use_idx, path);
                 return;
@@ -163,10 +177,33 @@ struct City{
         }
         // preview_edge(tmp);
     }
-    void search_polygon(int from, int edge_idx){
-        vector<int> tmp;
-        outside_dfs(from, edge_idx, tmp);
-        preview_edge(tmp);
+    void search_detour_route_all(){
+        rep(i, m){
+            int vertex_id;
+            rep(j, graph[u[i]].size()){
+                if(graph[u[i]][j].id==i){
+                    vertex_id=j;
+                    break;
+                }
+            }
+            if(!outside_edge[i]) outside_dfs(u[i], vertex_id, path[i].forw);
+            else path[i].for_cost=1000000000;
+            
+            rep(j, graph[v[i]].size()){
+                if(graph[v[i]][j].id==i){
+                    vertex_id=j;
+                    break;
+                }
+            }
+            outside_dfs(v[i], vertex_id, path[i].reve);
+            path[i].calc_cost_sum();
+        }
+    }
+    void calc_NGlist(){
+        rep(i, m){
+            
+        }
+
     }
     void dijkstra(int start, int day, vector<int>& calc_dist, vector<int>& prev){
         // cout<< "dijkstra " << start <<endl;
@@ -229,10 +266,6 @@ struct City{
         dist_sum*=2;
         return dist_sum;
     }
-    void pickup_NGlist(){
-        // 出発してきた辺の隣の添え字の辺を伝うdfsを書く
-
-    }
     void init_ans(){
         rep(i, m) ans[i]=i%d+1;
     }
@@ -255,6 +288,19 @@ struct City{
         rep(i, m) cout<< ans[i] SP;
         cout<< endl;
     }
+    void debug_mode(){
+        while(1){
+            int tmp;
+            cin>> tmp;
+            if(0<tmp){
+                preview_edge(path[tmp].forw);
+                cout<< "for_cost: " << path[tmp].for_cost <<endl;
+            }else{
+                preview_edge(path[-tmp].reve);
+                cout<< "rev_cost: " << path[-tmp].rev_cost <<endl;
+            }
+        }
+    }
 };
 
 
@@ -273,7 +319,7 @@ void inpt(){
     }
     rep(i, n){
         cin>> x[i] >> y[i];
-        // 最も右にある点を取得
+        // 最も左にある点を取得
         if(x[i]<left_max){
             left_max=x[i];
             leftmost_v_idx=i;
@@ -286,7 +332,10 @@ int main(){
     inpt();
     City city;
     city.init();
-    // city.search_outside_edge();
+    city.search_outside_edge();
+    city.search_detour_route_all();
+    city.calc_NGlist();
+    
     // rep(i, n) PV(city.edge_inv[i]);
     // city.floyd_warshall();
     // cout<< city.dist_sum <<endl;
@@ -296,8 +345,6 @@ int main(){
     sort(all(city.edge_used_fig));
     // PV(city.edge_used_fig);
     // PV(city.edge_priority);
-    city.search_polygon(166, 1);
-    city.search_polygon(50, 4);
     // cout<< city.calc_score() <<endl;
 
     return 0;
