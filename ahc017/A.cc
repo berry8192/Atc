@@ -18,13 +18,13 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=4900;
-double start_temp;
-double end_temp=0.0;
+double TIME_LIMIT=5900.0;
+double start_temp=100000000.0;
+double end_temp=10000.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=1;
+auto seed=(unsigned)time(NULL);
+// int seed=1;
 mt19937 mt(seed);
 
 //入力
@@ -114,7 +114,11 @@ struct City{
     vector<ll> edge_used_fig; // [m] 辺が全頂点対の最短距離として何回使われているか //頂点からの距離で割ってもいいかも
     bitset<3000> outside_edge; // 辺が外周の辺であるかどうか
     vector<Path> path; // [m] 迂回ルートを保存
-    vector<vector<bool>> nglist; // [m][d] ダメな日を保存 //愚直
+    vector<int> nglist; // [m][d bit] ダメな日を保存
+    vector<vector<ll>> trouble; // [m][m] 辺iが通行止めのときに辺jが通行止めになると辺iがどの程度困るか
+    vector<set<int>> ans_inv; // [d]{} i日目に所属している辺の集合を表す
+    ll best_score; // トラブル値の最小記録
+    vector<int> best_ans; // トラブル値の最少記録を達成した時のans
 
     void init(){
         // cout<< "init" <<endl;
@@ -123,8 +127,12 @@ struct City{
         edge_inv.resize(n, vector<int>(n, -1));
         graph.resize(n);
         ans.resize(m, -1);
+        ans_inv.resize(d);
+        vector<set<int>> ans_inv;
         edge_used_fig.resize(m);
         path.resize(m);
+        nglist.resize(m);
+        trouble.resize(m, vector<ll>(m));
         rep(i, m){
             // ワーシャルフロイドの時は使う
             // dist[u[i]][v[i]]=w[i];
@@ -199,11 +207,111 @@ struct City{
             path[i].calc_cost_sum();
         }
     }
-    void calc_NGlist(){
-        rep(i, m){
-            
+    void decide_close_day(int edge, int close_day){
+        ans[edge]=close_day;
+        if(path[edge].for_cost<path[edge].rev_cost){
+            rep3(i, path[edge].forw.size(), 1){
+                nglist[path[edge].forw[i]]+=(1<<close_day);
+            }
+        }else{
+            rep3(i, path[edge].reve.size(), 1){
+                nglist[path[edge].reve[i]]+=(1<<close_day);
+            }
         }
-
+    }
+    void calc_NGlist(){
+        vector<int> days(d);
+        rep(i, m){
+            int rot=mt()%d;
+            rep(lp, 2*d){
+                int j=(lp+rot)%d;
+                // cout<< j << endl;
+                if(days[j]==k) continue;
+                if((nglist[i]&(1<<d)) && lp<d) continue;
+                decide_close_day(i, j);
+                days[j]++;
+                break;
+            }
+        }
+    }
+    void calc_trouble(){
+        // ll ma=0, mi=10000000000;
+        rep(i, m){
+            ll weight=edge_used_fig[i]+150000*n/m;
+            // ma=max(ma, weight);
+            // mi=min(mi, weight);
+            // weight=1;
+            // ここで迂回ルートが短い方を選んでいるが、そうじゃない方がいいときがありそう
+            // if(path[i].for_cost<path[i].rev_cost && !outside_edge[i]){
+            //     rep3(j, path[i].forw.size(), 1){
+            //         int stop_edge_id=path[i].forw[j];
+            //         trouble[i][stop_edge_id]=weight*(path[stop_edge_id].rev_cost-w[stop_edge_id]);
+            //     }
+            // }else{
+            //     rep3(j, path[i].reve.size(), 1){
+            //         int stop_edge_id=path[i].reve[j];
+            //         trouble[i][stop_edge_id]=weight*(path[stop_edge_id].for_cost-w[stop_edge_id]);
+            //     }
+            // }
+            if(!outside_edge[i]){
+                rep3(j, path[i].forw.size(), 1){
+                    int stop_edge_id=path[i].forw[j];
+                    trouble[i][stop_edge_id]=weight*(path[stop_edge_id].rev_cost-w[stop_edge_id]);
+                }
+            }
+            rep3(j, path[i].reve.size(), 1){
+                int stop_edge_id=path[i].reve[j];
+                trouble[i][stop_edge_id]=weight*(path[stop_edge_id].for_cost-w[stop_edge_id]);
+            }
+        }
+        // cout<< mi SP << ma <<endl;
+    }
+    ll calc_trouble_score(){
+        ll rtn=0;
+        // rep(i, d){
+        //     // cout<< ans_inv[i].size() <<endl;
+        //     for(auto itr=ans_inv[i].begin();itr!=ans_inv[i].end();itr++){
+        //         for(auto itr2=next(itr);itr2!=ans_inv[i].end();itr2++){
+        //             // cout<< *itr SP << *itr2 <<endl;
+        //             rtn+=trouble[*itr][*itr2];
+        //             rtn+=trouble[*itr2][*itr];
+        //         }
+        //     }
+        // }
+        rep(i, m){
+            if(!outside_edge[i]){
+                rep3(j, path[i].forw.size(), 1){
+                    int stop_edge_id=path[i].forw[j];
+                    if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
+                }
+            }
+            rep3(j, path[i].reve.size(), 1){
+                int stop_edge_id=path[i].reve[j];
+                if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
+            }
+        }
+        return rtn;
+    }
+    void burn_up(){
+        
+    }
+    void move_ans(int e1, int day){
+        int before_day=ans[e1];
+        ans[e1]=day;
+        ans_inv[before_day].erase(e1);
+        ans_inv[day].insert(e1);
+    }
+    void swap_ans(int e1, int e2){
+        int before_day1=ans[e1];
+        int before_day2=ans[e2];
+        swap(ans[e1], ans[e2]);
+        // cout<< e1 SP << e2 SP << ans[e1] SP << ans[e2]<<endl;
+        ans_inv[before_day1].erase(e1);
+        ans_inv[before_day2].erase(e2);
+        ans_inv[before_day1].insert(e2);
+        ans_inv[before_day2].insert(e1);
+        // PS(ans_inv[before_day1]);
+        // PS(ans_inv[before_day2]);
     }
     void dijkstra(int start, int day, vector<int>& calc_dist, vector<int>& prev){
         // cout<< "dijkstra " << start <<endl;
@@ -216,7 +324,7 @@ struct City{
             int dd = que.top().first;
             int uu = que.top().second;
             que.pop();
-            if(calc_dist[uu] < dd) continue;
+            if(calc_dist[uu] != dd) continue;
             for(int i=0;i<graph[uu].size();++i){
                 // ここはedge型に一旦移すと速いはず
                 if(ans[graph[uu][i].id]==day) continue;
@@ -248,7 +356,7 @@ struct City{
         }
         // cout<< "dijkstra_base_end" <<endl;
         // rep(i, m) edge_used_fig[i]*=-w[i];
-        edge_priority=v_inv(edge_used_fig);
+        // edge_priority=v_inv(edge_used_fig);
     }
     void dijkstra_all(int day, vector<vector<int>>& calc_dist){
         rep(i, n){
@@ -267,7 +375,12 @@ struct City{
         return dist_sum;
     }
     void init_ans(){
-        rep(i, m) ans[i]=i%d+1;
+        rep(i, m){
+            int day=i%d;
+            ans[i]=day;
+            ans_inv[day].insert(i);
+            // cout<< day <<endl;
+        }
     }
     ll calc_score(){
         // vector<vector<int>> block(d);
@@ -285,7 +398,11 @@ struct City{
         return round(1000.0*complain_sum/(d*n*(n-1)));
     }
     void print_ans(){
-        rep(i, m) cout<< ans[i] SP;
+        rep(i, m) cout<< ans[i]+1 SP;
+        cout<< endl;
+    }
+    void print_best_ans(){
+        rep(i, m) cout<< best_ans[i]+1 SP;
         cout<< endl;
     }
     void debug_mode(){
@@ -328,24 +445,62 @@ void inpt(){
 }
 
 int main(){
-    // cout<< "main" <<endl;
+    //開始時間の計測
+    std::chrono::system_clock::time_point start, current;
+    start = chrono::system_clock::now();
+
     inpt();
     City city;
     city.init();
+    city.init_ans();
+    city.dijkstra_base();
     city.search_outside_edge();
     city.search_detour_route_all();
-    city.calc_NGlist();
+    city.calc_trouble();
+    city.best_score=city.calc_trouble_score();
     
-    // rep(i, n) PV(city.edge_inv[i]);
-    // city.floyd_warshall();
-    // cout<< city.dist_sum <<endl;
-    city.init_ans();
-    // city.print_ans();
-    city.dijkstra_base();
-    sort(all(city.edge_used_fig));
-    // PV(city.edge_used_fig);
-    // PV(city.edge_priority);
-    // cout<< city.calc_score() <<endl;
+    int lp=0;
+    while (true) { // 時間の許す限り回す
+        lp++;
+        // if(lp%2000==0) cout<< "lp: " << lp << " score: " << city.best_score <<endl;
+        // if(lp==2) break;
+        current = chrono::system_clock::now(); // 現在時刻
+        double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+        if (delta > TIME_LIMIT) break;
+
+        int type=mt()%100, mass=max(1.0, (TIME_LIMIT-delta-500)/200), day=mt()%d;
+        // int move_from=city.ans[e1];
+        vector<int> e1(mass), e2(mass);
+        rep(i, mass){
+            e1[i]=mt()%m;
+            e2[i]=(e1[i]+mt()%(m-1))%m;
+        }
+        if(type<100){
+            rep(i, mass) city.swap_ans(e1[i], e2[i]);
+        }else{
+            // if(city.ans_inv[day].size()==k) continue;
+            // city.move_ans(e1, day);
+        }
+        
+        ll new_score=city.calc_trouble_score();
+
+        // 温度関数
+        double d_time=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+        double temp = start_temp + (end_temp - start_temp) * d_time / TIME_LIMIT;
+        double prob = exp((city.best_score-new_score)/temp);
+        if (prob > (mt()%imax)/(double)imax) { // 確率probで遷移する
+            city.best_ans=city.ans;
+            city.best_score=new_score;
+        }else{
+            if(type<100){
+                repr(i, mass) city.swap_ans(e1[i], e2[i]);
+            }else{
+                // city.move_ans(e1, move_from);
+            }
+        }
+    }
+
+    city.print_ans();
 
     return 0;
 }
