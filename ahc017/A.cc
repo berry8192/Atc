@@ -371,6 +371,7 @@ struct City{
                 // cout<< shorter_path <<endl;
             }
             ll weight=edge_used_fig[i]+150000*n/m;
+            // weight=1;
             rtn+=shorter_path*weight;
         }
         // }
@@ -585,17 +586,20 @@ int main(){
         if (delta > TIME_LIMIT) break;
 
         int type=mt()%100, mass=max(1.0, (TIME_LIMIT-delta-500)/200), day=mt()%d;
-        // int move_from=city.ans[e1];
-        vector<int> e1(mass), e2(mass);
+        int e1=mt()%m;
+        int move_from=city.ans[e1];
+        bool movable=true;
+        // vector<int> e1(mass);
+        vector<int> e2(mass);
         set<int> move_days;
-        if(type<1000){
+        if(type<50){
             rep(i, mass){
-                e1[i]=mt()%m;
-                e2[i]=(e1[i]+mt()%(m-1))%m;
-                move_days.insert(city.ans[e1[i]]);
+                // e1[i]=mt()%m;
+                e2[i]=(e1+mt()%(m-1))%m;
+                move_days.insert(city.ans[e1]);
                 move_days.insert(city.ans[e2[i]]);
             }
-            rep(i, mass) city.swap_ans(e1[i], e2[i]);
+            rep(i, mass) city.swap_ans(e1, e2[i]);
         }else{
             // rep(i, mass){
             //     e1[i]=mt()%m;
@@ -603,7 +607,11 @@ int main(){
             //     move_days.insert(city.ans[e1[i]]);
             //     move_days.insert(city.ans[e2[i]]);
             // }
-            if(city.ans_inv[day].size()==k) continue;
+            if(city.ans_inv[day].size()==k){
+                movable=false;
+                continue;
+            }
+            city.move_ans(e1, day);
         }
         
         int iso=city.is_separate(move_days);
@@ -611,7 +619,10 @@ int main(){
         double new_score=city.calc_trouble_score(iso);
         // cout<< new_score SP << iso <<endl;
         if(iso) new_score*=iso*iso*1e10;
-        // if(lp%100==0) cout<< new_score SP << iso <<endl;
+        if(lp%1000==0){
+            cout<< new_score SP << iso <<endl;
+            city.print_ans();
+        }
 
         // 温度関数
         double d_time=chrono::duration_cast<chrono::milliseconds>(current - start).count();
@@ -621,10 +632,10 @@ int main(){
             city.best_ans=city.ans;
             city.best_score=new_score;
         }else{
-            if(type<100){
-                repr(i, mass) city.swap_ans(e1[i], e2[i]);
+            if(type<50){
+                repr(i, mass) city.swap_ans(e1, e2[i]);
             }else{
-                // city.move_ans(e1, move_from);
+                if(movable) city.move_ans(e1, move_from);
             }
         }
     }
