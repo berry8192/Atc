@@ -287,10 +287,6 @@ struct City{
                 int base_cost=path[i].rev_cost+w[i];
                 rep3(j, path[i].reve.size(), 1){
                     int stop_edge_id=path[i].reve[j];
-                    trouble[i][stop_edge_id]=weight*(path[stop_edge_id].for_cost-w[stop_edge_id]);
-                }
-                rep3(j, path[i].reve.size(), 1){
-                    int stop_edge_id=path[i].reve[j];
                     if(base_cost!=path[stop_edge_id].rev_cost+w[stop_edge_id]){
                         trouble[i][stop_edge_id]=weight*(path[stop_edge_id].for_cost-w[stop_edge_id]);
                     }else{
@@ -317,28 +313,41 @@ struct City{
     }
     // 辺id, 大本の辺の通行止め日、ルートの方向、残り迂回回数、迂回で増加した距離
     ll detour_increase_dist_dfs(int eid, int ban_day, int dir, int depth){
-        rep(i, depth*2) cout SP;
-        cout<< eid SP << ban_day SP << dir SP << depth <<endl;
         // dir==1 ? forward_route : reverse_route
+        // rep(i, depth*2) cout SP;
+        // cout<< eid SP << ban_day SP << dir SP << depth <<endl;
         if(ans[eid]!=ban_day) return w[eid];
         if(depth==0){
-            cout<< "とどかない " << eid SP << ban_day SP << dir SP << depth <<endl;
+            // cout<< "とどかない " << eid SP << ban_day SP << dir SP << depth <<endl;
             return INF;
         }
 
         // 迂回するときは自分を通らなくなるので引いておく
         ll rtn=-w[eid];
-        if(dir==1){
+        if(dir==1 && !is_outside_for[eid]){
+            int base_cost=path[eid].for_cost+w[eid];
             rep3(i, path[eid].forw.size(), 1){
                 int next_eid=path[eid].forw[i];
-                rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1-dir, depth-1);
+                if(base_cost!=path[next_eid].for_cost+w[next_eid]){
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1-dir, depth-1);
+                }else{
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, dir, depth-1);
+                }
             }
-        }else{
+        }else if(dir==0 && !is_outside_rev[eid]){
+            int base_cost=path[eid].rev_cost+w[eid];
             rep3(i, path[eid].reve.size(), 1){
                 int next_eid=path[eid].reve[i];
-                rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1-dir, depth-1);
+                if(base_cost!=path[next_eid].rev_cost+w[next_eid]){
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1-dir, depth-1);
+                }else{
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, dir, depth-1);
+                }
             }
+        }else{
+            rtn=INF;
         }
+
         if(rtn<=0){
             PV(path[eid].reve);
             cout<< rtn <<endl;
@@ -348,7 +357,7 @@ struct City{
     }
     ll calc_trouble_score(int iso){
         ll rtn=0;
-        if(iso || 1){
+        if(iso){
             // グラフが連結でない場合、従来の方法で比較的高速に計算する
             // これは下の方法を使って焼く時の初期解の硬直化につながる可能性があるため注意
             rep(i, m){
@@ -618,8 +627,8 @@ int main(){
         // city.print_ans();
         double new_score=city.calc_trouble_score(iso);
         // cout<< new_score SP << iso <<endl;
-        if(iso) new_score*=iso*iso*100;
-        // if(lp%1000==0) cout<< new_score SP << iso <<endl;
+        if(iso) new_score*=iso*iso*1e10;
+        // if(lp%100==0) cout<< new_score SP << iso <<endl;
 
         // 温度関数
         double d_time=chrono::duration_cast<chrono::milliseconds>(current - start).count();
