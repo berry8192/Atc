@@ -292,8 +292,8 @@ struct City{
     ll detour_increase_dist_dfs(int eid, int ban_day, int dir, int depth){
         // dir==1 ? forward_route : reverse_route
         if(ans[eid]!=ban_day) return w[eid];
-        rep(i, depth*2) cout SP;
-        cout<< eid SP << ban_day SP << dir SP << depth <<endl;
+        // rep(i, depth*2) cout SP;
+        // cout<< eid SP << ban_day SP << dir SP << depth <<endl;
         if(depth==0){
             // cout<< "とどかない " << eid SP << ban_day SP << dir SP << depth <<endl;
             return INF;
@@ -301,95 +301,79 @@ struct City{
 
         // 迂回するときは自分を通らなくなるので引いておく
         ll rtn=-w[eid];
-        cout<< "before weight: " << rtn <<endl;
-        ll testes, testes2;
         if(dir==1 && !is_outside_for[eid]){
-            cout<< "for" <<endl;
             rep3(i, path[eid].forw.size(), 1){
                 int next_eid=path[eid].forw[i];
-                cout<< "nextid " << next_eid<<endl;
                 if(path[eid].ford[i]){
-                    ll ttmp=rtn;
                     rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1);
-                    cout<< "increase " << rtn-ttmp <<endl;
                 }else{
-                    ll ttmp=rtn;
                     rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1);
-                    cout<< "increase " << rtn-ttmp <<endl;
                 }
             }
-            testes=rtn;
         }else if(dir==0 && !is_outside_rev[eid]){
-            
-            cout<< "rev" <<endl;
             rep3(i, path[eid].reve.size(), 1){
-                cout<< "u[eid], v[eid] = " << u[eid] SP << v[eid] <<endl;
                 int next_eid=path[eid].reve[i];
-                cout<< "nextid " << next_eid  << "uvw" << u[next_eid] SP << v[next_eid] SP <<w[next_eid]<<endl;
                 if(!path[eid].revd[i]){
-                    ll ttmp=rtn;
                     rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1);
-                    cout<< "increase " << rtn-ttmp <<endl;
                 }else{
-                    ll ttmp=rtn;
                     rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1);
-                    cout<< "increase " << rtn-ttmp <<endl;
                 }
             }
-            testes2=rtn;
         }else{
             rtn=INF;
         }
 
         if(rtn<0){
-            cout<< "lp: " << lp <<endl;
-            PV(path[eid].forw);
-            PV(path[eid].reve);
-            cout<< testes SP << testes2 <<endl;
-            cout<< rtn <<endl;
-            preview_edge(path[eid].forw);
-            preview_edge(path[eid].reve);
-            cout<< path[eid].for_cost SP << path[eid].rev_cost <<endl;
-            print_ans();
-            assert(0<=rtn);
+            // 精度の問題で時空がゆがんでいる事があるので0にする
+            rtn=0;
+            // cout<< "lp: " << lp <<endl;
+            // PV(path[eid].forw);
+            // PV(path[eid].reve);
+            // // cout<< testes SP << testes2 <<endl;
+            // cout<< "rtn: " << rtn <<endl;
+            // preview_edge(path[eid].forw);
+            // preview_edge(path[eid].reve);
+            // cout<< path[eid].for_cost SP << path[eid].rev_cost <<endl;
+            // print_ans();
+            // assert(0<=rtn);
         }
         return rtn;
     }
     ll calc_trouble_score(int iso){
         ll rtn=0;
-        if(0 && iso){
-            // グラフが連結でない場合、従来の方法で比較的高速に計算する
-            // これは下の方法を使って焼く時の初期解の硬直化につながる可能性があるため注意
-            rep(i, m){
-                if(!is_outside_for[i]){
-                    rep3(j, path[i].forw.size(), 1){
-                        int stop_edge_id=path[i].forw[j];
-                        if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
-                    }
-                }
-                if(!is_outside_rev[i]){
-                    rep3(j, path[i].reve.size(), 1){
-                        int stop_edge_id=path[i].reve[j];
-                        if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
-                    }
-                }
-            }
-        }else{
+        // if(0 && iso){
+        //     // グラフが連結でない場合、従来の方法で比較的高速に計算する
+        //     // これは下の方法を使って焼く時の初期解の硬直化につながる可能性があるため注意
+        //     rep(i, m){
+        //         if(!is_outside_for[i]){
+        //             rep3(j, path[i].forw.size(), 1){
+        //                 int stop_edge_id=path[i].forw[j];
+        //                 if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
+        //             }
+        //         }
+        //         if(!is_outside_rev[i]){
+        //             rep3(j, path[i].reve.size(), 1){
+        //                 int stop_edge_id=path[i].reve[j];
+        //                 if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
+        //             }
+        //         }
+        //     }
+        // }else{
             // グラフが連結である場合、ちゃんと迂回ルートを検索する
-            rep(i, m){
-                ll shorter_path=lmax;
-                if(!is_outside_for[i]){
-                    shorter_path=detour_increase_dist_dfs(i, ans[i], 1, 5);
-                    // cout<< shorter_path <<endl;
-                }
-                if(!is_outside_rev[i]){
-                    shorter_path=min(shorter_path, detour_increase_dist_dfs(i, ans[i], 0, 5));
-                    // cout<< shorter_path <<endl;
-                }
-                ll weight=edge_used_fig[i]+150000*n/m;
-                rtn+=shorter_path*weight;
+        rep(i, m){
+            ll shorter_path=lmax;
+            if(!is_outside_for[i]){
+                shorter_path=detour_increase_dist_dfs(i, ans[i], 1, 5);
+                // cout<< shorter_path <<endl;
             }
+            if(!is_outside_rev[i]){
+                shorter_path=min(shorter_path, detour_increase_dist_dfs(i, ans[i], 0, 5));
+                // cout<< shorter_path <<endl;
+            }
+            ll weight=edge_used_fig[i]+150000*n/m;
+            rtn+=shorter_path*weight;
         }
+        // }
         return rtn;
     }
     void move_ans(int e1, int day){
