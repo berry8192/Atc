@@ -2,6 +2,7 @@
 // #pragma GCC optimize("O3")
 
 #include <bits/stdc++.h>
+#include <atcoder/all>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
@@ -11,6 +12,7 @@
 #define ll long long
 
 using namespace std;
+using namespace atcoder;
 
 // 定数周り
 int INF=1000000000;
@@ -19,7 +21,7 @@ ll lmax=9223372036854775807;
 
 //焼きなましの定数
 double TIME_LIMIT=5900.0;
-double start_temp=100000000.0;
+double start_temp=10000000.0;
 double end_temp=10000.0;
 
 // 乱数の準備
@@ -123,7 +125,7 @@ struct City{
     vector<int> nglist; // [m][d bit] ダメな日を保存
     vector<vector<ll>> trouble; // [m][m] 辺iが通行止めのときに辺jが通行止めになると辺iがどの程度困るか
     vector<set<int>> ans_inv; // [d]{} i日目に所属している辺の集合を表す
-    ll best_score; // トラブル値の最小記録
+    double best_score; // トラブル値の最小記録
     vector<int> best_ans; // トラブル値の最少記録を達成した時のans
 
     vector<Loss> loss_list; // 正確な計算で伸びてしまった経路長を算出
@@ -270,6 +272,20 @@ struct City{
         }
         // cout<< mi SP << ma <<endl;
     }
+    int is_separate(set<int> days){
+        int rtn=0;
+        for(auto itr=days.begin();itr!=days.end();itr++){
+            // cout<< *itr <<endl;
+            dsu ds(n);
+            rep(i, m){
+                if(ans[i]!=*itr) ds.merge(u[i], v[i]);
+            }
+            int tmp=max(ds.size(0), ds.size(1));
+            // cout<< ds.size(0) SP << ds.size(1) <<endl;
+            rtn+=n-tmp;
+        }
+        return rtn;
+    }
     ll calc_trouble_score(){
         ll rtn=0;
         // rep(i, d){
@@ -295,9 +311,6 @@ struct City{
             }
         }
         return rtn;
-    }
-    void burn_up(){
-        
     }
     void move_ans(int e1, int day){
         int before_day=ans[e1];
@@ -375,7 +388,7 @@ struct City{
         rep(i, d){
             rep(j, n){
                 rep(l, n){
-                    double loss=dist[i][j][l]-base_dist[j][l];
+                    double loss=1.0*dist[i][j][l]/base_dist[j][l];
                     loss_list.push_back({i, j, l, loss});
                 }
             }
@@ -383,11 +396,17 @@ struct City{
     }
     void preview_loss(){
         sort(all(loss_list));
-        rep(i, 10){
+        rep(i, 1){
             cout<< loss_list[i].day SP << loss_list[i].from SP << loss_list[i].to SP << loss_list[i].loss <<endl;
             vector<int> tmp(n), prev(n, -1);
             dijkstra(loss_list[i].from, loss_list[i].day, tmp, prev);
-            preview_edge(get_path(prev, loss_list[i].to));
+            vector<int> view=get_path(prev, loss_list[i].to);
+            preview_edge(view);
+            // PV(view);
+            // rep(i, m){
+            //     if(ans[i]==loss_list[i].day) view[i]=1;
+            // }
+            // PV(view);
         }
     }
     ll calc_dist_sum(vector<vector<int>>& calc_dist){
@@ -401,6 +420,7 @@ struct City{
         return dist_sum;
     }
     void init_ans(){
+        // ランダムのやつ
         rep(i, m){
             int day=i%d;
             ans[i]=day;
@@ -445,7 +465,9 @@ struct City{
         }
     }
     ll ideal_score(){
-
+        ll rtn=0;
+        rep(i, m) rtn+=min(path[i].for_cost, path[i].rev_cost)-w[i];
+        return rtn/(m);
     }
 };
 
@@ -483,17 +505,12 @@ int main(){
     city.init();
     city.init_ans();
     city.dijkstra_base();
-
-    cout<< "min_score: " << 
-    rep(i, d) city.dijkstra_all(i, city.dist[i]);
-    city.calc_loss_all();
-    city.preview_loss();
-    return 0;
-
     city.search_outside_edge();
     city.search_detour_route_all();
     city.calc_trouble();
-    city.best_score=city.calc_trouble_score();
+    city.best_score=1e100;
+
+    // cout<< "min_score: " << city.ideal_score() <<endl;
     
     int lp=0;
     while (true) { // 時間の許す限り回す
@@ -507,9 +524,12 @@ int main(){
         int type=mt()%100, mass=max(1.0, (TIME_LIMIT-delta-500)/200), day=mt()%d;
         // int move_from=city.ans[e1];
         vector<int> e1(mass), e2(mass);
+        set<int> move_days;
         rep(i, mass){
             e1[i]=mt()%m;
             e2[i]=(e1[i]+mt()%(m-1))%m;
+            move_days.insert(city.ans[e1[i]]);
+            move_days.insert(city.ans[e2[i]]);
         }
         if(type<100){
             rep(i, mass) city.swap_ans(e1[i], e2[i]);
@@ -518,7 +538,9 @@ int main(){
             // city.move_ans(e1, day);
         }
         
-        ll new_score=city.calc_trouble_score();
+        double new_score=city.calc_trouble_score();
+        int iso=city.is_separate(move_days)+1;
+        new_score*=iso*iso;
 
         // 温度関数
         double d_time=chrono::duration_cast<chrono::milliseconds>(current - start).count();
@@ -527,6 +549,7 @@ int main(){
         if (prob > (mt()%imax)/(double)imax) { // 確率probで遷移する
             city.best_ans=city.ans;
             city.best_score=new_score;
+            // if(lp%1000==0) cout<< new_score SP << iso <<endl;
         }else{
             if(type<100){
                 repr(i, mass) city.swap_ans(e1[i], e2[i]);
@@ -536,7 +559,13 @@ int main(){
         }
     }
 
+    // cout<< "lp: " << lp <<endl;
     city.print_ans();
+    return 0;
+    
+    rep(i, d) city.dijkstra_all(i, city.dist[i]);
+    city.calc_loss_all();
+    city.preview_loss();
 
     return 0;
 }
