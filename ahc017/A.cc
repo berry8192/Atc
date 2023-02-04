@@ -94,7 +94,7 @@ struct Edge{
 // 最初の出発辺が入ってしまうのでcost計算やパス一覧を見るときに呼ぶ側で無視する
 struct Path{
     vector<int> forw, reve;
-    int for_cost=0, rev_cost=0;
+    ll for_cost=0, rev_cost=0;
 
     void calc_cost_sum(){
         rep3(i, forw.size(), 1) for_cost+=w[forw[i]];
@@ -102,12 +102,18 @@ struct Path{
     }
 };
 
-// struct polygon{
-//     vector<int> edge_id;
-// };
+struct Loss{
+    int day, from, to;
+    double loss;
+
+    bool operator<(const Loss &in) const{
+		return loss>in.loss;
+	};
+};
 
 struct City{
-    vector<vector<int>> base_dist, dist; // [n][n] 通行止めがない状態の2頂点間の距離、2頂点間の距離計算用
+    vector<vector<int>> base_dist; // [n][n] 通行止めがない状態の2頂点間の距離
+    vector<vector<vector<int>>> dist; // [d][n][n] d日目の2頂点間の距離計算用
     vector<vector<int>> edge_inv; // [n][n] 始点と終点から辺idを出す
     vector<vector<Edge>> graph; // [n][3~10] 辺をEdgeの隣接リストで持っている
     vector<int> ans, edge_priority; // [m] 辺が何日目に通行止めになるかの出力用、辺が何番目に多く使われているか
@@ -120,15 +126,22 @@ struct City{
     ll best_score; // トラブル値の最小記録
     vector<int> best_ans; // トラブル値の最少記録を達成した時のans
 
+    vector<Loss> loss_list; // 正確な計算で伸びてしまった経路長を算出
+
     void init(){
         // cout<< "init" <<endl;
         base_dist.resize(n, vector<int>(n));
-        dist.resize(n, vector<int>(n));
+        dist.resize(d);
+        rep(i, d) dist[i].resize(n);
+        rep(i, d){
+            rep(j, n){
+                dist[i][j].resize(n);
+            }
+        }
         edge_inv.resize(n, vector<int>(n, -1));
         graph.resize(n);
         ans.resize(m, -1);
         ans_inv.resize(d);
-        vector<set<int>> ans_inv;
         edge_used_fig.resize(m);
         path.resize(m);
         nglist.resize(m);
@@ -148,15 +161,6 @@ struct City{
         rep(i, n) sort(all(graph[i]));
     }
 
-    void floyd_warshall() {
-        for (int k=0;k<n;k++){
-            for (int i=0;i<n;i++){
-                for (int j=0;j<n;j++){
-                    dist[i][j]=min(dist[i][j], dist[i][k]+dist[k][j]);
-                }
-            }
-        }
-    }
     // dfs(どの頂点idから来たか、どのidの辺を使うか)
     void outside_dfs(int from, int edge_idx, vector<int>& path){
         int before_edge_id=graph[from][edge_idx].id; // 使った辺のid
@@ -338,19 +342,22 @@ struct City{
             }
         }
     }
-    void get_path(const vector<int> &prev, int t) {
+    vector<int> get_path(const vector<int> &prev, int t) {
+        vector<int> rtn;
         for (int cur = t; prev[cur] != -1; cur = prev[cur]) {
             int tmp=edge_inv[cur][prev[cur]];
+            rtn.push_back(tmp);
             // cout<< cur << "->" << prev[cur] SP << tmp SP;
             if(-1<tmp) edge_used_fig[tmp]++;
         }
         // cout<< endl;
+        return rtn;
     }
     void dijkstra_base(){
         // cout<< "dijkstra_base" <<endl;
         rep(i, n){
             vector<int> prev(n, -1);
-            dijkstra(i, 0, base_dist[i], prev);
+            dijkstra(i, -1, base_dist[i], prev);
             rep(j, n) get_path(prev, j);
             // PV(edge_used);
         }
@@ -362,6 +369,25 @@ struct City{
         rep(i, n){
             vector<int> prev(n, -1);
             dijkstra(i, day, calc_dist[i], prev);
+        }
+    }
+    void calc_loss_all(){
+        rep(i, d){
+            rep(j, n){
+                rep(l, n){
+                    double loss=dist[i][j][l]-base_dist[j][l];
+                    loss_list.push_back({i, j, l, loss});
+                }
+            }
+        }
+    }
+    void preview_loss(){
+        sort(all(loss_list));
+        rep(i, 10){
+            cout<< loss_list[i].day SP << loss_list[i].from SP << loss_list[i].to SP << loss_list[i].loss <<endl;
+            vector<int> tmp(n), prev(n, -1);
+            dijkstra(loss_list[i].from, loss_list[i].day, tmp, prev);
+            preview_edge(get_path(prev, loss_list[i].to));
         }
     }
     ll calc_dist_sum(vector<vector<int>>& calc_dist){
@@ -382,21 +408,21 @@ struct City{
             // cout<< day <<endl;
         }
     }
-    ll calc_score(){
-        // vector<vector<int>> block(d);
-        // rep(i, m) block[ans[i]-1].push_back(i-1);
-        ll complain_sum=0, base_sum=calc_dist_sum(base_dist);
-        rep3(i, d+1, 1){
-            dijkstra_all(i, dist);
-            // cout<< calc_dist_sum(dist) SP << base_sum <<endl;
-            double day_complain=calc_dist_sum(dist)-base_sum;
-            // day_complain/=n*(n-1);
-            cout<< "day:" << i SP;
-            printf("%.3lf\n", day_complain/n/(n-1));
-            complain_sum+=day_complain;
-        }
-        return round(1000.0*complain_sum/(d*n*(n-1)));
-    }
+    // ll calc_score(){
+    //     // vector<vector<int>> block(d);
+    //     // rep(i, m) block[ans[i]-1].push_back(i-1);
+    //     ll complain_sum=0, base_sum=calc_dist_sum(base_dist);
+    //     rep3(i, d){
+    //         dijkstra_all(i, dist);
+    //         // cout<< calc_dist_sum(dist) SP << base_sum <<endl;
+    //         double day_complain=calc_dist_sum(dist)-base_sum;
+    //         // day_complain/=n*(n-1);
+    //         cout<< "day:" << i SP;
+    //         printf("%.3lf\n", day_complain/n/(n-1));
+    //         complain_sum+=day_complain;
+    //     }
+    //     return round(1000.0*complain_sum/(d*n*(n-1)));
+    // }
     void print_ans(){
         rep(i, m) cout<< ans[i]+1 SP;
         cout<< endl;
@@ -417,6 +443,9 @@ struct City{
                 cout<< "rev_cost: " << path[-tmp].rev_cost <<endl;
             }
         }
+    }
+    ll ideal_score(){
+
     }
 };
 
@@ -454,6 +483,13 @@ int main(){
     city.init();
     city.init_ans();
     city.dijkstra_base();
+
+    cout<< "min_score: " << 
+    rep(i, d) city.dijkstra_all(i, city.dist[i]);
+    city.calc_loss_all();
+    city.preview_loss();
+    return 0;
+
     city.search_outside_edge();
     city.search_detour_route_all();
     city.calc_trouble();
