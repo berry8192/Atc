@@ -29,6 +29,8 @@ double end_temp=10000.0;
 int seed=1;
 mt19937 mt(seed);
 
+int lp=0;
+
 //入力
 int n, m, d, k;
 vector<int> u, v, w, x, y;
@@ -44,34 +46,6 @@ template <class T> void PS(T ps) {
     cout<< "{";
 	for(auto itr = ps.begin(); itr != ps.end(); ++itr) cout<< *itr SP;
 	cout<< "}" <<endl;
-}
-
-vector<int> v_inv(vector<ll> pvv) {
-    vector<pair<ll, int>> pa;
-	// rep(i, pvv.size()) pa.push_back(make_pair(-pvv[i], i)); // 昇順の場合
-	rep(i, pvv.size()) pa.push_back(make_pair(-pvv[i], i));
-    sort(all(pa));
-    vector<int> rtn;
-    rep(i, pa.size()){
-        rtn.push_back(pa[i].second);
-    }
-    return rtn;
-}
-
-vector<int> rankOfArray(vector<ll> arr) {
-    vector<ll> sorted = arr;
-    sort(sorted.begin(), sorted.end(), greater<ll>());
-    unordered_map<ll, int> rankMap;
-    for (int i = 0; i < sorted.size(); i++) {
-        if (!rankMap.count(sorted[i])) {
-            rankMap[sorted[i]] = i;
-        }
-    }
-    vector<int> result(arr.size());
-    for (int i = 0; i < arr.size(); i++) {
-        result[i] = rankMap[arr[i]];
-    }
-    return result;
 }
 
 void preview_edge(vector<int> vv){
@@ -96,6 +70,7 @@ struct Edge{
 // 最初の出発辺が入ってしまうのでcost計算やパス一覧を見るときに呼ぶ側で無視する
 struct Path{
     vector<int> forw, reve;
+    vector<int> ford, revd;
     ll for_cost=0, rev_cost=0;
 
     void calc_cost_sum(){
@@ -165,10 +140,11 @@ struct City{
     }
 
     // dfs(どの頂点idから来たか、どのidの辺を使うか)
-    void outside_dfs(int from, int edge_idx, vector<int>& path){
+    void outside_dfs(int from, int edge_idx, vector<int>& path, vector<int>& pathd){
         int before_edge_id=graph[from][edge_idx].id; // 使った辺のid
-        if(!path.empty() && path[0]==before_edge_id) return; // 最初の辺に戻ってきたら終了
+        if(!path.empty() && abs(path[0])==before_edge_id) return; // 最初の辺に戻ってきたら終了
         path.push_back(before_edge_id);
+        pathd.push_back(from==u[before_edge_id]); // for->1, rev->0
         int to=graph[from][edge_idx].to;
         int esz=graph[to].size();
         // cout<< "from edge of: " << before_edge_id <<endl;
@@ -177,17 +153,18 @@ struct City{
                 int use_idx=(i+1)%esz;
                 Edge use_edge=graph[to][use_idx];
                 // testv.push_back(use_edge.id);
-                outside_dfs(to, use_idx, path);
+                outside_dfs(to, use_idx, path, pathd);
                 return;
             }
         }
     }
     void search_outside_edge(){
         // 一番左側の頂点の一番左下を向いた辺がスタート地点
-        vector<int> tmp;
-        outside_dfs(leftmost_v_idx, 0, tmp);
+        vector<int> tmp, tmp2;
+        outside_dfs(leftmost_v_idx, 0, tmp, tmp2);
         int prv_v=leftmost_v_idx;
         rep(i, tmp.size()){
+            tmp[i]=abs(tmp[i]);
             // cout<< prv_v SP << tmp[i] SP;
             // outside_edge.set(tmp[i]);
             if(prv_v==u[tmp[i]]){
@@ -211,7 +188,7 @@ struct City{
                     break;
                 }
             }
-            if(!is_outside_for[i]) outside_dfs(u[i], vertex_id, path[i].forw);
+            if(!is_outside_for[i]) outside_dfs(u[i], vertex_id, path[i].forw, path[i].ford);
             else path[i].for_cost=1000000000;
             
             rep(j, graph[v[i]].size()){
@@ -220,38 +197,38 @@ struct City{
                     break;
                 }
             }
-            if(!is_outside_rev[i]) outside_dfs(v[i], vertex_id, path[i].reve);
+            if(!is_outside_rev[i]) outside_dfs(v[i], vertex_id, path[i].reve, path[i].revd);
             else path[i].rev_cost=1000000000;
             
             path[i].calc_cost_sum();
         }
     }
     void decide_close_day(int edge, int close_day){
-        ans[edge]=close_day;
-        if(path[edge].for_cost<path[edge].rev_cost){
-            rep3(i, path[edge].forw.size(), 1){
-                nglist[path[edge].forw[i]]+=(1<<close_day);
-            }
-        }else{
-            rep3(i, path[edge].reve.size(), 1){
-                nglist[path[edge].reve[i]]+=(1<<close_day);
-            }
-        }
+        // ans[edge]=close_day;
+        // if(path[edge].for_cost<path[edge].rev_cost){
+        //     rep3(i, path[edge].forw.size(), 1){
+        //         nglist[path[edge].forw[i]]+=(1<<close_day);
+        //     }
+        // }else{
+        //     rep3(i, path[edge].reve.size(), 1){
+        //         nglist[path[edge].reve[i]]+=(1<<close_day);
+        //     }
+        // }
     }
     void calc_NGlist(){
-        vector<int> days(d);
-        rep(i, m){
-            int rot=mt()%d;
-            rep(lp, 2*d){
-                int j=(lp+rot)%d;
-                // cout<< j << endl;
-                if(days[j]==k) continue;
-                if((nglist[i]&(1<<d)) && lp<d) continue;
-                decide_close_day(i, j);
-                days[j]++;
-                break;
-            }
-        }
+        // vector<int> days(d);
+        // rep(i, m){
+        //     int rot=mt()%d;
+        //     rep(lp, 2*d){
+        //         int j=(lp+rot)%d;
+        //         // cout<< j << endl;
+        //         if(days[j]==k) continue;
+        //         if((nglist[i]&(1<<d)) && lp<d) continue;
+        //         decide_close_day(i, j);
+        //         days[j]++;
+        //         break;
+        //     }
+        // }
     }
     void calc_trouble(){
         // ll ma=0, mi=10000000000;
@@ -314,9 +291,9 @@ struct City{
     // 辺id, 大本の辺の通行止め日、ルートの方向、残り迂回回数、迂回で増加した距離
     ll detour_increase_dist_dfs(int eid, int ban_day, int dir, int depth){
         // dir==1 ? forward_route : reverse_route
-        // rep(i, depth*2) cout SP;
-        // cout<< eid SP << ban_day SP << dir SP << depth <<endl;
         if(ans[eid]!=ban_day) return w[eid];
+        rep(i, depth*2) cout SP;
+        cout<< eid SP << ban_day SP << dir SP << depth <<endl;
         if(depth==0){
             // cout<< "とどかない " << eid SP << ban_day SP << dir SP << depth <<endl;
             return INF;
@@ -324,40 +301,63 @@ struct City{
 
         // 迂回するときは自分を通らなくなるので引いておく
         ll rtn=-w[eid];
+        cout<< "before weight: " << rtn <<endl;
+        ll testes, testes2;
         if(dir==1 && !is_outside_for[eid]){
-            int base_cost=path[eid].for_cost+w[eid];
+            cout<< "for" <<endl;
             rep3(i, path[eid].forw.size(), 1){
                 int next_eid=path[eid].forw[i];
-                if(base_cost!=path[next_eid].for_cost+w[next_eid]){
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1-dir, depth-1);
+                cout<< "nextid " << next_eid<<endl;
+                if(path[eid].ford[i]){
+                    ll ttmp=rtn;
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1);
+                    cout<< "increase " << rtn-ttmp <<endl;
                 }else{
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, dir, depth-1);
+                    ll ttmp=rtn;
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1);
+                    cout<< "increase " << rtn-ttmp <<endl;
                 }
             }
+            testes=rtn;
         }else if(dir==0 && !is_outside_rev[eid]){
-            int base_cost=path[eid].rev_cost+w[eid];
+            
+            cout<< "rev" <<endl;
             rep3(i, path[eid].reve.size(), 1){
+                cout<< "u[eid], v[eid] = " << u[eid] SP << v[eid] <<endl;
                 int next_eid=path[eid].reve[i];
-                if(base_cost!=path[next_eid].rev_cost+w[next_eid]){
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1-dir, depth-1);
+                cout<< "nextid " << next_eid  << "uvw" << u[next_eid] SP << v[next_eid] SP <<w[next_eid]<<endl;
+                if(!path[eid].revd[i]){
+                    ll ttmp=rtn;
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1);
+                    cout<< "increase " << rtn-ttmp <<endl;
                 }else{
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, dir, depth-1);
+                    ll ttmp=rtn;
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1);
+                    cout<< "increase " << rtn-ttmp <<endl;
                 }
             }
+            testes2=rtn;
         }else{
             rtn=INF;
         }
 
-        if(rtn<=0){
+        if(rtn<0){
+            cout<< "lp: " << lp <<endl;
+            PV(path[eid].forw);
             PV(path[eid].reve);
+            cout<< testes SP << testes2 <<endl;
             cout<< rtn <<endl;
-            assert(0<rtn);
+            preview_edge(path[eid].forw);
+            preview_edge(path[eid].reve);
+            cout<< path[eid].for_cost SP << path[eid].rev_cost <<endl;
+            print_ans();
+            assert(0<=rtn);
         }
         return rtn;
     }
     ll calc_trouble_score(int iso){
         ll rtn=0;
-        if(iso){
+        if(0 && iso){
             // グラフが連結でない場合、従来の方法で比較的高速に計算する
             // これは下の方法を使って焼く時の初期解の硬直化につながる可能性があるため注意
             rep(i, m){
@@ -587,12 +587,11 @@ int main(){
     city.dijkstra_base();
     city.search_outside_edge();
     city.search_detour_route_all();
-    city.calc_trouble();
+    // city.calc_trouble();
     city.best_score=1e100;
 
     // cout<< "min_score: " << city.ideal_score() <<endl;
-    
-    int lp=0;
+
     while (true) { // 時間の許す限り回す
         lp++;
         // if(lp%2000==0) cout<< "lp: " << lp << " score: " << city.best_score <<endl;
