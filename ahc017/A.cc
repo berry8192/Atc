@@ -25,8 +25,8 @@ double start_temp=10000000.0;
 double end_temp=10000.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=1;
+auto seed=(unsigned)time(NULL);
+// int seed=1;
 mt19937 mt(seed);
 
 int lp=0;
@@ -88,6 +88,16 @@ struct Loss{
 	};
 };
 
+struct Day{
+    int day;
+    int has_edge;
+    int ran;
+
+    bool operator<(const Day &in) const{
+		return has_edge!=in.has_edge ? has_edge<in.has_edge : ran<in.ran;
+	};
+};
+
 struct City{
     vector<vector<int>> base_dist; // [n][n] 通行止めがない状態の2頂点間の距離
     vector<vector<vector<int>>> dist; // [d][n][n] d日目の2頂点間の距離計算用
@@ -105,6 +115,8 @@ struct City{
     bitset<3000> is_outside_rev; // [m] 辺がrev方向が外周の辺であるかどうか
 
     vector<Loss> loss_list; // 正確な計算で伸びてしまった経路長を算出
+    vector<Edge> edges;
+    vector<bitset<3000>> straight_bonus;
 
     void init(){
         // cout<< "init" <<endl;
@@ -133,6 +145,8 @@ struct City{
             // cout<< rad SP << radr <<endl;
             graph[u[i]].push_back({i, v[i], w[i], rad});
             graph[v[i]].push_back({i, u[i], w[i], radr});
+            if(rad<0) rad+=M_PI;
+            edges.push_back({i, v[i], w[i], rad});
             edge_inv[u[i]][v[i]]=i;
             edge_inv[v[i]][u[i]]=-i;
         }
@@ -288,6 +302,13 @@ struct City{
         }
         return rtn;
     }
+    int over_day(){
+        int rtn=0;
+        rep(i, d){
+            rtn+=max(0, int(k-ans_inv[i].size()));
+        }
+        return rtn;
+    }
     // 辺id, 大本の辺の通行止め日、ルートの方向、残り迂回回数、迂回で増加した距離
     ll detour_increase_dist_dfs(int eid, int ban_day, int dir, int depth, vector<int>& tmp){
         // dir==1 ? forward_route : reverse_route
@@ -342,40 +363,56 @@ struct City{
         }
         return rtn;
     }
-    ll calc_trouble_score(){
-        ll rtn=0;
-        // if(0 && iso){
-        //     // グラフが連結でない場合、従来の方法で比較的高速に計算する
-        //     // これは下の方法を使って焼く時の初期解の硬直化につながる可能性があるため注意
-        //     rep(i, m){
-        //         if(!is_outside_for[i]){
-        //             rep3(j, path[i].forw.size(), 1){
-        //                 int stop_edge_id=path[i].forw[j];
-        //                 if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
-        //             }
-        //         }
-        //         if(!is_outside_rev[i]){
-        //             rep3(j, path[i].reve.size(), 1){
-        //                 int stop_edge_id=path[i].reve[j];
-        //                 if(ans[i]==ans[stop_edge_id]) rtn+=trouble[i][stop_edge_id];
-        //             }
-        //         }
-        //     }
-        // }else{
-            // グラフが連結である場合、ちゃんと迂回ルートを検索する
+    double calc_trouble_score(){
+        double rtn=0;
         rep(i, m){
-            ll shorter_path=lmax;
+            ll fpath_dist=lmax, rpath_dist=lmax;
+            // double weight=w[i];
+            // weight*=1000000-(x[u[i]]-500)*(x[u[i]]-500)-(x[v[i]]-500)*(x[v[i]]-500)-(y[u[i]]-500)*(y[u[i]]-500)-(y[v[i]]-500)*(y[v[i]]-500);
+            // weight*=0.000001;
+            // ll weight=edge_used_fig[i]+30000;
             // cout<< "i: " << i <<endl;
             vector<int> detuor_fpath, detuor_rpath;
             // int width=0;
             if(!is_outside_for[i]){
-                shorter_path=detour_increase_dist_dfs(i, ans[i], 1, 3, detuor_fpath);
+                fpath_dist=detour_increase_dist_dfs(i, ans[i], 1, 3, detuor_fpath);
+                //rep(i, detuor_fpath.size()){
+
+                    // int u0=u[detuor_fpath[i]];
+                    // int u1=u[detuor_fpath[i+1]];
+                    // int v0=v[detuor_fpath[i]];
+                    // int v1=v[detuor_fpath[i+1]];
+                    // if(edge_inv[u0][v0]!=0){
+                    //     fpath_dist-=w[u0]+w[v0]-w[abs(edge_inv[u0][v0])];
+                    // }else if(edge_inv[u0][v1]!=0){
+                    //     fpath_dist-=w[u0]+w[v1]-w[abs(edge_inv[u0][v1])];
+                    // }else if(edge_inv[u1][v0]!=0){
+                    //     fpath_dist-=w[u1]+w[v0]-w[abs(edge_inv[u1][v0])];
+                    // }else if(edge_inv[u1][v1]!=0){
+                    //     fpath_dist-=w[u1]+w[v1]-w[abs(edge_inv[u1][v1])];
+                    // }
+                //}
                 // cout<< shorter_path <<endl;
                 // PV(detuor_rpath);
                 // preview_edge(detuor_fpath);
             }
             if(!is_outside_rev[i]){
-                shorter_path=min(shorter_path, detour_increase_dist_dfs(i, ans[i], 0, 3, detuor_rpath));
+                rpath_dist=detour_increase_dist_dfs(i, ans[i], 0, 3, detuor_rpath);
+                //rep(i, detuor_rpath.size()-1){
+                    // int u0=u[detuor_rpath[i]];
+                    // int u1=u[detuor_rpath[i+1]];
+                    // int v0=v[detuor_rpath[i]];
+                    // int v1=v[detuor_rpath[i+1]];
+                    // if(edge_inv[u0][v0]!=0){
+                    //     rpath_dist-=w[u0]+w[v0]-w[abs(edge_inv[u0][v0])];
+                    // }else if(edge_inv[u0][v1]!=0){
+                    //     rpath_dist-=w[u0]+w[v1]-w[abs(edge_inv[u0][v1])];
+                    // }else if(edge_inv[u1][v0]!=0){
+                    //     rpath_dist-=w[u1]+w[v0]-w[abs(edge_inv[u1][v0])];
+                    // }else if(edge_inv[u1][v1]!=0){
+                    //     rpath_dist-=w[u1]+w[v1]-w[abs(edge_inv[u1][v1])];
+                    // }
+                //}
                 // cout<< shorter_path <<endl;
                 // PV(detuor_rpath);
                 // preview_edge(detuor_rpath);
@@ -386,8 +423,19 @@ struct City{
             // }
             ll weight=edge_used_fig[i]+150000*n/m;
             // weight=1;
-            rtn+=shorter_path*weight;
+            rtn+=min(fpath_dist, rpath_dist)*weight;
         }
+        // vector<bitset<3000>> bs(d);
+        // rep(i, m) bs[ans[i]].set(i);
+        // rep(i, d){
+        //     rep(j, straight_bonus.size()){
+        //         int tmp=straight_bonus[j].count();
+        //         if(round(tmp*0.8)<=(bs[i]&straight_bonus[j]).count()){
+        //             rtn*=pow(0.98, tmp);
+        //         }
+        //     }
+        // }
+
         // }
         return rtn;
     }
@@ -507,6 +555,127 @@ struct City{
             // cout<< day <<endl;
         }
     }
+    void init_outside_ans(){
+        // rep(i, m){
+        //     int day=i%(d-1)+1;
+        //     ans[i]=day;
+        //     ans_inv[day].insert(i);
+        //     // cout<< day <<endl;
+        // }
+        rep(i, m){
+            if(is_outside_for[i] || is_outside_rev[i]){
+                move_ans(i, 0);
+            }
+        }
+    }
+    void straight_line_ans(){
+        sort(all(edges));
+        rep(i, m) cout<< edges[i].rad <<endl;
+        int div=m/d, sur=m%d, loop=0;
+        rep(i, d){
+            rep(j, div+(i<sur)){
+                ans[edges[loop].id]=i;
+                loop++;
+            }
+        }
+    }
+    void make_straight_path_dfs(int edg, double radian, double tolerance_rad, set<int>& st, int depth){
+        if(depth==0) return;
+        // cout<< edg SP << radian SP << tolerance_rad <<endl;
+        // PS(st);
+        st.insert(edg);
+        double rad=radian;
+        if(radian<0) rad=edges[edg].rad;
+
+        int uedge, vedge, nuid, nvid;
+        double miu=5.0, miv=5.0;
+        rep(i, graph[u[edg]].size()){
+            double tmp=abs(graph[u[edg]][i].rad-rad);
+            nuid=graph[u[edg]][i].id;
+            // 誤差が最小、答えが決まっていない、現在計算中でもない、もと来た辺ではない
+            if(tmp<miu && st.find(nuid)==st.end() && nuid!=edg){
+                miu=tmp;
+                uedge=nuid;
+            }
+        }
+        if(miu<=tolerance_rad){
+            make_straight_path_dfs(uedge, edges[uedge].rad, tolerance_rad, st, depth-1);
+        }
+        rep(i, graph[v[edg]].size()){
+            double tmp=abs(graph[v[edg]][i].rad-rad);
+            nvid=graph[v[edg]][i].id;
+            // 誤差が最小、答えが決まっていない、現在計算中でもない、もと来た辺ではない
+            if(tmp<miv && st.find(nvid)==st.end() && nvid!=edg){
+                miv=tmp;
+                vedge=nvid;
+            }
+        }
+        if(miv<=tolerance_rad){
+            make_straight_path_dfs(vedge, edges[vedge].rad, tolerance_rad, st, depth-1);
+        }
+    }
+    int make_straight_path(double tolerance_rad){
+        lp++;
+        fill(all(ans), -1);
+        vector<set<int>> lines;
+        vector<int> shu(m);
+        rep(i, m) shu[i]=i;
+        shuffle(all(shu), mt);
+        rep(i, m){
+            set<int> tmp;
+            if(shu[i]==-1) continue;
+            make_straight_path_dfs(shu[i], -1, tolerance_rad, tmp, 30);
+            for(auto itr2=tmp.begin();itr2!=tmp.end();itr2++){
+                shu[*itr2]=-1;
+            }
+            lines.push_back(tmp);
+        }
+        set<Day> days;
+        rep(i, d) days.insert({i, 0, int(mt()%INF)});
+        for(auto itr2=days.begin();itr2!=days.end();itr2++){
+            Day tmp2=*itr2;
+            // cout<< tmp2.day SP << tmp2.has_edge <<endl;
+        }
+        int use_line=0;
+        rep(i, lines.size()){
+            // PS(lines[i]);
+            auto itr=days.begin();
+            Day day=*itr;
+            days.erase(itr);
+            day.has_edge+=lines[i].size();
+            days.insert(day);
+            int used=0;
+            for(auto itr2=lines[i].begin();itr2!=lines[i].end();itr2++){
+                if(ans[i]!=-1) used++;
+                ans[*itr2]=day.day;
+            }
+            if(used) use_line++;
+        }
+        // rep(i, lines.size()){
+        //     if(lines[i].size()<5) continue;
+        //     bitset<3000> bs;
+        //     for(auto itr2=lines[i].begin();itr2!=lines[i].end();itr2++){
+        //         bs.set(*itr2);
+        //     }
+        //     straight_bonus.push_back(bs);
+        // }
+        // cout<< straight_bonus.size() <<endl;
+
+        rep(i, d){
+            dsu ds(n);
+            int cnt=0;
+            rep(j, m){
+                if(ans[j]==i){
+                    cnt++;
+                    continue;
+                }
+                ds.merge(u[j], v[j]);
+            }
+            if(cnt>k) return cnt;
+            if(ds.size(0)!=n) return n-ds.size(0);
+        }
+        return use_line-100000;
+    }
     // ll calc_score(){
     //     // vector<vector<int>> block(d);
     //     // rep(i, m) block[ans[i]-1].push_back(i-1);
@@ -582,6 +751,34 @@ int main(){
     inpt();
     City city;
     city.init();
+    if(1.0*m/n>2.6){
+        int best_tmp=INF;
+        vector<int> best_ans;
+        rep(i, 500){
+            double rd=(mt()%400)/1000.0+0.2;
+            int tmp=city.make_straight_path(rd);
+            if(tmp<best_tmp){
+                best_tmp=tmp;
+                best_ans=city.ans;
+                // city.print_ans();
+                // return 0;
+            }
+            // cout<< tmp <<endl;
+            current = chrono::system_clock::now(); // 現在時刻
+            double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+            if (delta > 2000){
+                assert(delta<6000);
+                if(best_tmp>0) break;
+                rep(i, m) cout<< best_ans[i]+1 SP;
+                cout<< endl;
+                return 0;
+            }
+        }
+    }
+    // city.init_ans();
+    // city.print_ans();
+    // return 0;
+
     city.init_ans();
     city.dijkstra_base();
     city.search_outside_edge();
@@ -591,6 +788,7 @@ int main(){
 
     // cout<< "min_score: " << city.ideal_score() <<endl;
 
+    bool use_outside=false;
     while (true) { // 時間の許す限り回す
         lp++;
         // if(lp%2000==0) cout<< "lp: " << lp << " score: " << city.best_score <<endl;
@@ -598,6 +796,11 @@ int main(){
         current = chrono::system_clock::now(); // 現在時刻
         double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
         if (delta > TIME_LIMIT) break;
+        if(delta > TIME_LIMIT>2000 && !use_outside){
+            city.best_score=1e100;
+            city.init_outside_ans();
+            use_outside=true;
+        }
 
         int type=mt()%100, mass=max(1.0, (TIME_LIMIT-delta-500)/200), day=mt()%d;
         int e1=mt()%m;
@@ -629,14 +832,17 @@ int main(){
         }
         
         int iso=city.is_separate(move_days);
+        int ove=city.over_day();
         // city.print_ans();
         double new_score=city.calc_trouble_score();
+        // assert(0.0<new_score);
         // cout<< new_score SP << iso <<endl;
         if(iso) new_score*=iso*iso*1e10;
-        if(lp%1000==0){
-            cout<< new_score SP << iso <<endl;
-            city.print_ans();
-        }
+        if(ove) new_score*=ove*1e10;
+        // if(lp%1000==0){
+        //     cout<< new_score SP << iso <<endl;
+        //     city.print_ans();
+        // }
 
         // 温度関数
         double d_time=chrono::duration_cast<chrono::milliseconds>(current - start).count();
