@@ -1,7 +1,9 @@
 a.out
 a-plus-b*
 testcases
-log.*
+test_results
+*log.*
 Cargo.lock
 Cargo.toml
 target
+external*
