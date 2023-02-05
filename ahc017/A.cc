@@ -289,9 +289,12 @@ struct City{
         return rtn;
     }
     // 辺id, 大本の辺の通行止め日、ルートの方向、残り迂回回数、迂回で増加した距離
-    ll detour_increase_dist_dfs(int eid, int ban_day, int dir, int depth){
+    ll detour_increase_dist_dfs(int eid, int ban_day, int dir, int depth, vector<int>& tmp){
         // dir==1 ? forward_route : reverse_route
-        if(ans[eid]!=ban_day) return w[eid];
+        if(ans[eid]!=ban_day){
+            tmp.push_back(eid);
+            return w[eid];
+        }
         // rep(i, depth*2) cout SP;
         // cout<< eid SP << ban_day SP << dir SP << depth <<endl;
         if(depth==0){
@@ -305,18 +308,18 @@ struct City{
             rep3(i, path[eid].forw.size(), 1){
                 int next_eid=path[eid].forw[i];
                 if(path[eid].ford[i]){
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1);
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1, tmp);
                 }else{
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1);
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1, tmp);
                 }
             }
         }else if(dir==0 && !is_outside_rev[eid]){
             rep3(i, path[eid].reve.size(), 1){
                 int next_eid=path[eid].reve[i];
                 if(!path[eid].revd[i]){
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1);
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 0, depth-1, tmp);
                 }else{
-                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1);
+                    rtn+=detour_increase_dist_dfs(next_eid, ban_day, 1, depth-1, tmp);
                 }
             }
         }else{
@@ -339,7 +342,7 @@ struct City{
         }
         return rtn;
     }
-    ll calc_trouble_score(int iso){
+    ll calc_trouble_score(){
         ll rtn=0;
         // if(0 && iso){
         //     // グラフが連結でない場合、従来の方法で比較的高速に計算する
@@ -362,14 +365,25 @@ struct City{
             // グラフが連結である場合、ちゃんと迂回ルートを検索する
         rep(i, m){
             ll shorter_path=lmax;
+            // cout<< "i: " << i <<endl;
+            vector<int> detuor_fpath, detuor_rpath;
+            // int width=0;
             if(!is_outside_for[i]){
-                shorter_path=detour_increase_dist_dfs(i, ans[i], 1, 5);
+                shorter_path=detour_increase_dist_dfs(i, ans[i], 1, 3, detuor_fpath);
                 // cout<< shorter_path <<endl;
+                // PV(detuor_rpath);
+                // preview_edge(detuor_fpath);
             }
             if(!is_outside_rev[i]){
-                shorter_path=min(shorter_path, detour_increase_dist_dfs(i, ans[i], 0, 5));
+                shorter_path=min(shorter_path, detour_increase_dist_dfs(i, ans[i], 0, 3, detuor_rpath));
                 // cout<< shorter_path <<endl;
+                // PV(detuor_rpath);
+                // preview_edge(detuor_rpath);
             }
+            // if(i==50){
+            //     print_ans();
+            //     exit(0);
+            // }
             ll weight=edge_used_fig[i]+150000*n/m;
             // weight=1;
             rtn+=shorter_path*weight;
@@ -616,7 +630,7 @@ int main(){
         
         int iso=city.is_separate(move_days);
         // city.print_ans();
-        double new_score=city.calc_trouble_score(iso);
+        double new_score=city.calc_trouble_score();
         // cout<< new_score SP << iso <<endl;
         if(iso) new_score*=iso*iso*1e10;
         if(lp%1000==0){
