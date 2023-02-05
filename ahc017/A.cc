@@ -618,15 +618,15 @@ struct City{
         lp++;
         fill(all(ans), -1);
         vector<set<int>> lines;
+        set<int> unsettled_edge;
+        rep(i, m) unsettled_edge.insert(i);
         vector<int> shu(m);
-        rep(i, m) shu[i]=i;
-        shuffle(all(shu), mt);
-        rep(i, m){
+        while(!unsettled_edge.empty()){
+            auto itr=unsettled_edge.begin();
             set<int> tmp;
-            if(shu[i]==-1) continue;
-            make_straight_path_dfs(shu[i], -1, tolerance_rad, tmp, 30);
+            make_straight_path_dfs(*itr, -1, tolerance_rad, tmp, 30);
             for(auto itr2=tmp.begin();itr2!=tmp.end();itr2++){
-                shu[*itr2]=-1;
+                unsettled_edge.erase(*itr2);
             }
             lines.push_back(tmp);
         }
@@ -636,20 +636,20 @@ struct City{
             Day tmp2=*itr2;
             // cout<< tmp2.day SP << tmp2.has_edge <<endl;
         }
-        int use_line=0;
+
+        int used=0;
         rep(i, lines.size()){
             // PS(lines[i]);
+            int sz=lines[i].size();
+            used+=sz*sz*i;
             auto itr=days.begin();
             Day day=*itr;
             days.erase(itr);
             day.has_edge+=lines[i].size();
             days.insert(day);
-            int used=0;
             for(auto itr2=lines[i].begin();itr2!=lines[i].end();itr2++){
-                if(ans[i]!=-1) used++;
                 ans[*itr2]=day.day;
             }
-            if(used) use_line++;
         }
         // rep(i, lines.size()){
         //     if(lines[i].size()<5) continue;
@@ -674,7 +674,7 @@ struct City{
             if(cnt>k) return cnt;
             if(ds.size(0)!=n) return n-ds.size(0);
         }
-        return use_line-100000;
+        return used-INF;
     }
     // ll calc_score(){
     //     // vector<vector<int>> block(d);
@@ -751,11 +751,11 @@ int main(){
     inpt();
     City city;
     city.init();
-    if(1.0*m/n>2.6){
+    if(1.0*m/n>2.4){
         int best_tmp=INF;
         vector<int> best_ans;
         rep(i, 500){
-            double rd=(mt()%400)/1000.0+0.2;
+            double rd=(mt()%600)/1000.0+0.2;
             int tmp=city.make_straight_path(rd);
             if(tmp<best_tmp){
                 best_tmp=tmp;
@@ -777,7 +777,6 @@ int main(){
     }
     // city.init_ans();
     // city.print_ans();
-    // return 0;
 
     city.init_ans();
     city.dijkstra_base();
