@@ -31,6 +31,7 @@ auto seed=(unsigned)time(NULL);
 mt19937 mt(seed);
 
 int lp=0;
+int excavation_count=0; //testtest
 int score=0; //testtest
 
 //グローバル
@@ -62,18 +63,16 @@ void set_hyper_v_set(){
 bool does_get_water(int id){
     return (water_set.end()!=water_set.find(uf.leader(id)));
 }
-//testtest
-int excavation(int y, int x, int power){
-    score+=C+power;
-    int id=y*N+x;
-    if(S[y][x]<=0){
-        cout<< "S[y][x]<=0" <<endl;
-        return -1;
+bool does_water_complete(){
+    int cnt=0;
+    rep(i, K){
+        if(does_get_water(c[i]*N+d[i])) cnt++;
     }
-    S[y][x]-=power;
-    if(S[y][x]>0) return 0;
-
+    return (cnt==K);
+}
+void merge_uf(int y, int x){
     // 繋がっていればつなげる
+    int id=y*N+x;
     rep(i, 4){
         if(y+dr[i]<0 || N<=y+dr[i] || x+dc[i]<0 || N<=x+dc[i]){
             continue;
@@ -81,13 +80,38 @@ int excavation(int y, int x, int power){
         int nid=(y+dr[i])*N+x+dc[i];
         uf.merge(id, nid);
     }
-
-    int cnt=0;
-    rep(i, K){
-        if(does_get_water(c[i]*N+d[i])) cnt++;
+}
+//testtest
+int excavation_local(int y, int x, int power){
+    excavation_count++;
+    score+=C+power;
+    if(S[y][x]<=0){
+        cout<< "S[y][x]<=0" <<endl;
+        return -1;
     }
-    if(cnt==K) return 2;
+    S[y][x]-=power;
+    if(S[y][x]>0) return 0;
+
+    merge_uf(y, x);
+
+    if(does_water_complete()) return 2;
     else return 1;
+}
+int excavation(int y, int x, int power){
+    excavation_count++;
+    score+=C+power;
+    cout<< y SP << x SP << power <<endl;
+    int tmp;
+    cin>> tmp;
+
+    if(tmp==0){
+        return 0;
+    }else if(tmp==1){
+        merge_uf(y, x);
+        return 1;
+    }else{
+        exit(0);
+    }
 }
 
 void inpt(){
@@ -126,7 +150,7 @@ int main(){
         rep(j, 200){
             if(i==c[0] && j==d[0]) continue;
             while(1){
-                cout<< i SP << j SP << 1 <<endl;
+                cout<< i SP << j SP << 100 <<endl;
                 int tmp;
                 cin>> tmp;
                 if(tmp==1) break;
@@ -134,11 +158,14 @@ int main(){
         }
     }
     while(1){
-        cout<< c[0] SP << d[0] SP << 1 <<endl;
+        cout<< c[0] SP << d[0] SP << 100 <<endl;
         int tmp;
         cin>> tmp;
         if(tmp==2) break;
     }
+
+    cout<< "exca: " << excavation_count <<endl;
+    cout<< "score: " << score <<endl;
 
     return 0;
 }
