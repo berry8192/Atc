@@ -1,8 +1,9 @@
 import bpy
 import bmesh
-file_path = 'C:\\Users\\berry\\Downloads\\6bada50282\\tools\\onlys\\0000.txt'
+file_path = 'C:\\Users\\berry\\Downloads\\6bada50282\\tools\\onlys\\0009.txt'
 with open(file_path) as f:
     data = f.read().split()
+
 # Convert data to list of integers
 data = [int(d)/1000 for d in data]
 # Create grid object
