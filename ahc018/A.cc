@@ -73,6 +73,9 @@ struct Pos{
     //     //cout<< "weight" <<endl;
     //     return (x-n/2)*(x-n/2)+(y-n/2)*(y-n/2)+1;
     // }
+    int get_id(){
+        return y*N+x;
+    }
     bool is_out_of_bounce(){
         //cout<< "out_of_bounce" <<endl;
         return (x<0 || 199<x || y<0 || 199<y);
@@ -127,6 +130,7 @@ Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 int N, W, K, C;
 // int S[210][210]; //testtest
 vector<int> a, b, c, d;
+Pos water[4], house[10];
 UnionFind uf(40010);
 int HYPER_V_IDX =40000;
 
@@ -143,28 +147,28 @@ template <class T> void PS(T ps) {
 
 void set_hyper_v_set(){
     rep(i, W){
-        int id=a[i]*N+b[i];
-        uf.par[id]=HYPER_V_IDX;
+        uf.par[water[i].get_id()]=HYPER_V_IDX;
     }
 }
 
 // ジャッジ
-bool does_water_complete(){
-    int cnt=0;
-    rep(i, K){
-        int id=c[i]*N+d[i];
-        if(uf.par[id]==HYPER_V_IDX) cnt++;
-    }
-    return (cnt==K);
-}
-void merge_uf(int y, int x){
+// bool does_water_complete(){
+//     int cnt=0;
+//     rep(i, K){
+//         int id=c[i]*N+d[i];
+//         if(uf.par[id]==HYPER_V_IDX) cnt++;
+//     }
+//     return (cnt==K);
+// }
+void merge_uf(Pos pos){
     // 繋がっていればつなげる
-    int id=y*N+x;
+    int id=pos.get_id();
     rep(i, 4){
-        if(y+d4[i].y<0 || N<=y+d4[i].y || x+d4[i].x<0 || N<=x+d4[i].x){
+        Pos npos=pos+d4[i];
+        if(npos.is_out_of_bounce()){
             continue;
         }
-        int nid=(y+d4[i].y)*N+x+d4[i].x;
+        int nid=npos.get_id();
         uf.unite(id, nid);
     }
 }
@@ -184,17 +188,17 @@ void merge_uf(int y, int x){
 //     if(does_water_complete()) return 2;
 //     else return 1;
 // }
-int excavation(int y, int x, int power){
+int excavation(Pos pos, int power){
     // excavation_count++;
     // score+=C+power;
-    cout<< y SP << x SP << power <<endl;
+    cout<< pos SP << power <<endl;
     int tmp;
     cin>> tmp;
 
     if(tmp==0){
         return 0;
     }else if(tmp==1){
-        merge_uf(y, x);
+        merge_uf(pos);
         return 1;
     }else{
         exit(0);
@@ -215,9 +219,11 @@ void inpt(){
     d.resize(K);
     rep(i, W){
         cin>> a[i] >> b[i];
+        water[i]={a[i], b[i]};
     }
     rep(i, K){
         cin>> c[i] >> d[i];
+        house[i]={c[i], d[i]};
     }
 }
 
