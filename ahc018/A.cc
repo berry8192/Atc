@@ -78,18 +78,22 @@ struct Pos{
     }
     bool is_out_of_bounce(){
         //cout<< "out_of_bounce" <<endl;
+        if(x<0 || 199<x || y<0 || 199<y){
+            // cout<< "y, x " << y SP << x <<endl;
+        }
         return (x<0 || 199<x || y<0 || 199<y);
     }
     int manhattan(Pos a){
         //cout<< "manhattan" <<endl;
         if(a.is_out_of_bounce()){
+            return 1000;
             // a.print();
-            assert(!a.is_out_of_bounce());
+            // assert(!a.is_out_of_bounce());
         }
-        if(is_out_of_bounce()){
-            // print();
-            assert(!is_out_of_bounce());
-        }
+        // if(is_out_of_bounce()){
+        //     // print();
+        //     assert(!is_out_of_bounce());
+        // }
         return (abs(a.x-x)+abs(a.y-y));
     }
 
@@ -120,8 +124,8 @@ struct Pos{
     bool operator<(const Pos &in) const{
 		return x!=in.x ? x<in.x : y<in.y;
 	};
-    bool operator!=(const Pos &in) const{
-		return x!=in.x && y!=in.y;
+    bool operator==(const Pos &in) const{
+		return x==in.x && y==in.y;
 	};
 };
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
@@ -144,6 +148,8 @@ vector<int> a, b, c, d;
 Pos water[4], house[10];
 UnionFind uf(40010);
 int HYPER_V_IDX =40000;
+int need_power[200][200];
+int is_broken[200][200];
 
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
@@ -202,6 +208,11 @@ void merge_uf(Pos pos){
 int excavation(Pos pos, int power){
     // excavation_count++;
     // score+=C+power;
+    assert(!pos.is_out_of_bounce());
+    // assert(power>0);
+    power=min(5000, power);
+    power=max(10, power);
+    assert(is_broken[pos.y][pos.x]==0);
     cout<< pos SP << power <<endl;
     int tmp;
     cin>> tmp;
@@ -210,6 +221,7 @@ int excavation(Pos pos, int power){
         return 0;
     }else if(tmp==1){
         merge_uf(pos);
+        is_broken[pos.y][pos.x]=1;
         return 1;
     }else{
         // -1か2が返ってきたら勝手にプログラムを終了する
@@ -217,15 +229,34 @@ int excavation(Pos pos, int power){
         exit(0);
     }
 }
-int break_bedrock(Pos pos){
-    int power=20;
+void break_bedrock(Pos pos, int power=20){
+    assert(!pos.is_out_of_bounce());
+    // assert(power>0);
+    // assert(power<=5000);
+    if(is_broken[pos.y][pos.x]) return;
     int cost=0;
     while(1){
         cost+=power;
         if(excavation(pos, power)) break;
         power*=2;
     }
-    return cost;
+    need_power[pos.y][pos.x]=cost;
+}
+void straight_connect(Pos pos1, Pos pos2){
+    // cout<< "straight_connect" << endl;
+    Pos npos=pos1;
+    int dir=0;
+    int power=need_power[npos.y][npos.x];
+    while(1){
+        power=need_power[npos.y][npos.x]*9/10;
+        // cout<< npos <<endl;
+        if((npos+d4[dir]).manhattan(pos2)<npos.manhattan(pos2)){
+            break_bedrock(npos+d4[dir], power);
+            npos+=d4[dir];
+            if(npos==pos2) break;
+        }
+        dir=(dir+1)%4;
+    }
 }
 
 void inpt(){
@@ -264,6 +295,28 @@ int main(){
 
     rep(i, W) break_bedrock(water[i]);
     rep(i, K) break_bedrock(house[i]);
+
+    rep(i, K){
+        int mi=500;
+        int midx;
+        int type;
+        rep(j, W){
+            if(mi>house[i].manhattan(water[j])){
+                mi=house[i].manhattan(water[j]);
+                midx=j;
+                type=1;
+            }
+        }
+        rep(j, i){
+            if(mi>house[i].manhattan(house[j])){
+                mi=house[i].manhattan(house[j]);
+                midx=j;
+                type=0;
+            }
+        }
+        if(type==1) straight_connect(water[midx], house[i]);
+        else straight_connect(house[midx], house[i]);
+    }
 
     return 0;
 }
