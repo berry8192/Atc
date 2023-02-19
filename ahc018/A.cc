@@ -2,7 +2,7 @@
 // #pragma GCC optimize("O3")
 
 #include <bits/stdc++.h>
-#include <atcoder/all>
+// #include <atcoder/all>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
@@ -12,7 +12,7 @@
 #define ll long long
 
 using namespace std;
-using namespace atcoder;
+// using namespace atcoder;
 
 // 定数周り
 int INF=1000000000;
@@ -34,12 +34,38 @@ int lp=0;
 int excavation_count=0; //testtest
 int score=0; //testtest
 
+struct UnionFind {
+    vector<int> par; // par[i]:iの親の番号　(例) par[3] = 2 : 3の親が2
+
+    UnionFind(int N) : par(N) { //最初は全てが根であるとして初期化
+        for(int i = 0; i < N; i++) par[i] = i;
+    }
+
+    int root(int x) { // データxが属する木の根を再帰で得る：root(x) = {xの木の根}
+        if (par[x] == x) return x;
+        return par[x] = root(par[x]);
+    }
+
+    void unite(int x, int y) { // xとyの木を併合
+        int rx = root(x); //xの根をrx
+        int ry = root(y); //yの根をry
+        if (rx>ry) swap(rx, ry); // 超頂点を優先
+        par[rx] = ry; //xの根rxをyの根ryにつける
+    }
+
+    bool same(int x, int y) { // 2つのデータx, yが属する木が同じならtrueを返す
+        int rx = root(x);
+        int ry = root(y);
+        return rx == ry;
+    }
+};
+
 //グローバル
 int N, W, K, C;
 int S[210][210]; //testtest
 vector<int> a, b, c, d;
-dsu uf(40010);
-set<int> water_set;
+UnionFind uf(40010);
+int HYPER_V_IDX =40000;
 
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
@@ -55,18 +81,16 @@ template <class T> void PS(T ps) {
 void set_hyper_v_set(){
     rep(i, W){
         int id=a[i]*N+b[i];
-        water_set.insert(id);
+        uf.par[id]=HYPER_V_IDX;
     }
 }
 
 // ジャッジ
-bool does_get_water(int id){
-    return (water_set.end()!=water_set.find(uf.leader(id)));
-}
 bool does_water_complete(){
     int cnt=0;
     rep(i, K){
-        if(does_get_water(c[i]*N+d[i])) cnt++;
+        int id=c[i]*N+d[i];
+        if(uf.par[id]==HYPER_V_IDX) cnt++;
     }
     return (cnt==K);
 }
@@ -78,7 +102,7 @@ void merge_uf(int y, int x){
             continue;
         }
         int nid=(y+dr[i])*N+x+dc[i];
-        uf.merge(id, nid);
+        uf.unite(id, nid);
     }
 }
 //testtest
