@@ -126,6 +126,17 @@ struct Pos{
 };
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
+struct Excavator{
+    Pos pos; // 現在地
+    double direction; // 次の掘削地
+    int prio; // 掘削優先度
+    int relate; // 出発地にあった水源家をbit列
+
+    bool operator<(const Excavator& in) const {
+        return prio < in.prio;
+    }
+};
+
 //グローバル
 int N, W, K, C;
 // int S[210][210]; //testtest
