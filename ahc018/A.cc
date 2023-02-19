@@ -31,8 +31,8 @@ auto seed=(unsigned)time(NULL);
 mt19937 mt(seed);
 
 int lp=0;
-int excavation_count=0; //testtest
-int score=0; //testtest
+// int excavation_count=0; //testtest
+// int score=0; //testtest
 
 struct UnionFind {
     vector<int> par; // par[i]:iの親の番号　(例) par[3] = 2 : 3の親が2
@@ -62,7 +62,7 @@ struct UnionFind {
 
 //グローバル
 int N, W, K, C;
-int S[210][210]; //testtest
+// int S[210][210]; //testtest
 vector<int> a, b, c, d;
 UnionFind uf(40010);
 int HYPER_V_IDX =40000;
@@ -106,24 +106,24 @@ void merge_uf(int y, int x){
     }
 }
 //testtest
-int excavation_local(int y, int x, int power){
-    excavation_count++;
-    score+=C+power;
-    if(S[y][x]<=0){
-        cout<< "S[y][x]<=0" <<endl;
-        return -1;
-    }
-    S[y][x]-=power;
-    if(S[y][x]>0) return 0;
+// int excavation_local(int y, int x, int power){
+//     excavation_count++;
+//     score+=C+power;
+//     if(S[y][x]<=0){
+//         cout<< "S[y][x]<=0" <<endl;
+//         return -1;
+//     }
+//     S[y][x]-=power;
+//     if(S[y][x]>0) return 0;
 
-    merge_uf(y, x);
+//     merge_uf(y, x);
 
-    if(does_water_complete()) return 2;
-    else return 1;
-}
+//     if(does_water_complete()) return 2;
+//     else return 1;
+// }
 int excavation(int y, int x, int power){
-    excavation_count++;
-    score+=C+power;
+    // excavation_count++;
+    // score+=C+power;
     cout<< y SP << x SP << power <<endl;
     int tmp;
     cin>> tmp;
@@ -141,11 +141,11 @@ int excavation(int y, int x, int power){
 void inpt(){
     // cout<< "inpt" <<endl;
     cin>> N >> W >> K >> C;
-    rep(i, 200){
-        rep(j, 200){
-            cin>> S[i][j];
-        }
-    }
+    // rep(i, 200){
+    //     rep(j, 200){
+    //         cin>> S[i][j];
+    //     }
+    // }
     a.resize(W);
     b.resize(W);
     c.resize(K);
@@ -187,9 +187,6 @@ int main(){
         cin>> tmp;
         if(tmp==2) break;
     }
-
-    cout<< "exca: " << excavation_count <<endl;
-    cout<< "score: " << score <<endl;
 
     return 0;
 }
