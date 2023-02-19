@@ -61,20 +61,20 @@ struct UnionFind {
 };
 
 struct Pos{
-    int x;
     int y;
+    int x;
 
     Pos(){};
-    Pos(int xx, int yy){
-        x=xx;
+    Pos(int yy, int xx){
         y=yy;
+        x=xx;
     }
     // int weight(){
     //     //cout<< "weight" <<endl;
     //     return (x-n/2)*(x-n/2)+(y-n/2)*(y-n/2)+1;
     // }
     int get_id(){
-        return y*N+x;
+        return y*200+x;
     }
     bool is_out_of_bounce(){
         //cout<< "out_of_bounce" <<endl;
@@ -83,19 +83,19 @@ struct Pos{
     int manhattan(Pos a){
         //cout<< "manhattan" <<endl;
         if(a.is_out_of_bounce()){
-            a.print();
+            // a.print();
             assert(!a.is_out_of_bounce());
         }
         if(is_out_of_bounce()){
-            print();
+            // print();
             assert(!is_out_of_bounce());
         }
         return (abs(a.x-x)+abs(a.y-y));
     }
 
-    void print(){
-        cout<< "(" << x << ", " << y << ")";
-    }
+    // void print(){
+    //     cout<< "(" << x << ", " << y << ")";
+    // }
     friend ostream &operator<<(ostream &os, const Pos &d) {
         os << d.y << " " << d.x;
         return os;
@@ -201,8 +201,20 @@ int excavation(Pos pos, int power){
         merge_uf(pos);
         return 1;
     }else{
+        // -1か2が返ってきたら勝手にプログラムを終了する
+        if(tmp==-1) cout<< "return -1 from excavation." <<endl;
         exit(0);
     }
+}
+int break_bedrock(Pos pos){
+    int power=20;
+    int cost=0;
+    while(1){
+        cost+=power;
+        if(excavation(pos, power)) break;
+        power*=2;
+    }
+    return cost;
 }
 
 void inpt(){
@@ -219,11 +231,11 @@ void inpt(){
     d.resize(K);
     rep(i, W){
         cin>> a[i] >> b[i];
-        water[i]={a[i], b[i]};
+        water[i]=Pos(a[i], b[i]);
     }
     rep(i, K){
         cin>> c[i] >> d[i];
-        house[i]={c[i], d[i]};
+        house[i]=Pos(c[i], d[i]);
     }
 }
 
@@ -239,7 +251,8 @@ int main(){
 
     init();
 
-
+    rep(i, W) break_bedrock(water[i]);
+    rep(i, K) break_bedrock(house[i]);
 
     return 0;
 }
