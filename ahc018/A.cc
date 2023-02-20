@@ -162,7 +162,7 @@ UnionFind uf(15);
 int HYPER_V_IDX=14;
 int need_power[200][200];
 int is_broken[200][200];
-int made_exca[200][200];
+// int made_exca[200][200];
 priority_queue<Excavator> excavatores;
 map<Pos, vector<Excavator>> exca_map;
 
@@ -227,7 +227,10 @@ int excavation(Pos pos, int power){
     // assert(power>0);
     power=min(5000, power);
     power=max(10, power);
-    assert(is_broken[pos.y][pos.x]==0);
+    if(is_broken[pos.y][pos.x]!=0){
+        cout<< pos << " is broken. " << is_broken[pos.y][pos.x] <<endl;
+        assert(is_broken[pos.y][pos.x]==0);
+    }
     cout<< pos SP << power <<endl;
     int tmp;
     cin>> tmp;
@@ -320,13 +323,13 @@ void set_exca_map(Excavator exca){
     }
 }
 
-void gen_exavator(Pos pos, int prio, int par){
+void gen_exavator(Excavator exca){
     // cout<< "gen_exavator " << pos SP << par_id <<endl;
     rep(i, 8){
-        Pos npos=pos+d8[i]*EXCA_WIDTH;
-        if(npos.is_out_of_bounce() || made_exca[npos.y][npos.x]) continue;
-        made_exca[pos.y][pos.x]=1;
-        Excavator nexca(npos, prio, par);
+        Pos npos=exca.pos+d8[i]*EXCA_WIDTH;
+        if(npos.is_out_of_bounce() || is_broken[npos.y][npos.x]) continue;
+        // is_broken[npos.y][npos.x]=1;
+        Excavator nexca(npos, exca.prio, exca.par);
         excavatores.push(nexca);
         set_exca_map(nexca);
     }
@@ -334,10 +337,10 @@ void gen_exavator(Pos pos, int prio, int par){
 
 void gen_all_excavator(){
     rep(i, W){
-        gen_exavator(water[i], 0, i);
+        gen_exavator({water[i], 0, i});
     }
     rep(i, K){
-        gen_exavator(house[i], 0, W+i);
+        gen_exavator({house[i], 0, W+i});
     }
 }
 
@@ -345,7 +348,14 @@ void exec_exca(){
     while(!excavatores.empty()){
         Excavator exca=excavatores.top();
         excavatores.pop();
-        cout<< exca <<endl;
+        // cout<< exca <<endl;
+        if(is_broken[exca.pos.y][exca.pos.x]) continue;
+        if(excavation(exca.pos, exca.prio+15)==1){
+            gen_exavator(exca);
+        }else{
+            gen_exavator({exca.pos, exca.prio*2, exca.par});
+            // excavation(exca.pos, 5000); //
+        }
     }
     cout<< "failed exec excavator." <<endl;
 }
