@@ -258,6 +258,29 @@ void straight_connect(Pos pos1, Pos pos2){
         dir=(dir+1)%4;
     }
 }
+void simple_straight_connect(){
+    rep(i, K){
+        int mi=500;
+        int midx;
+        int type;
+        rep(j, W){
+            if(mi>house[i].manhattan(water[j])){
+                mi=house[i].manhattan(water[j]);
+                midx=j;
+                type=1;
+            }
+        }
+        rep(j, i){
+            if(mi>house[i].manhattan(house[j])){
+                mi=house[i].manhattan(house[j]);
+                midx=j;
+                type=0;
+            }
+        }
+        if(type==1) straight_connect(water[midx], house[i]);
+        else straight_connect(house[midx], house[i]);
+    }
+}
 
 void inpt(){
     // cout<< "inpt" <<endl;
@@ -293,30 +316,10 @@ int main(){
 
     init();
 
-    rep(i, W) break_bedrock(water[i]);
+    // rep(i, W) break_bedrock(water[i]);
     rep(i, K) break_bedrock(house[i]);
 
-    rep(i, K){
-        int mi=500;
-        int midx;
-        int type;
-        rep(j, W){
-            if(mi>house[i].manhattan(water[j])){
-                mi=house[i].manhattan(water[j]);
-                midx=j;
-                type=1;
-            }
-        }
-        rep(j, i){
-            if(mi>house[i].manhattan(house[j])){
-                mi=house[i].manhattan(house[j]);
-                midx=j;
-                type=0;
-            }
-        }
-        if(type==1) straight_connect(water[midx], house[i]);
-        else straight_connect(house[midx], house[i]);
-    }
+    
 
     return 0;
 }
