@@ -282,6 +282,10 @@ void simple_straight_connect(){
     }
 }
 
+void break_house_bedrock(){
+    rep(i, K) break_bedrock(house[i]);
+}
+
 void inpt(){
     // cout<< "inpt" <<endl;
     cin>> N >> W >> K >> C;
@@ -316,10 +320,8 @@ int main(){
 
     init();
 
-    // rep(i, W) break_bedrock(water[i]);
-    rep(i, K) break_bedrock(house[i]);
+    break_house_bedrock();
 
-    
 
     return 0;
 }
