@@ -23,6 +23,7 @@ ll lmax=9223372036854775807;
 double TIME_LIMIT=4900.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
+int EXCA_WIDTH=10;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -133,9 +134,15 @@ Pos d8[]={{0, 2}, {-1, 1}, {-2, 0}, {-1, -1}, {0, -2}, {1, -1}, {2, 0}, {1, 1}};
 
 struct Excavator{
     Pos pos; // 現在地
-    // double direction; // 次の掘削地
     int prio; // 掘削優先度
     int par; // 出発地にあった水源or家のid
+
+    Excavator(){};
+    Excavator(Pos ipos, int iprio, int ipar){
+        pos=ipos;
+        prio=iprio;
+        par=ipar;
+    }
 
     bool operator<(const Excavator& in) const {
         return prio < in.prio;
@@ -294,19 +301,41 @@ void break_all_house_bedrock(){
     rep(i, K) break_bedrock(house[i]);
 }
 
-void gen_exavator(Pos pos, int par_id){
+void set_exca_map(Excavator exca){
+    // cout<< exca <<endl;
+    int y1=max(0, exca.pos.y-EXCA_WIDTH);
+    int y2=min(199, exca.pos.y+EXCA_WIDTH+1); // 隙間をなくすため下に1つずらす
+    int x1=max(0, exca.pos.x-EXCA_WIDTH);
+    int x2=min(199, exca.pos.x+EXCA_WIDTH);
+    // cout<< y1 SP << y2 SP << x1 SP << x2 <<endl;
+    for(int i=y1;i<=y2;i++){
+        for(int j=x1;j<=x2;j++){
+            Pos npos(i, j);
+            if(exca.pos.manhattan(npos)<EXCA_WIDTH || (exca.pos.manhattan(npos)==EXCA_WIDTH && exca.pos.y<i)){
+                if(exca_map[npos].size()) cout<< "!" <<endl;
+                exca_map[npos].emplace_back(exca);
+                break_bedrock(npos);
+            }
+        }
+    }
+}
+
+void gen_exavator(Pos pos, int par){
     // cout<< "gen_exavator " << pos SP << par_id <<endl;
     rep(i, 8){
-        Pos npos=pos+d8[i]*10;
+        Pos npos=pos+d8[i]*EXCA_WIDTH;
         if(npos.is_out_of_bounce() || made_exca[npos.y][npos.x]) continue;
         made_exca[pos.y][pos.x]=1;
-        excavatores.push({npos, 0, par_id});
+        Excavator nexca(npos, 0, par);
+        excavatores.push(nexca);
+        set_exca_map(nexca);
     }
 }
 
 void gen_all_excavator(){
     rep(i, W){
         gen_exavator(water[i], i);
+        return; //
     }
     rep(i, K){
         gen_exavator(house[i], W+i);
