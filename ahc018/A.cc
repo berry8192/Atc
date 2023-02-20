@@ -145,7 +145,7 @@ struct Excavator{
     }
 
     bool operator<(const Excavator& in) const {
-        return prio < in.prio;
+        return prio > in.prio;
     }
     friend ostream &operator<<(ostream &os, const Excavator &e) {
         os << "pos: " << e.pos << " prio: " << e.prio << " parent: " << e.par;
@@ -312,21 +312,21 @@ void set_exca_map(Excavator exca){
         for(int j=x1;j<=x2;j++){
             Pos npos(i, j);
             if(exca.pos.manhattan(npos)<EXCA_WIDTH || (exca.pos.manhattan(npos)==EXCA_WIDTH && exca.pos.y<i)){
-                if(exca_map[npos].size()) cout<< "!" <<endl;
+                // if(exca_map[npos].size()) cout<< "!" <<endl;
                 exca_map[npos].emplace_back(exca);
-                break_bedrock(npos);
+                // break_bedrock(npos);
             }
         }
     }
 }
 
-void gen_exavator(Pos pos, int par){
+void gen_exavator(Pos pos, int prio, int par){
     // cout<< "gen_exavator " << pos SP << par_id <<endl;
     rep(i, 8){
         Pos npos=pos+d8[i]*EXCA_WIDTH;
         if(npos.is_out_of_bounce() || made_exca[npos.y][npos.x]) continue;
         made_exca[pos.y][pos.x]=1;
-        Excavator nexca(npos, 0, par);
+        Excavator nexca(npos, prio, par);
         excavatores.push(nexca);
         set_exca_map(nexca);
     }
@@ -334,11 +334,10 @@ void gen_exavator(Pos pos, int par){
 
 void gen_all_excavator(){
     rep(i, W){
-        gen_exavator(water[i], i);
-        return; //
+        gen_exavator(water[i], 0, i);
     }
     rep(i, K){
-        gen_exavator(house[i], W+i);
+        gen_exavator(house[i], 0, W+i);
     }
 }
 
