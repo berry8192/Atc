@@ -111,10 +111,10 @@ struct Pos{
         rtn.y=y+pos.y;
         return rtn;
     }
-    Pos operator-(const Pos pos){
+    Pos operator*(const int a){
         Pos rtn;
-        rtn.x=x-pos.x;
-        rtn.y=y-pos.y;
+        rtn.x=x*a;
+        rtn.y=y*a;
         return rtn;
     }
     void operator+=(const Pos pos){
@@ -129,15 +129,20 @@ struct Pos{
 	};
 };
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+Pos d8[]={{0, 1}, {-1, 1}, {-1, 0}, {-1, -1}, {0, -1}, {1, -1}, {1, 0}, {1, 1}};
 
 struct Excavator{
     Pos pos; // 現在地
-    double direction; // 次の掘削地
+    // double direction; // 次の掘削地
     int prio; // 掘削優先度
-    int relate; // 出発地にあった水源家をbit列
+    int par; // 出発地にあった水源or家のid
 
     bool operator<(const Excavator& in) const {
         return prio < in.prio;
+    }
+    friend ostream &operator<<(ostream &os, const Excavator &e) {
+        os << "pos: " << e.pos << " prio: " << e.prio << " parent: " << e.par;
+        return os;
     }
 };
 
@@ -146,10 +151,13 @@ int N, W, K, C;
 // int S[210][210]; //testtest
 vector<int> a, b, c, d;
 Pos water[4], house[10];
-UnionFind uf(40010);
-int HYPER_V_IDX =40000;
+UnionFind uf(15);
+int HYPER_V_IDX=14;
 int need_power[200][200];
 int is_broken[200][200];
+int made_exca[200][200];
+priority_queue<Excavator> excavatores;
+map<Pos, vector<Excavator>> exca_map;
 
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
@@ -164,7 +172,7 @@ template <class T> void PS(T ps) {
 
 void set_hyper_v_set(){
     rep(i, W){
-        uf.par[water[i].get_id()]=HYPER_V_IDX;
+        uf.par[i]=HYPER_V_IDX;
     }
 }
 
@@ -177,18 +185,18 @@ void set_hyper_v_set(){
 //     }
 //     return (cnt==K);
 // }
-void merge_uf(Pos pos){
-    // 繋がっていればつなげる
-    int id=pos.get_id();
-    rep(i, 4){
-        Pos npos=pos+d4[i];
-        if(npos.is_out_of_bounce()){
-            continue;
-        }
-        int nid=npos.get_id();
-        uf.unite(id, nid);
-    }
-}
+// void merge_uf(Pos pos){
+//     // 繋がっていればつなげる
+//     int id=pos.get_id();
+//     rep(i, 4){
+//         Pos npos=pos+d4[i];
+//         if(npos.is_out_of_bounce()){
+//             continue;
+//         }
+//         int nid=npos.get_id();
+//         uf.unite(id, nid);
+//     }
+// }
 //testtest
 // int excavation_local(int y, int x, int power){
 //     excavation_count++;
@@ -220,7 +228,7 @@ int excavation(Pos pos, int power){
     if(tmp==0){
         return 0;
     }else if(tmp==1){
-        merge_uf(pos);
+        // merge_uf(pos);
         is_broken[pos.y][pos.x]=1;
         return 1;
     }else{
@@ -282,8 +290,36 @@ void simple_straight_connect(){
     }
 }
 
-void break_house_bedrock(){
+void break_all_house_bedrock(){
     rep(i, K) break_bedrock(house[i]);
+}
+
+void gen_exavator(Pos pos, int par_id){
+    // cout<< "gen_exavator " << pos SP << par_id <<endl;
+    rep(i, 8){
+        Pos npos=pos+d8[i]*10;
+        if(npos.is_out_of_bounce() || made_exca[npos.y][npos.x]) continue;
+        made_exca[pos.y][pos.x]=1;
+        excavatores.push({npos, 0, par_id});
+    }
+}
+
+void gen_all_excavator(){
+    rep(i, W){
+        gen_exavator(water[i], i);
+    }
+    rep(i, K){
+        gen_exavator(house[i], W+i);
+    }
+}
+
+void exec_exca(){
+    while(!excavatores.empty()){
+        Excavator exca=excavatores.top();
+        excavatores.pop();
+        cout<< exca <<endl;
+    }
+    cout<< "failed exec excavator." <<endl;
 }
 
 void inpt(){
@@ -320,8 +356,11 @@ int main(){
 
     init();
 
-    break_house_bedrock();
+    break_all_house_bedrock();
+    gen_all_excavator();
+    exec_exca();
 
+    cout<< "end" <<endl;
 
     return 0;
 }
