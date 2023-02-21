@@ -136,19 +136,21 @@ struct Excavator{
     Pos pos; // 現在地
     int prio; // 掘削優先度
     int par; // 出発地にあった水源or家のid
+    Pos prepos;
 
     Excavator(){};
-    Excavator(Pos ipos, int iprio, int ipar){
+    Excavator(Pos ipos, int iprio, int ipar, Pos ipre){
         pos=ipos;
         prio=iprio;
         par=ipar;
+        prepos=ipre;
     }
 
     bool operator<(const Excavator& in) const {
         return prio > in.prio;
     }
     friend ostream &operator<<(ostream &os, const Excavator &e) {
-        os << "pos: " << e.pos << " prio: " << e.prio << " parent: " << e.par;
+        os << "pos: " << e.pos << " prio: " << e.prio << " parent: " << e.par << " prepos: " << e.prepos;
         return os;
     }
 };
@@ -159,12 +161,16 @@ int N, W, K, C;
 vector<int> a, b, c, d;
 Pos water[4], house[10];
 UnionFind uf(15);
+bool united[15];
+bool does_get_water[10];
+bool complete_make_path;
 int HYPER_V_IDX=14;
 int need_power[200][200];
 int is_broken[200][200];
 // int made_exca[200][200];
 priority_queue<Excavator> excavatores;
 map<Pos, vector<Excavator>> exca_map;
+vector<pair<Pos, Pos>> path_list;
 
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
@@ -181,6 +187,7 @@ void set_hyper_v_set(){
     rep(i, W){
         uf.par[i]=HYPER_V_IDX;
     }
+    // rep(i, W+K) cout<< uf.par[i] <<endl;
 }
 
 // ジャッジ
@@ -253,6 +260,7 @@ void break_bedrock(Pos pos, int power=20){
     // assert(power<=5000);
     if(is_broken[pos.y][pos.x]) return;
     int cost=0;
+    power=max(10, power);
     while(1){
         cost+=power;
         if(excavation(pos, power)) break;
@@ -265,6 +273,7 @@ void straight_connect(Pos pos1, Pos pos2){
     Pos npos=pos1;
     int dir=0;
     int power=need_power[npos.y][npos.x];
+    break_bedrock(npos, power);
     while(1){
         power=need_power[npos.y][npos.x]*9/10;
         // cout<< npos <<endl;
@@ -304,8 +313,19 @@ void break_all_house_bedrock(){
     rep(i, K) break_bedrock(house[i]);
 }
 
+void dfs_make_path(Excavator exca){
+    // cout<< "# dfs_make_path " << exca <<endl;
+    path_list.push_back({exca.pos, exca.prepos});
+    if(exca.par<W){
+        if(exca.prepos==water[exca.par]) return;
+    }else{
+        if(exca.prepos==house[exca.par-W]) return;
+    }
+    dfs_make_path(exca_map[exca.prepos][0]);
+}
+
 void set_exca_map(Excavator exca){
-    // cout<< exca <<endl;
+    // cout<< "set_exca_map " << exca <<endl;
     int y1=max(0, exca.pos.y-EXCA_WIDTH);
     int y2=min(199, exca.pos.y+EXCA_WIDTH+1); // 隙間をなくすため下に1つずらす
     int x1=max(0, exca.pos.x-EXCA_WIDTH);
@@ -315,21 +335,67 @@ void set_exca_map(Excavator exca){
         for(int j=x1;j<=x2;j++){
             Pos npos(i, j);
             if(exca.pos.manhattan(npos)<EXCA_WIDTH || (exca.pos.manhattan(npos)==EXCA_WIDTH && exca.pos.y<i)){
-                // if(exca_map[npos].size()) cout<< "!" <<endl;
-                exca_map[npos].emplace_back(exca);
-                // break_bedrock(npos);
+                if(exca_map[npos].size()){
+                    // cout<< "match exca_map " << exca_map[npos][0] <<endl;
+                    int native_root=uf.root(exca_map[npos][0].par);
+                    int visitor_root=uf.root(exca.par);
+                    if(native_root==HYPER_V_IDX && visitor_root==HYPER_V_IDX) continue; // 両方の親に水源がいるならそもそもくっつける必要がない
+                    if(native_root==visitor_root){
+                        continue; // 既にくっついているもの同士が出会ったときはくっつける必要がない
+                        // cout<< "same par: " << exca.par <<endl;
+                        // assert(exca_map[npos][0].par!=exca.par);
+                    }
+                    // cout<< "# native_id: " << exca_map[npos][0].par <<endl;
+                    // cout<< "# native_root: " << native_root <<endl;
+                    // cout<< "# visitor_id: " << exca.par <<endl;
+                    // cout<< "# visitore_root: " << visitor_root <<endl;
+
+                    // パスを作る必要があるのは今までどこかとくっついたことがない水源家の方、両方かもしれないし両方違ううかもしれない4通り
+                    // 道のりを逆順にたどってパスをつくる
+                    if(1 || !united[exca_map[npos][0].par]){
+                        // cout<< "# native dfs" <<endl;
+                        dfs_make_path(exca_map[npos][0]);
+                        united[exca_map[npos][0].par]=true;
+                    }
+                    // 道のりを逆順にたどってパスをつくる
+                    if(1 || !united[exca.par]){
+                        // cout<< "# visitor dfs" <<endl;
+                        dfs_make_path(exca);
+                        united[exca.par]=true;
+                    }
+                    // 先端の点同士を結ぶpathも必要
+                    // cout<< "# direct connect " << exca.pos SP << exca_map[npos][0].pos <<endl;
+                    path_list.push_back({exca.pos, exca_map[npos][0].pos});
+                    uf.unite(exca_map[npos][0].par, exca.par);
+                    int cnt=0;
+                    rep(i, K){
+                        if(uf.root(W+i)==HYPER_V_IDX){
+                            does_get_water[i]=true;
+                            cnt++;
+                        }
+                    }
+                    if(cnt==K){
+                        complete_make_path=true;
+                        // return true;
+                    }
+                }else{
+                    exca_map[npos].emplace_back(exca);
+                    // break_bedrock(npos);
+                }
             }
         }
     }
+    // return false;
 }
 
 void gen_exavator(Excavator exca){
-    // cout<< "gen_exavator " << pos SP << par_id <<endl;
+    // cout<< "gen_exavator " << exca <<endl;
     rep(i, 8){
         Pos npos=exca.pos+d8[i]*EXCA_WIDTH;
-        if(npos.is_out_of_bounce() || is_broken[npos.y][npos.x]) continue;
+        if(npos.is_out_of_bounce()) continue;
+        if(!exca_map[npos].empty() && exca_map[npos][0].par==exca.par) continue;
         // is_broken[npos.y][npos.x]=1;
-        Excavator nexca(npos, exca.prio, exca.par);
+        Excavator nexca(npos, exca.prio, exca.par, exca.pos);
         excavatores.push(nexca);
         set_exca_map(nexca);
     }
@@ -337,27 +403,35 @@ void gen_exavator(Excavator exca){
 
 void gen_all_excavator(){
     rep(i, W){
-        gen_exavator({water[i], 0, i});
+        gen_exavator({water[i], 20, i, water[i]});
     }
     rep(i, K){
-        gen_exavator({house[i], 0, W+i});
+        gen_exavator({house[i], 20, W+i, house[i]});
     }
 }
 
 void exec_exca(){
+    // cout<< "exec excavator" <<endl;
     while(!excavatores.empty()){
         Excavator exca=excavatores.top();
         excavatores.pop();
+        if(complete_make_path) break;
         // cout<< exca <<endl;
         if(is_broken[exca.pos.y][exca.pos.x]) continue;
-        if(excavation(exca.pos, exca.prio+15)==1){
-            gen_exavator(exca);
+        if(excavation(exca.pos, exca.prio)==1){
+            gen_exavator({exca.pos, exca.prio+1, exca.par, exca.prepos});
         }else{
-            gen_exavator({exca.pos, exca.prio*2, exca.par});
+            excavatores.push({exca.pos, exca.prio*2, exca.par, exca.prepos});
             // excavation(exca.pos, 5000); //
         }
     }
-    cout<< "failed exec excavator." <<endl;
+    // cout<< "failed exec excavator." <<endl;
+}
+
+void exec_path_excavation(){
+    rep(i, path_list.size()){
+        straight_connect(path_list[i].first, path_list[i].second);
+    }
 }
 
 void inpt(){
@@ -397,8 +471,7 @@ int main(){
     break_all_house_bedrock();
     gen_all_excavator();
     exec_exca();
-
-    cout<< "end" <<endl;
+    exec_path_excavation();
 
     return 0;
 }
