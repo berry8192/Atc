@@ -134,14 +134,16 @@ Pos d8[]={{0, 2}, {-1, 1}, {-2, 0}, {-1, -1}, {0, -2}, {1, -1}, {2, 0}, {1, 1}};
 
 struct Excavator{
     Pos pos; // 現在地
-    int prio; // 掘削優先度
+    double prio; // 掘削優先度
+    int power;
     int par; // 出発地にあった水源or家のid
     Pos prepos;
 
     Excavator(){};
-    Excavator(Pos ipos, int iprio, int ipar, Pos ipre){
+    Excavator(Pos ipos, double iprio, int ipower, int ipar, Pos ipre){
         pos=ipos;
         prio=iprio;
+        power=ipower;
         par=ipar;
         prepos=ipre;
     }
@@ -150,7 +152,7 @@ struct Excavator{
         return prio > in.prio;
     }
     friend ostream &operator<<(ostream &os, const Excavator &e) {
-        os << "pos: " << e.pos << " prio: " << e.prio << " parent: " << e.par << " prepos: " << e.prepos;
+        os << "pos: " << e.pos << " prio: " << e.prio << " power: " << e.power << " parent: " << e.par << " prepos: " << e.prepos;
         return os;
     }
 };
@@ -404,18 +406,34 @@ void gen_exavator(Excavator exca){
         if(npos.is_out_of_bounce()) continue;
         if(!exca_map[npos].empty() && exca_map[npos][0].par==exca.par) continue;
         // is_broken[npos.y][npos.x]=1;
-        Excavator nexca(npos, exca.prio, exca.par, exca.pos);
+        // 行った先に家水源が居そうなら行く
+        int delta_sum=0;
+        rep(i, W){
+            if(exca.par==i) continue;
+            if(uf.root(exca.par)==uf.root(i)) continue;
+            int delta=water[i].manhattan(npos)-water[i].manhattan(exca.pos);
+            delta_sum+=delta;
+        }
+        rep(i, K){
+            if(exca.par==i+W) continue;
+            if(uf.root(exca.par)==uf.root(i+W)) continue;
+            int delta=house[i].manhattan(npos)-house[i].manhattan(exca.pos);
+            delta_sum+=delta;
+        }
+        Excavator nexca(npos, exca.prio, exca.power, exca.par, exca.pos);
+        // Excavator nexca(npos, exca.prio+delta_sum, exca.power, exca.par, exca.pos);
         excavatores.push(nexca);
         set_exca_map(nexca);
     }
 }
 
 void gen_all_excavator(){
+    int base=15+C/4;
     rep(i, W){
-        gen_exavator({water[i], 20, i, water[i]});
+        gen_exavator({water[i], base, base, i, water[i]});
     }
     rep(i, K){
-        gen_exavator({house[i], 20, W+i, house[i]});
+        gen_exavator({house[i], base, base, W+i, house[i]});
     }
 }
 
@@ -427,10 +445,10 @@ void exec_exca(){
         if(complete_make_path) break;
         // cout<< exca <<endl;
         if(is_broken[exca.pos.y][exca.pos.x]) continue;
-        if(excavation(exca.pos, exca.prio)==1){
-            gen_exavator({exca.pos, exca.prio+1, exca.par, exca.prepos});
+        if(excavation(exca.pos, exca.power)==1){
+            gen_exavator({exca.pos, exca.prio*1.5, exca.power+1, exca.par, exca.prepos});
         }else{
-            excavatores.push({exca.pos, exca.prio*2, exca.par, exca.prepos});
+            excavatores.push({exca.pos, exca.prio*1.5, exca.power*1.5, exca.par, exca.prepos});
             // excavation(exca.pos, 5000); //
         }
     }
