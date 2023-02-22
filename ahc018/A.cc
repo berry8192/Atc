@@ -270,11 +270,16 @@ void break_bedrock(Pos pos, int power=20){
 }
 void straight_connect(Pos pos1, Pos pos2){
     // cout<< "straight_connect" << endl;
+    if(pos1==pos2) return;
     Pos npos=pos1;
     int dir=0;
-    int power=need_power[npos.y][npos.x];
+    int power=max(10, need_power[npos.y][npos.x]);
     break_bedrock(npos, power);
+    int cnt=1;
     while(1){
+        cnt++;
+        if(cnt==10000) exit(0);
+        // cout<< "# connecting" << npos <<endl;
         power=need_power[npos.y][npos.x]*9/10;
         // cout<< npos <<endl;
         if((npos+d4[dir]).manhattan(pos2)<npos.manhattan(pos2)){
@@ -321,6 +326,9 @@ void dfs_make_path(Excavator exca){
     }else{
         if(exca.prepos==house[exca.par-W]) return;
     }
+    if(!(exca.prepos==exca_map[exca.prepos][0].pos)){
+        path_list.push_back({exca.prepos, exca_map[exca.prepos][0].pos});
+    }
     dfs_make_path(exca_map[exca.prepos][0]);
 }
 
@@ -336,26 +344,27 @@ void set_exca_map(Excavator exca){
             Pos npos(i, j);
             if(exca.pos.manhattan(npos)<EXCA_WIDTH || (exca.pos.manhattan(npos)==EXCA_WIDTH && exca.pos.y<i)){
                 if(exca_map[npos].size()){
-                    // cout<< "match exca_map " << exca_map[npos][0] <<endl;
-                    int native_root=uf.root(exca_map[npos][0].par);
+                    Excavator target=exca_map[npos][0];
+                    // cout<< "match exca_map " << target <<endl;
+                    int native_root=uf.root(target.par);
                     int visitor_root=uf.root(exca.par);
                     if(native_root==HYPER_V_IDX && visitor_root==HYPER_V_IDX) continue; // 両方の親に水源がいるならそもそもくっつける必要がない
                     if(native_root==visitor_root){
                         continue; // 既にくっついているもの同士が出会ったときはくっつける必要がない
                         // cout<< "same par: " << exca.par <<endl;
-                        // assert(exca_map[npos][0].par!=exca.par);
+                        // assert(target.par!=exca.par);
                     }
-                    // cout<< "# native_id: " << exca_map[npos][0].par <<endl;
+                    // cout<< "# native_id: " << target.par <<endl;
                     // cout<< "# native_root: " << native_root <<endl;
                     // cout<< "# visitor_id: " << exca.par <<endl;
                     // cout<< "# visitore_root: " << visitor_root <<endl;
 
                     // パスを作る必要があるのは今までどこかとくっついたことがない水源家の方、両方かもしれないし両方違ううかもしれない4通り
                     // 道のりを逆順にたどってパスをつくる
-                    if(1 || !united[exca_map[npos][0].par]){
+                    if(1 || !united[target.par]){
                         // cout<< "# native dfs" <<endl;
-                        dfs_make_path(exca_map[npos][0]);
-                        united[exca_map[npos][0].par]=true;
+                        dfs_make_path(target);
+                        united[target.par]=true;
                     }
                     // 道のりを逆順にたどってパスをつくる
                     if(1 || !united[exca.par]){
@@ -364,9 +373,9 @@ void set_exca_map(Excavator exca){
                         united[exca.par]=true;
                     }
                     // 先端の点同士を結ぶpathも必要
-                    // cout<< "# direct connect " << exca.pos SP << exca_map[npos][0].pos <<endl;
-                    path_list.push_back({exca.pos, exca_map[npos][0].pos});
-                    uf.unite(exca_map[npos][0].par, exca.par);
+                    // cout<< "# direct connect " << exca.pos SP << target.pos <<endl;
+                    if(!(exca.pos==target.pos)) path_list.push_back({exca.pos, target.pos});
+                    uf.unite(target.par, exca.par);
                     int cnt=0;
                     rep(i, K){
                         if(uf.root(W+i)==HYPER_V_IDX){
@@ -430,6 +439,8 @@ void exec_exca(){
 
 void exec_path_excavation(){
     rep(i, path_list.size()){
+        assert(!path_list[i].first.is_out_of_bounce());
+        assert(!path_list[i].second.is_out_of_bounce());
         straight_connect(path_list[i].first, path_list[i].second);
     }
 }
