@@ -97,6 +97,12 @@ struct Pos{
         // }
         return (abs(a.x-x)+abs(a.y-y));
     }
+    Pos midpos(const Pos pos){
+        Pos rtn;
+        rtn.x=(x+pos.x)/2;
+        rtn.y=(y+pos.y)/2;
+        return rtn;
+    }
 
     // void print(){
     //     cout<< "(" << x << ", " << y << ")";
@@ -266,9 +272,37 @@ void break_bedrock(Pos pos, int power=20){
     while(1){
         cost+=power;
         if(excavation(pos, power)) break;
-        power*=2;
+        power*=1.5;
     }
     need_power[pos.y][pos.x]=cost;
+}
+void break_known_bedrock(Pos pos, int power=20){
+    assert(!pos.is_out_of_bounce());
+    // assert(power>0);
+    // assert(power<=5000);
+    if(is_broken[pos.y][pos.x]) return;
+    int cost=0;
+    power=max(10, power);
+    int cnt=0;
+    while(1){
+        cost+=power;
+        if(excavation(pos, power)) break;
+        cnt++;
+        if(10-int(log2(C))<=cnt) power*=2;
+        else power=power/5+int(log2(C));
+    }
+    need_power[pos.y][pos.x]=cost;
+}
+
+void binary_connect(Pos pos1, Pos pos2){
+    if(pos1==pos2) return;
+    if(pos1.manhattan(pos2)<=1) return;
+    Pos npos=pos1.midpos(pos2);
+    int power=need_power[pos1.y][pos1.x]+need_power[pos2.y][pos2.x];
+    power=power/2+int(log2(C));
+    break_known_bedrock(npos, power);
+    binary_connect(pos1, npos);
+    binary_connect(pos2, npos);
 }
 void straight_connect(Pos pos1, Pos pos2){
     // cout<< "straight_connect" << endl;
@@ -276,16 +310,19 @@ void straight_connect(Pos pos1, Pos pos2){
     Pos npos=pos1;
     int dir=0;
     int power=max(10, need_power[npos.y][npos.x]);
-    break_bedrock(npos, power);
+    break_known_bedrock(npos, power);
     int cnt=1;
     while(1){
         cnt++;
         if(cnt==10000) exit(0);
         // cout<< "# connecting" << npos <<endl;
-        power=need_power[npos.y][npos.x]*9/10;
         // cout<< npos <<endl;
+        // int delta=need_power[pos2.y][pos2.x]-need_power[npos.y][npos.x];
+        // delta/=2;
+        int delta=0;
+        power=need_power[npos.y][npos.x]*9/10+delta;
         if((npos+d4[dir]).manhattan(pos2)<npos.manhattan(pos2)){
-            break_bedrock(npos+d4[dir], power);
+            break_known_bedrock(npos+d4[dir], power);
             npos+=d4[dir];
             if(npos==pos2) break;
         }
