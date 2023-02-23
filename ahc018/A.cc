@@ -23,7 +23,7 @@ ll lmax=9223372036854775807;
 double TIME_LIMIT=4900.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
-int EXCA_WIDTH=10;
+int EXCA_WIDTH=8;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -320,6 +320,10 @@ void break_all_house_bedrock(){
     rep(i, K) break_bedrock(house[i]);
 }
 
+void break_all_water_bedrock(){
+    rep(i, W) break_bedrock(water[i]);
+}
+
 void dfs_make_path(Excavator exca){
     // cout<< "# dfs_make_path " << exca <<endl;
     path_list.push_back({exca.pos, exca.prepos});
@@ -430,6 +434,7 @@ void gen_exavator(Excavator exca){
 void gen_all_excavator(){
     int base=15+C/4;
     rep(i, W){
+        int nedpow=+need_power[water[i].y][water[i].x];
         gen_exavator({water[i], base, base, i, water[i]});
     }
     rep(i, K){
@@ -444,6 +449,7 @@ void exec_exca(){
         excavatores.pop();
         if(complete_make_path) break;
         // cout<< exca <<endl;
+        if(exca.par>=W && uf.root(exca.par)==HYPER_V_IDX) continue;
         if(is_broken[exca.pos.y][exca.pos.x]) continue;
         if(excavation(exca.pos, exca.power)==1){
             gen_exavator({exca.pos, exca.prio*1.5, exca.power+1, exca.par, exca.prepos});
@@ -498,6 +504,7 @@ int main(){
     init();
 
     break_all_house_bedrock();
+    break_all_water_bedrock();
     gen_all_excavator();
     exec_exca();
     exec_path_excavation();
