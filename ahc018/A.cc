@@ -24,6 +24,7 @@ double TIME_LIMIT=4900.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
 int EXCA_WIDTH=8;
+int min_power;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -241,7 +242,7 @@ int excavation(Pos pos, int power){
     assert(!pos.is_out_of_bounce());
     // assert(power>0);
     power=min(5000, power);
-    power=max(10, power);
+    power=max(min_power, power);
     if(is_broken[pos.y][pos.x]!=0){
         cout<< pos << " is broken. " << is_broken[pos.y][pos.x] <<endl;
         assert(is_broken[pos.y][pos.x]==0);
@@ -268,8 +269,9 @@ void break_bedrock(Pos pos, int power=20){
     // assert(power<=5000);
     if(is_broken[pos.y][pos.x]) return;
     int cost=0;
-    power=max(10, power);
+    power=max(min_power, power);
     while(1){
+        power=min(power, 5000-cost);
         cost+=power;
         if(excavation(pos, power)) break;
         power*=1.5;
@@ -277,12 +279,32 @@ void break_bedrock(Pos pos, int power=20){
     need_power[pos.y][pos.x]=cost;
 }
 void break_known_bedrock(Pos pos, int power=20){
+    // cout<< "#break_known_bedrock " << pos SP << power <<endl;
     assert(!pos.is_out_of_bounce());
     // assert(power>0);
     // assert(power<=5000);
     if(is_broken[pos.y][pos.x]) return;
     int cost=0;
-    power=max(10, power);
+    // power=max(mi, power*C/128);
+    power=max(min_power, power);
+    int cnt=0;
+    while(1){
+        cost+=power;
+        if(excavation(pos, power)) break;
+        cnt++;
+        // if(cnt%(128/C)==0) power*=2;
+        if(10-int(log2(C))<=cnt) power*=2;
+        else power=power/5+int(log2(C));
+    }
+    need_power[pos.y][pos.x]=cost;
+}
+void straight_break_known_bedrock(Pos pos, int power=20){
+    assert(!pos.is_out_of_bounce());
+    // assert(power>0);
+    // assert(power<=5000);
+    if(is_broken[pos.y][pos.x]) return;
+    int cost=0;
+    power=max(min_power, power);
     int cnt=0;
     while(1){
         cost+=power;
@@ -295,12 +317,24 @@ void break_known_bedrock(Pos pos, int power=20){
 }
 
 void binary_connect(Pos pos1, Pos pos2){
+    straight_break_known_bedrock(pos1, 10);
+    straight_break_known_bedrock(pos2, 10);
+    int dist=pos1.manhattan(pos2);
+    // cout<< "#binary connect " << pos1 SP << pos2 <<endl;
     if(pos1==pos2) return;
-    if(pos1.manhattan(pos2)<=1) return;
+    // cout<< "#manhattan" <<endl;
+    if(dist<=1) return;
+    // cout<< "#midpos" <<endl;
     Pos npos=pos1.midpos(pos2);
+    if(npos==pos1 || npos==pos2){
+        npos={pos1.y, pos2.x};
+    }
+    // assert(need_power[pos1.y][pos1.x]!=0);
+    // assert(need_power[pos2.y][pos2.x]!=0);
     int power=need_power[pos1.y][pos1.x]+need_power[pos2.y][pos2.x];
-    power=power/2+int(log2(C));
-    break_known_bedrock(npos, power);
+    power=power/2;
+    if(dist>EXCA_WIDTH) power=(power+(dist-EXCA_WIDTH-1)*min_power)/(dist-EXCA_WIDTH);
+    straight_break_known_bedrock(npos, power);
     binary_connect(pos1, npos);
     binary_connect(pos2, npos);
 }
@@ -310,7 +344,7 @@ void straight_connect(Pos pos1, Pos pos2){
     Pos npos=pos1;
     int dir=0;
     int power=max(10, need_power[npos.y][npos.x]);
-    break_known_bedrock(npos, power);
+    straight_break_known_bedrock(npos, power);
     int cnt=1;
     while(1){
         cnt++;
@@ -322,7 +356,7 @@ void straight_connect(Pos pos1, Pos pos2){
         int delta=0;
         power=need_power[npos.y][npos.x]*9/10+delta;
         if((npos+d4[dir]).manhattan(pos2)<npos.manhattan(pos2)){
-            break_known_bedrock(npos+d4[dir], power);
+            straight_break_known_bedrock(npos+d4[dir], power);
             npos+=d4[dir];
             if(npos==pos2) break;
         }
@@ -364,6 +398,8 @@ void break_all_water_bedrock(){
 void dfs_make_path(Excavator exca){
     // cout<< "# dfs_make_path " << exca <<endl;
     path_list.push_back({exca.pos, exca.prepos});
+    // break_known_bedrock(exca.pos, 15);
+    // break_known_bedrock(exca.prepos, 15);
     if(exca.par<W){
         if(exca.prepos==water[exca.par]) return;
     }else{
@@ -371,6 +407,8 @@ void dfs_make_path(Excavator exca){
     }
     if(!(exca.prepos==exca_map[exca.prepos][0].pos)){
         path_list.push_back({exca.prepos, exca_map[exca.prepos][0].pos});
+        // break_known_bedrock(exca.prepos, 15);
+        // break_known_bedrock(exca_map[exca.prepos][0].pos, 15);
     }
     dfs_make_path(exca_map[exca.prepos][0]);
 }
@@ -418,6 +456,8 @@ void set_exca_map(Excavator exca){
                     // 先端の点同士を結ぶpathも必要
                     // cout<< "# direct connect " << exca.pos SP << target.pos <<endl;
                     if(!(exca.pos==target.pos)) path_list.push_back({exca.pos, target.pos});
+                    // break_known_bedrock(exca.pos, 15);
+                    // break_known_bedrock(target.pos, 15);
                     uf.unite(target.par, exca.par);
                     int cnt=0;
                     rep(i, K){
@@ -456,22 +496,20 @@ void gen_exavator(Excavator exca){
             }
         }
         // is_broken[npos.y][npos.x]=1;
-        // 行った先に家水源が居そうなら行く
-        // int delta_sum=0;
+        // 行った先に家水源が居なさそうなら行かない
+        // int ikanai=1;
         // rep(i, W){
         //     if(exca.par==i) continue;
         //     if(uf.root(exca.par)==uf.root(i)) continue;
-        //     int delta=water[i].manhattan(npos)-water[i].manhattan(exca.pos);
-        //     delta_sum+=delta;
+        //     ikanai*=(water[i].manhattan(npos)-water[i].manhattan(exca.pos)<0);
         // }
         // rep(i, K){
         //     if(exca.par==i+W) continue;
         //     if(uf.root(exca.par)==uf.root(i+W)) continue;
-        //     int delta=house[i].manhattan(npos)-house[i].manhattan(exca.pos);
-        //     delta_sum+=delta;
+        //     ikanai*=(house[i].manhattan(npos)-house[i].manhattan(exca.pos)<0);
         // }
         Excavator nexca(npos, exca.prio, exca.power, exca.par, exca.pos);
-        // Excavator nexca(npos, exca.prio+delta_sum, exca.power, exca.par, exca.pos);
+        // Excavator nexca(npos, exca.prio*(1+ikanai*3), exca.power, exca.par, exca.pos);
         excavatores.push(nexca);
         set_exca_map(nexca);
     }
@@ -481,10 +519,10 @@ void gen_all_excavator(){
     int base=15+C/4;
     rep(i, W){
         int nedpow=+need_power[water[i].y][water[i].x];
-        gen_exavator({water[i], base, base, i, water[i]});
+        gen_exavator({water[i], double(base), base, i, water[i]});
     }
     rep(i, K){
-        gen_exavator({house[i], base, base, W+i, house[i]});
+        gen_exavator({house[i], double(base), base, W+i, house[i]});
     }
 }
 
@@ -500,7 +538,7 @@ void exec_exca(){
         if(excavation(exca.pos, exca.power)==1){
             gen_exavator({exca.pos, exca.prio*1.5, exca.power+1, exca.par, exca.prepos});
         }else{
-            excavatores.push({exca.pos, exca.prio*1.5, exca.power*1.5, exca.par, exca.prepos});
+            excavatores.push({exca.pos, exca.prio*1.5, int(exca.power*1.5), exca.par, exca.prepos});
             // excavation(exca.pos, 5000); //
         }
     }
@@ -511,8 +549,17 @@ void exec_path_excavation(){
     rep(i, path_list.size()){
         assert(!path_list[i].first.is_out_of_bounce());
         assert(!path_list[i].second.is_out_of_bounce());
-        straight_connect(path_list[i].first, path_list[i].second);
+        // straight_connect(path_list[i].first, path_list[i].second);
+        binary_connect(path_list[i].first, path_list[i].second);
     }
+}
+
+void set_min_power(){
+    min_power=6*(int(log2(C)+2))/2;
+}
+
+void set_exca_width(){
+    EXCA_WIDTH=6+log2(C);
 }
 
 void inpt(){
@@ -540,6 +587,8 @@ void inpt(){
 void init(){
     inpt();
     set_hyper_v_set();
+    set_min_power();
+    // set_exca_width();
 }
 
 int main(){
