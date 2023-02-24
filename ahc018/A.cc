@@ -445,22 +445,27 @@ void gen_exavator(Excavator exca){
     rep(i, 8){
         Pos npos=exca.pos+d8[i]*EXCA_WIDTH;
         if(npos.is_out_of_bounce()) continue;
-        if(!exca_map[npos].empty() && exca_map[npos][0].par==exca.par) continue;
+        if(!exca_map[npos].empty()){
+            // 自分が既に行った場所には2度いかない
+            if(exca_map[npos][0].par==exca.par) continue;
+            // 自分と親が同じ掘削機が既に行った場所には2度いかない
+            if(uf.root(exca_map[npos][0].par)==uf.root(exca.par)) continue;
+        }
         // is_broken[npos.y][npos.x]=1;
         // 行った先に家水源が居そうなら行く
-        int delta_sum=0;
-        rep(i, W){
-            if(exca.par==i) continue;
-            if(uf.root(exca.par)==uf.root(i)) continue;
-            int delta=water[i].manhattan(npos)-water[i].manhattan(exca.pos);
-            delta_sum+=delta;
-        }
-        rep(i, K){
-            if(exca.par==i+W) continue;
-            if(uf.root(exca.par)==uf.root(i+W)) continue;
-            int delta=house[i].manhattan(npos)-house[i].manhattan(exca.pos);
-            delta_sum+=delta;
-        }
+        // int delta_sum=0;
+        // rep(i, W){
+        //     if(exca.par==i) continue;
+        //     if(uf.root(exca.par)==uf.root(i)) continue;
+        //     int delta=water[i].manhattan(npos)-water[i].manhattan(exca.pos);
+        //     delta_sum+=delta;
+        // }
+        // rep(i, K){
+        //     if(exca.par==i+W) continue;
+        //     if(uf.root(exca.par)==uf.root(i+W)) continue;
+        //     int delta=house[i].manhattan(npos)-house[i].manhattan(exca.pos);
+        //     delta_sum+=delta;
+        // }
         Excavator nexca(npos, exca.prio, exca.power, exca.par, exca.pos);
         // Excavator nexca(npos, exca.prio+delta_sum, exca.power, exca.par, exca.pos);
         excavatores.push(nexca);
