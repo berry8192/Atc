@@ -446,10 +446,14 @@ void gen_exavator(Excavator exca){
         Pos npos=exca.pos+d8[i]*EXCA_WIDTH;
         if(npos.is_out_of_bounce()) continue;
         if(!exca_map[npos].empty()){
+            Excavator native=exca_map[npos][0];
             // 自分が既に行った場所には2度いかない
-            if(exca_map[npos][0].par==exca.par) continue;
+            if(native.par==exca.par) continue;
             // 自分と親が同じ掘削機が既に行った場所には2度いかない
-            if(uf.root(exca_map[npos][0].par)==uf.root(exca.par)) continue;
+            if(uf.root(native.par)==uf.root(exca.par)){
+                continue;
+                // if(native.pos.manhattan(npos)<EXCA_WIDTH/2) continue;
+            }
         }
         // is_broken[npos.y][npos.x]=1;
         // 行った先に家水源が居そうなら行く
