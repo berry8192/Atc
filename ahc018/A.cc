@@ -311,7 +311,7 @@ void straight_break_known_bedrock(Pos pos, int power=20){
         if(excavation(pos, power)) break;
         cnt++;
         if(10-int(log2(C))<=cnt) power*=2;
-        else power=power/5+int(log2(C));
+        else power=max(min_power, power/5+int(log2(C)));
     }
     need_power[pos.y][pos.x]=cost;
 }
