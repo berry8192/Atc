@@ -24,7 +24,7 @@ double TIME_LIMIT=4900.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
 int EXCA_WIDTH=8;
-int min_power;
+int min_power, max_power;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -241,7 +241,7 @@ int excavation(Pos pos, int power){
     // score+=C+power;
     assert(!pos.is_out_of_bounce());
     // assert(power>0);
-    power=min(5000, power);
+    power=min(max_power, power);
     power=max(min_power, power);
     if(is_broken[pos.y][pos.x]!=0){
         cout<< pos << " is broken. " << is_broken[pos.y][pos.x] <<endl;
@@ -554,8 +554,9 @@ void exec_path_excavation(){
     }
 }
 
-void set_min_power(){
+void set_power_lim(){
     min_power=6*(int(log2(C)+2))/2;
+    max_power=C*20;
 }
 
 void set_exca_width(){
@@ -587,7 +588,7 @@ void inpt(){
 void init(){
     inpt();
     set_hyper_v_set();
-    set_min_power();
+    set_power_lim();
     // set_exca_width();
 }
 
