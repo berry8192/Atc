@@ -24,7 +24,7 @@ double TIME_LIMIT=4900.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
 int EXCA_WIDTH=8;
-int min_power, max_power;
+int min_power, max_power, giveup_lim;
 
 // 乱数の準備
 auto seed=(unsigned)time(NULL);
@@ -164,6 +164,27 @@ struct Excavator{
     }
 };
 
+struct Edge{
+    Excavator from;
+    Excavator to;
+    int dist;
+
+    Edge(){};
+    Edge(Excavator ifrom, Excavator ito, int idist){
+        from=ifrom;
+        to=ito;
+        dist=idist;
+    }
+
+    bool operator<(const Edge& in) const {
+        return dist < in.dist;
+    }
+    // friend ostream &operator<<(ostream &os, const Excavator &e) {
+    //     os << "pos: " << e.pos << " prio: " << e.prio << " power: " << e.power << " parent: " << e.par << " prepos: " << e.prepos;
+    //     return os;
+    // }
+};
+
 //グローバル
 int N, W, K, C;
 // int S[210][210]; //testtest
@@ -180,6 +201,7 @@ int is_broken[200][200];
 priority_queue<Excavator> excavatores;
 map<Pos, vector<Excavator>> exca_map;
 vector<pair<Pos, Pos>> path_list;
+int step_sum=0;
 
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
@@ -237,6 +259,7 @@ void set_hyper_v_set(){
 //     else return 1;
 // }
 int excavation(Pos pos, int power){
+    step_sum++;
     // excavation_count++;
     // score+=C+power;
     assert(!pos.is_out_of_bounce());
@@ -526,9 +549,51 @@ void gen_all_excavator(){
     }
 }
 
+void giveup_smart(){
+    vector<Edge> edges;
+    vector<Excavator> vex;
+    set<Pos> st;
+    rep(i, W){
+        vex.push_back({water[i], 0, 0, i, water[i]});
+    }
+    rep(i, K){
+        vex.push_back({house[i], 0, 0, i+W, house[i]});
+    }
+    rep(i, 200){
+        rep(j, 200){
+            if(!exca_map[{i, j}].empty()){
+                if(st.find(exca_map[{i, j}][0].pos)==st.end()){
+                    vex.push_back(exca_map[{i, j}][0]);
+                    st.insert(exca_map[{i, j}][0].pos);
+                }
+            }
+        }
+    }
+    rep(i, vex.size()){
+        rep3(j, vex.size(), i+1){
+            Excavator exca1=vex[i];
+            Excavator exca2=vex[j];
+            edges.push_back({exca1, exca2, exca1.pos.manhattan(exca2.pos)});
+        }
+    }
+    sort(all(edges));
+    rep(i, edges.size()){
+        if(uf.root(edges[i].from.par)!=uf.root(edges[i].to.par)){
+            uf.unite(edges[i].from.par, edges[i].to.par);
+            path_list.push_back({edges[i].from.pos, edges[i].to.pos});
+            dfs_make_path(edges[i].from);
+            dfs_make_path(edges[i].to);
+        }
+    }
+}
+
 void exec_exca(){
     // cout<< "exec excavator" <<endl;
     while(!excavatores.empty()){
+        if(step_sum>=giveup_lim){
+            giveup_smart();
+            break;
+        }
         Excavator exca=excavatores.top();
         excavatores.pop();
         if(complete_make_path) break;
@@ -554,9 +619,10 @@ void exec_path_excavation(){
     }
 }
 
-void set_power_lim(){
+void set_lim(){
     min_power=6*(int(log2(C)+2))/2;
     max_power=C*20;
+    giveup_lim=400*128/C;
 }
 
 void set_exca_width(){
@@ -588,7 +654,7 @@ void inpt(){
 void init(){
     inpt();
     set_hyper_v_set();
-    set_power_lim();
+    set_lim();
     // set_exca_width();
 }
 
