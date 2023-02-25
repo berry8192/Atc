@@ -36,6 +36,7 @@ int lp=0;
 // int score=0; //testtest
 double MIN_POWER=4.280816478144385;
 double MAX_POWER=39.83511602448258;
+double EXCAVATION_WIDTH;
 
 // 構造体
 struct UnionFind {
@@ -260,7 +261,7 @@ void set_hyper_v_set(){
 //     if(does_water_complete()) return 2;
 //     else return 1;
 // }
-int excavation(Pos pos, int power){
+int excavation(Pos pos, int power, int &cost){
     step_sum++;
     // excavation_count++;
     // score+=C+power;
@@ -268,6 +269,7 @@ int excavation(Pos pos, int power){
     // assert(power>0);
     power=min(max_power, power);
     power=max(min_power, power);
+    cost+=power;
     if(is_broken[pos.y][pos.x]!=0){
         cout<< pos << " is broken. " << is_broken[pos.y][pos.x] <<endl;
         assert(is_broken[pos.y][pos.x]==0);
@@ -297,8 +299,7 @@ void break_bedrock(Pos pos, int power=20){
     power=max(min_power, power);
     while(1){
         power=min(power, 5000-cost);
-        cost+=power;
-        if(excavation(pos, power)) break;
+        if(excavation(pos, power, cost)) break;
         power*=1.5;
     }
     need_power[pos.y][pos.x]=cost;
@@ -314,8 +315,7 @@ void break_known_bedrock(Pos pos, int power=20){
     power=max(min_power, power);
     int cnt=0;
     while(1){
-        cost+=power;
-        if(excavation(pos, power)) break;
+        if(excavation(pos, power, cost)) break;
         cnt++;
         // if(cnt%(128/C)==0) power*=2;
         if(10-int(log2(C))<=cnt) power*=2;
@@ -332,8 +332,7 @@ void straight_break_known_bedrock(Pos pos, int power=20){
     power=max(min_power, power);
     int cnt=0;
     while(1){
-        cost+=power;
-        if(excavation(pos, power)) break;
+        if(excavation(pos, power, cost)) break;
         cnt++;
         if(10-int(log2(C))<=cnt) power*=2;
         else power=max(min_power, power/5+int(log2(C)));
@@ -603,7 +602,7 @@ void exec_exca(){
         // cout<< exca <<endl;
         if(exca.par>=W && uf.root(exca.par)==HYPER_V_IDX) continue;
         if(is_broken[exca.pos.y][exca.pos.x]) continue;
-        if(excavation(exca.pos, exca.power)==1){
+        if(excavation(exca.pos, exca.power, need_power[exca.pos.y][exca.pos.x])==1){
             gen_exavator({exca.pos, exca.prio*1.5, exca.power+1, exca.par, exca.prepos});
         }else{
             excavatores.push({exca.pos, exca.prio*1.5, int(exca.power*1.5), exca.par, exca.prepos});
