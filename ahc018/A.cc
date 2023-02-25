@@ -34,6 +34,8 @@ mt19937 mt(seed);
 int lp=0;
 // int excavation_count=0; //testtest
 // int score=0; //testtest
+double MIN_POWER=4.280816478144385;
+double MAX_POWER=39.83511602448258;
 
 // 構造体
 struct UnionFind {
@@ -621,8 +623,10 @@ void exec_path_excavation(){
 }
 
 void set_lim(){
-    // min_power=6*(int(log2(C)+2))/2;
-    // max_power=C*20;
+    min_power=(int(log2(C)+2))*MIN_POWER;
+    min_power=max(min_power, 3);
+    max_power=C*MAX_POWER;
+    max_power=min(max_power, 5000);
     giveup_lim=400*128/C;
 }
 
@@ -677,7 +681,7 @@ int main(int argc, char* argv[]){
     start = chrono::system_clock::now();
 
     init();
-    get_argv(argc, argv);
+    // get_argv(argc, argv);
 
     break_all_house_bedrock();
     break_all_water_bedrock();
