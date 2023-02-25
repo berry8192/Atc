@@ -343,6 +343,7 @@ void binary_connect(Pos pos1, Pos pos2){
     straight_break_known_bedrock(pos1, 10);
     straight_break_known_bedrock(pos2, 10);
     int dist=pos1.manhattan(pos2);
+    // int width=Pos({pos1.y, pos2.x}).manhattan({pos2.y, pos1.x});
     // cout<< "#binary connect " << pos1 SP << pos2 <<endl;
     if(pos1==pos2) return;
     // cout<< "#manhattan" <<endl;
@@ -620,8 +621,8 @@ void exec_path_excavation(){
 }
 
 void set_lim(){
-    min_power=6*(int(log2(C)+2))/2;
-    max_power=C*20;
+    // min_power=6*(int(log2(C)+2))/2;
+    // max_power=C*20;
     giveup_lim=400*128/C;
 }
 
@@ -658,12 +659,25 @@ void init(){
     // set_exca_width();
 }
 
-int main(){
+void get_argv(int argc, char* argv[]){
+    vector<double> args;
+    rep3(i, argc, 1){
+        string tmp;
+        tmp.assign(argv[i]);
+        args.push_back(stof(tmp));
+        // cout<< args[i-1] <<endl;
+    }
+    min_power=(int(log2(C)+2))*args[0];
+    max_power=C*args[1];
+}
+
+int main(int argc, char* argv[]){
     //開始時間の計測
     std::chrono::system_clock::time_point start, current;
     start = chrono::system_clock::now();
 
     init();
+    get_argv(argc, argv);
 
     break_all_house_bedrock();
     break_all_water_bedrock();
@@ -673,3 +687,4 @@ int main(){
 
     return 0;
 }
+
