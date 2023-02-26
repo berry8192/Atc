@@ -34,9 +34,35 @@ mt19937 mt(seed);
 int lp=0;
 // int excavation_count=0; //testtest
 // int score=0; //testtest
-double MIN_POWER=4.280816478144385;
-double MAX_POWER=39.83511602448258;
-double EXCAVATION_WIDTH;
+double MIN_POWER=4.391397971474189;
+double MAX_POWER=37.74416489497335;
+double BREAK_BEDROCK_POWER=2.194430142018194;
+double KNOWN_BREAK_BASE=12.056256062319171;
+double KNOWN_BREAK_TIMES=3.970286600604079;
+double KNOWN_BREAK_POWER=4.342452012187933;
+double ELSE_DIV=5.73617925099027;
+double ELSE_TIMES=2.8015568122342565;
+double BINARY_BASE=15.690267222036338;
+double BINARY_POWER_DIV=2.9331652601756897;
+double DIST_DEL=19.874474646189807;
+double GEN_EXCA_BASE=10.69064404923651;
+double GEN_EXCA_DIV=5.382294298890818;
+double GEN_EXCA_LOG=9.569735594685051;
+double GEN_EXCA_DIV_TIMES=2.6497439302656725;
+double GEN_EXCA_BASE_TIMES=1.6753105606676344;
+double IF_PRIO_TIMES=1.6511419573010544;
+double IF_PRIO_ADD=-9.150698072195603;
+double IF_POWER_TIMES=1.085667823945677;
+double IF_POWER_ADD=-7.967345057084337;
+double ELSE_PRIO_TIMES=1.7786317700659156;
+double ELSE_PRIO_ADD=-0.44060505969990194;
+double ELSE_POWER_TIMES=2.5318440510254265;
+double ELSE_POWER_ADD=-3.9977742891019368;
+double GIVEUP_BASE=123.73135742311537;
+double GIVEUP_DIV=426.88848283732597;
+double GIVE_UP_LOG=25.012586159651377;
+double EXCA_WIDTH_BASE=7.891676275199719;
+double EXCA_WIDTH_TIMES=1.9609223631145543;
 
 // 構造体
 struct UnionFind {
@@ -300,29 +326,29 @@ void break_bedrock(Pos pos, int power=20){
     while(1){
         power=min(power, 5000-cost);
         if(excavation(pos, power, cost)) break;
-        power*=1.5;
+        power*=BREAK_BEDROCK_POWER;
     }
     need_power[pos.y][pos.x]=cost;
 }
-void break_known_bedrock(Pos pos, int power=20){
-    // cout<< "#break_known_bedrock " << pos SP << power <<endl;
-    assert(!pos.is_out_of_bounce());
-    // assert(power>0);
-    // assert(power<=5000);
-    if(is_broken[pos.y][pos.x]) return;
-    int cost=0;
-    // power=max(mi, power*C/128);
-    power=max(min_power, power);
-    int cnt=0;
-    while(1){
-        if(excavation(pos, power, cost)) break;
-        cnt++;
-        // if(cnt%(128/C)==0) power*=2;
-        if(10-int(log2(C))<=cnt) power*=2;
-        else power=power/5+int(log2(C));
-    }
-    need_power[pos.y][pos.x]=cost;
-}
+// void break_known_bedrock(Pos pos, int power=20){
+//     // cout<< "#break_known_bedrock " << pos SP << power <<endl;
+//     assert(!pos.is_out_of_bounce());
+//     // assert(power>0);
+//     // assert(power<=5000);
+//     if(is_broken[pos.y][pos.x]) return;
+//     int cost=0;
+//     // power=max(mi, power*C/128);
+//     power=max(min_power, power);
+//     int cnt=0;
+//     while(1){
+//         if(excavation(pos, power, cost)) break;
+//         cnt++;
+//         // if(cnt%(128/C)==0) power*=2;
+//         if(10-int(log2(C))<=cnt) power*=2;
+//         else power=power/5+int(log2(C));
+//     }
+//     need_power[pos.y][pos.x]=cost;
+// }
 void straight_break_known_bedrock(Pos pos, int power=20){
     assert(!pos.is_out_of_bounce());
     // assert(power>0);
@@ -334,15 +360,15 @@ void straight_break_known_bedrock(Pos pos, int power=20){
     while(1){
         if(excavation(pos, power, cost)) break;
         cnt++;
-        if(10-int(log2(C))<=cnt) power*=2;
-        else power=max(min_power, power/5+int(log2(C)));
+        if(KNOWN_BREAK_BASE-int(log2(C)*KNOWN_BREAK_TIMES)<=cnt) power*=KNOWN_BREAK_POWER;
+        else power=max(min_power, int(power/ELSE_DIV+int(log2(C)*ELSE_TIMES)));
     }
     need_power[pos.y][pos.x]=cost;
 }
 
 void binary_connect(Pos pos1, Pos pos2){
-    straight_break_known_bedrock(pos1, 10);
-    straight_break_known_bedrock(pos2, 10);
+    straight_break_known_bedrock(pos1, BINARY_BASE);
+    straight_break_known_bedrock(pos2, BINARY_BASE);
     int dist=pos1.manhattan(pos2);
     // int width=Pos({pos1.y, pos2.x}).manhattan({pos2.y, pos1.x});
     // cout<< "#binary connect " << pos1 SP << pos2 <<endl;
@@ -357,60 +383,60 @@ void binary_connect(Pos pos1, Pos pos2){
     // assert(need_power[pos1.y][pos1.x]!=0);
     // assert(need_power[pos2.y][pos2.x]!=0);
     int power=need_power[pos1.y][pos1.x]+need_power[pos2.y][pos2.x];
-    power=power/2;
-    if(dist>EXCA_WIDTH) power=(power+(dist-EXCA_WIDTH-1)*min_power)/(dist-EXCA_WIDTH);
+    power=power/BINARY_POWER_DIV;
+    if(dist>EXCA_WIDTH+DIST_DEL) power=(power+(dist-EXCA_WIDTH-1)*min_power)/(dist-EXCA_WIDTH);
     straight_break_known_bedrock(npos, power);
     binary_connect(pos1, npos);
     binary_connect(pos2, npos);
 }
-void straight_connect(Pos pos1, Pos pos2){
-    // cout<< "straight_connect" << endl;
-    if(pos1==pos2) return;
-    Pos npos=pos1;
-    int dir=0;
-    int power=max(10, need_power[npos.y][npos.x]);
-    straight_break_known_bedrock(npos, power);
-    int cnt=1;
-    while(1){
-        cnt++;
-        if(cnt==10000) exit(0);
-        // cout<< "# connecting" << npos <<endl;
-        // cout<< npos <<endl;
-        // int delta=need_power[pos2.y][pos2.x]-need_power[npos.y][npos.x];
-        // delta/=2;
-        int delta=0;
-        power=need_power[npos.y][npos.x]*9/10+delta;
-        if((npos+d4[dir]).manhattan(pos2)<npos.manhattan(pos2)){
-            straight_break_known_bedrock(npos+d4[dir], power);
-            npos+=d4[dir];
-            if(npos==pos2) break;
-        }
-        dir=(dir+1)%4;
-    }
-}
-void simple_straight_connect(){
-    rep(i, K){
-        int mi=500;
-        int midx;
-        int type;
-        rep(j, W){
-            if(mi>house[i].manhattan(water[j])){
-                mi=house[i].manhattan(water[j]);
-                midx=j;
-                type=1;
-            }
-        }
-        rep(j, i){
-            if(mi>house[i].manhattan(house[j])){
-                mi=house[i].manhattan(house[j]);
-                midx=j;
-                type=0;
-            }
-        }
-        if(type==1) straight_connect(water[midx], house[i]);
-        else straight_connect(house[midx], house[i]);
-    }
-}
+// void straight_connect(Pos pos1, Pos pos2){
+//     // cout<< "straight_connect" << endl;
+//     if(pos1==pos2) return;
+//     Pos npos=pos1;
+//     int dir=0;
+//     int power=max(10, need_power[npos.y][npos.x]);
+//     straight_break_known_bedrock(npos, power);
+//     int cnt=1;
+//     while(1){
+//         cnt++;
+//         if(cnt==10000) exit(0);
+//         // cout<< "# connecting" << npos <<endl;
+//         // cout<< npos <<endl;
+//         // int delta=need_power[pos2.y][pos2.x]-need_power[npos.y][npos.x];
+//         // delta/=2;
+//         int delta=0;
+//         power=need_power[npos.y][npos.x]*9/10+delta;
+//         if((npos+d4[dir]).manhattan(pos2)<npos.manhattan(pos2)){
+//             straight_break_known_bedrock(npos+d4[dir], power);
+//             npos+=d4[dir];
+//             if(npos==pos2) break;
+//         }
+//         dir=(dir+1)%4;
+//     }
+// }
+// void simple_straight_connect(){
+//     rep(i, K){
+//         int mi=500;
+//         int midx;
+//         int type;
+//         rep(j, W){
+//             if(mi>house[i].manhattan(water[j])){
+//                 mi=house[i].manhattan(water[j]);
+//                 midx=j;
+//                 type=1;
+//             }
+//         }
+//         rep(j, i){
+//             if(mi>house[i].manhattan(house[j])){
+//                 mi=house[i].manhattan(house[j]);
+//                 midx=j;
+//                 type=0;
+//             }
+//         }
+//         if(type==1) straight_connect(water[midx], house[i]);
+//         else straight_connect(house[midx], house[i]);
+//     }
+// }
 
 void break_all_house_bedrock(){
     rep(i, K) break_bedrock(house[i]);
@@ -541,13 +567,13 @@ void gen_exavator(Excavator exca){
 }
 
 void gen_all_excavator(){
-    int base=15+C/4;
+    int base=GEN_EXCA_BASE+C/GEN_EXCA_DIV+log2(C)*GEN_EXCA_LOG;
     rep(i, W){
-        int nedpow=+need_power[water[i].y][water[i].x];
-        gen_exavator({water[i], double(base), base, i, water[i]});
+        // int nedpow=+need_power[water[i].y][water[i].x];
+        gen_exavator({water[i], double(base)*GEN_EXCA_DIV_TIMES, base*GEN_EXCA_BASE_TIMES, i, water[i]});
     }
     rep(i, K){
-        gen_exavator({house[i], double(base), base, W+i, house[i]});
+        gen_exavator({house[i], double(base)*GEN_EXCA_DIV_TIMES, base*GEN_EXCA_BASE_TIMES, W+i, house[i]});
     }
 }
 
@@ -603,9 +629,9 @@ void exec_exca(){
         if(exca.par>=W && uf.root(exca.par)==HYPER_V_IDX) continue;
         if(is_broken[exca.pos.y][exca.pos.x]) continue;
         if(excavation(exca.pos, exca.power, need_power[exca.pos.y][exca.pos.x])==1){
-            gen_exavator({exca.pos, exca.prio*1.5, exca.power+1, exca.par, exca.prepos});
+            gen_exavator({exca.pos, exca.prio*IF_PRIO_TIMES+IF_PRIO_ADD, exca.power*IF_POWER_TIMES+IF_POWER_ADD, exca.par, exca.prepos});
         }else{
-            excavatores.push({exca.pos, exca.prio*1.5, int(exca.power*1.5), exca.par, exca.prepos});
+            excavatores.push({exca.pos, exca.prio*ELSE_PRIO_TIMES+ELSE_PRIO_ADD, exca.power*ELSE_POWER_TIMES+ELSE_POWER_ADD, exca.par, exca.prepos});
             // excavation(exca.pos, 5000); //
         }
     }
@@ -626,11 +652,11 @@ void set_lim(){
     min_power=max(min_power, 3);
     max_power=C*MAX_POWER;
     max_power=min(max_power, 5000);
-    giveup_lim=400*128/C;
+    giveup_lim=GIVEUP_BASE+128/C*GIVEUP_DIV+log2(C)*GIVE_UP_LOG;
 }
 
 void set_exca_width(){
-    EXCA_WIDTH=6+log2(C);
+    EXCA_WIDTH=EXCA_WIDTH_BASE+log2(C)*EXCA_WIDTH_TIMES;
 }
 
 void inpt(){
@@ -659,7 +685,7 @@ void init(){
     inpt();
     set_hyper_v_set();
     set_lim();
-    // set_exca_width();
+    set_exca_width();
 }
 
 void get_argv(int argc, char* argv[]){
@@ -670,8 +696,35 @@ void get_argv(int argc, char* argv[]){
         args.push_back(stof(tmp));
         // cout<< args[i-1] <<endl;
     }
-    min_power=(int(log2(C)+2))*args[0];
-    max_power=C*args[1];
+    MIN_POWER=args[0];
+    MAX_POWER=args[1];
+    BREAK_BEDROCK_POWER=args[2];
+    KNOWN_BREAK_BASE=args[3];
+    KNOWN_BREAK_TIMES=args[4];
+    KNOWN_BREAK_POWER=args[5];
+    ELSE_DIV=args[6];
+    ELSE_TIMES=args[7];
+    BINARY_BASE=args[8];
+    BINARY_POWER_DIV=args[9];
+    DIST_DEL=args[10];
+    GEN_EXCA_BASE=args[11];
+    GEN_EXCA_DIV=args[12];
+    GEN_EXCA_LOG=args[13];
+    GEN_EXCA_DIV_TIMES=args[14];
+    GEN_EXCA_BASE_TIMES=args[15];
+    IF_PRIO_TIMES=args[16];
+    IF_PRIO_ADD=args[17];
+    IF_POWER_TIMES=args[18];
+    IF_POWER_ADD=args[19];
+    ELSE_PRIO_TIMES=args[20];
+    ELSE_PRIO_ADD=args[21];
+    ELSE_POWER_TIMES=args[22];
+    ELSE_POWER_ADD=args[23];
+    GIVEUP_BASE=args[24];
+    GIVEUP_DIV=args[25];
+    GIVE_UP_LOG=args[26];
+    EXCA_WIDTH_BASE=args[27];
+    EXCA_WIDTH_TIMES=args[28];
 }
 
 int main(int argc, char* argv[]){
@@ -680,7 +733,7 @@ int main(int argc, char* argv[]){
     start = chrono::system_clock::now();
 
     init();
-    // get_argv(argc, argv);
+    get_argv(argc, argv);
 
     break_all_house_bedrock();
     break_all_water_bedrock();

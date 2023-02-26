@@ -17,5 +17,5 @@ sleep 1
 
 for ((i=START; i<=END; i++)); do
     i4=$(printf "%04d" $i)
-    sed -n '$p' ../test_results/${DATE}/${i4}_score.txt | sed -e 's/.*= //; s/ //g' >> ../test_results/${DATE}/score_sum.txt
+    sed -n '$p' ../test_results/${DATE}/${i4}_score.txt | sed -e 's/.*= //; s/ //g' >> ../test_results/${DATE}/_${DATE}score_sum.txt
 done
