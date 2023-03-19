@@ -54,14 +54,38 @@ struct Pos{
     }
 };
 
+struct Field{
+    vector<vector<int>> ng_area;
+    Field(){}
+    Field(vector<vector<int>> sif, vector<vector<int>> sir){
+
+    }
+
+};
+
+struct Puzzle{
+    Puzzle(){}
+    void init(){
+
+    }
+};
+
 //グローバル
 int D;
-int f[2][15][15], r[2][15][15];
+vector<vector<vector<int>>> f, r;
 Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
 
 void inpt(){
     // cout<< "inpt" <<endl;
     cin>> D;
+
+    f.resize(2);
+    rep(i, 2) f[i].resize(D);
+    rep(i, 2) rep(j, D) f[i][j].resize(D);
+    r.resize(2);
+    rep(i, 2) r[i].resize(D);
+    rep(i, 2) rep(j, D) r[i][j].resize(D);
+
     rep(i, 2){
         rep(j, D){
             rep(k, D){
