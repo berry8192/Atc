@@ -40,37 +40,7 @@ template <class T> void PS(T ps) {
 	cout<< "}" <<endl;
 }
 
-// 構造体
-struct Pos{
-    int x;
-    int y;
-    int z;
-
-    Pos(){};
-    Pos(int xx, int yy, int zz){
-        x=xx;
-        y=yy;
-        z=zz;
-    }
-};
-
-struct Field{
-    vector<vector<int>> ng_area;
-    Field(){}
-    Field(vector<vector<int>> sif, vector<vector<int>> sir){
-
-    }
-
-};
-
-struct Puzzle{
-    Puzzle(){}
-    void init(){
-
-    }
-};
-
-//グローバル
+//入力
 int D;
 vector<vector<vector<int>>> f, r;
 Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
@@ -99,6 +69,54 @@ void inpt(){
         }
     }
 }
+
+// 構造体
+struct Pos{
+    int x;
+    int y;
+    int z;
+
+    Pos(){};
+    Pos(int xx, int yy, int zz){
+        x=xx;
+        y=yy;
+        z=zz;
+    }
+};
+
+struct Field{
+    vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
+    Field(){}
+    Field(vector<vector<int>> sif, vector<vector<int>> sir){
+        rep(i, D){
+            rep(j, D){
+                if(sif[i][j]==0){
+                    rep(k, D) val[i][k][j]=-1;
+                }
+                if(sir[i][j]==0){
+                    rep(k, D) val[k][i][j]=-1;
+                }
+            }
+        }
+    }
+
+    void print_val(){
+        rep(i, D) rep(j, D) rep(k, D) cout<< val[i][j][k] SP;
+        cout<<endl;
+    }
+};
+
+struct Puzzle{
+    Field f1=Field(f[0], r[0]), f2=Field(f[1], r[1]);
+    Puzzle(){}
+    void init(){
+
+    }
+    void print_ans(){
+        f1.print_val();
+        f2.print_val();
+    }
+};
 
 void init(){
     inpt();
