@@ -86,6 +86,12 @@ struct Pos{
     }
 };
 
+struct Blocks{
+    int rotx=0;
+    int roty=0;
+    int rotz=0;
+};
+
 struct Field{
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
     Field(){}
@@ -227,11 +233,50 @@ struct Puzzle{
     }
 };
 
+struct matrix {
+    vector<vector<int>> data;
+
+    matrix(vector<vector<int>> mat){
+        data=mat;
+    }
+
+    matrix operator*(const matrix &in) const {
+        matrix res(vector<vector<int>>(3, vector<int>(3)));
+        for (int i=0;i<3;i++){
+            for (int j=0;j<3;j++){
+                for (int k=0;k<3;k++){
+                    res.data[i][j]+=data[i][k]*in.data[k][j];
+                }
+            }
+        }
+        return res;
+    }
+    void print(){
+        rep(i, 3){
+            rep(j, 3){
+                cout<< data[i][j] SP;
+            }
+            cout<< endl;
+        }
+    }
+};
+
 // グローバル
 Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
+vector<vector<vector<matrix>>> rot;
+int icos[]={1, 0, -1, 0};
+int isin[]={0, 1, 0, -1};
 
 void init(){
     inpt();
+}
+
+matrix get_rot(int rx, int ry, int rz){
+    matrix rtn({{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
+    matrix matx({{1, 0, 0}, {0, icos[rx], -isin[rx]}, {0, isin[rx], icos[rx]}});
+    matrix maty({{icos[ry], 0, isin[ry]}, {0, 1, 0}, {-isin[ry], 0, icos[ry]}});
+    matrix matz({{icos[rz], -isin[rz], 0}, {isin[rz], icos[rz], 0}, {0, 0, 1}});
+    return rtn*matx*maty*matz;
 }
 
 void get_argv(int argc, char* argv[]){
