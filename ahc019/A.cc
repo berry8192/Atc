@@ -86,6 +86,18 @@ struct Pos{
         y=yy;
         z=zz;
     }
+
+    bool is_out_of_bounce(){
+        //cout<< "out_of_bounce" <<endl;
+        if(x<0 || D<=x || y<0 || D<=y || z<0 || D<=z){
+            print();
+            return true;
+        }
+        return false;
+    }
+    void print(){
+        cout<< "(" << x << ", " << y << ", " << z << ")";
+    }
 };
 Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
 
