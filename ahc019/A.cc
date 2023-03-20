@@ -55,15 +55,18 @@ void inpt(){
     rep(i, 2) r[i].resize(D);
     rep(i, 2) rep(j, D) r[i][j].resize(D);
 
+    string s;
     rep(i, 2){
         rep(j, D){
+            cin>> s;
             rep(k, D){
-                cin>> f[i][j][k];
+                f[i][j][k]=int(s[k]-'0');
             }
         }
         rep(j, D){
+            cin>> s;
             rep(k, D){
-                cin>> r[i][j][k];
+                r[i][j][k]=int(s[k]-'0');
             }
         }
     }
@@ -87,6 +90,10 @@ struct Field{
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
     Field(){}
     Field(vector<vector<int>> sif, vector<vector<int>> sir){
+        val.resize(D);
+        rep(i, D) val[i].resize(D);
+        rep(i, D) rep(j, D) val[i][j].resize(D);
+
         rep(i, D){
             rep(j, D){
                 if(sif[i][j]==0){
@@ -100,25 +107,44 @@ struct Field{
     }
 
     void random_set(int id){
+        int lp=0;
         while(1){
             int x=mt()%D;
             int y=mt()%D;
             int z=mt()%D;
+            lp++;
             if(val[x][y][z]==0){
+                // cout<< lp <<endl;
+                int dup1=0, dup2=0, dup;
+                rep(i, D){
+                    if(val[i][y][z]>0) dup1=1;
+                    if(val[x][i][z]>0) dup2=1;
+                }
+                dup=dup1+dup2;
+                if(dup*D*D*D>lp) continue;
                 val[x][y][z]=id;
                 break;
             }
         }
     }
     void print_val(){
-        rep(i, D) rep(j, D) rep(k, D) cout<< val[i][j][k] SP;
+        rep(i, D) rep(j, D) rep(k, D){
+            if(val[i][j][k]==-1) cout<< "0 ";
+            else cout<< val[i][j][k] SP;
+        }
         cout<<endl;
     }
 };
 
 struct Puzzle{
     Field f1=Field(f[0], r[0]), f2=Field(f[1], r[1]);
+    int idx=0;
 
+    void random_set(){
+        idx++;
+        f1.random_set(idx);
+        f2.random_set(idx);
+    }
     bool check_complete(){
         rep(i, D){
             rep(j, D){
@@ -127,10 +153,14 @@ struct Puzzle{
                         if(f1.val[j][k][i]>0) return false;
                     }
                 }else{
+                    int flag=1;
                     rep(k, D){
-                        if(f1.val[j][k][i]>0) continue;
+                        if(f1.val[j][k][i]>0){
+                            flag=0;
+                            break;
+                        }
                     }
-                    return false;
+                    if(flag) return false;
                 }
             }
         }
@@ -141,10 +171,14 @@ struct Puzzle{
                         if(f2.val[j][k][i]>0) return false;
                     }
                 }else{
+                    int flag=1;
                     rep(k, D){
-                        if(f2.val[j][k][i]>0) continue;
+                        if(f2.val[j][k][i]>0){
+                            flag=0;
+                            break;
+                        }
                     }
-                    return false;
+                    if(flag) return false;
                 }
             }
         }
@@ -155,10 +189,14 @@ struct Puzzle{
                         if(f1.val[k][j][i]>0) return false;
                     }
                 }else{
+                    int flag=1;
                     rep(k, D){
-                        if(f1.val[k][j][i]>0) continue;
+                        if(f1.val[k][j][i]>0){
+                            flag=0;
+                            break;
+                        }
                     }
-                    return false;
+                    if(flag) return false;
                 }
             }
         }
@@ -169,16 +207,21 @@ struct Puzzle{
                         if(f2.val[k][j][i]>0) return false;
                     }
                 }else{
+                    int flag=1;
                     rep(k, D){
-                        if(f2.val[k][j][i]>0) continue;
+                        if(f2.val[k][j][i]>0){
+                            flag=0;
+                            break;
+                        }
                     }
-                    return false;
+                    if(flag) return false;
                 }
             }
         }
         return true;
     }
     void print_ans(){
+        cout<< idx <<endl;
         f1.print_val();
         f2.print_val();
     }
@@ -209,10 +252,10 @@ int main(int argc, char* argv[]){
     init();
     // get_argv(argc, argv);
     Puzzle puzzle;
-    rep3(i, 2000, 1){
-        cout<< i <<endl;
-        puzzle.f1.random_set(i);
-        puzzle.f2.random_set(i);
+    rep3(i, 3000, 1){
+        // cout<< i <<endl;
+        puzzle.random_set();
+        if(puzzle.check_complete()) break;
     }
     puzzle.print_ans();
 
