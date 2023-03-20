@@ -43,7 +43,6 @@ template <class T> void PS(T ps) {
 //入力
 int D;
 vector<vector<vector<int>>> f, r;
-Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
 
 void inpt(){
     // cout<< "inpt" <<endl;
@@ -185,6 +184,9 @@ struct Puzzle{
     }
 };
 
+// グローバル
+Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
+
 void init(){
     inpt();
 }
@@ -206,6 +208,13 @@ int main(int argc, char* argv[]){
 
     init();
     // get_argv(argc, argv);
+    Puzzle puzzle;
+    rep3(i, 2000, 1){
+        cout<< i <<endl;
+        puzzle.f1.random_set(i);
+        puzzle.f2.random_set(i);
+    }
+    puzzle.print_ans();
 
     return 0;
 }
