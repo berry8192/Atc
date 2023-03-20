@@ -98,6 +98,13 @@ struct Pos{
     void print(){
         cout<< "(" << x << ", " << y << ", " << z << ")";
     }
+    Pos operator+(const Pos pos){
+        Pos rtn;
+        rtn.x=x+pos.x;
+        rtn.y=y+pos.y;
+        rtn.z=z+pos.z;
+        return rtn;
+    }
 };
 Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
 
@@ -198,6 +205,20 @@ struct Field{
             }
         }
     }
+    Pos f1_fetch_space(int block_id){
+        int lp=0;
+        while(1){
+            int cube_id=mt()%blocks[block_id].cubes.size();
+            lp++;
+            Pos pos=blocks[block_id].cubes[cube_id];
+            rep(i, 6){
+                Pos npos=pos+d6[i];
+                if(npos.is_out_of_bounce()) continue;
+                if(val[npos.x][npos.y][npos.z]==0) return npos;
+            }
+            if(lp>100) return {-1, -1, -1};
+        }
+    }
     void print_val(){
         rep(i, D) rep(j, D) rep(k, D){
             if(val[i][j][k]==-1) cout<< "0 ";
@@ -213,6 +234,13 @@ struct Puzzle{
 
     void random_set(){
         idx++;
+        f1.random_set(idx);
+        f2.random_set(idx);
+    }
+    void random_extend(){
+        int idx=mt()%f1.blocks.size();
+        Pos pos=f1.f1_fetch_space(idx);
+        if(pos.is_out_of_bounce()) return;
         f1.random_set(idx);
         f2.random_set(idx);
     }
