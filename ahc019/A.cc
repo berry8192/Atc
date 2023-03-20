@@ -127,22 +127,27 @@ matrix get_rot(int rx, int ry, int rz){
 }
 
 struct Blocks{
+    int type;
     matrix rot;
     vector<Pos> cubes;
 
     Blocks(){}
-    Blocks(Pos ipos){
+    Blocks(int ftype, Pos ipos){
+        type=ftype;
         cubes.push_back(ipos);
-        rot=get_rot(mt()%4, mt()%4, mt()%4);
+        if(type==2) rot=get_rot(mt()%4, mt()%4, mt()%4);
+        else rot=get_rot(0, 0, 0);
     }
 };
 
 struct Field{
+    int type;
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
     vector<Blocks> blocks;
 
     Field(){}
-    Field(vector<vector<int>> sif, vector<vector<int>> sir){
+    Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
+        type=ftype;
         val.resize(D);
         rep(i, D) val[i].resize(D);
         rep(i, D) rep(j, D) val[i][j].resize(D);
@@ -176,6 +181,7 @@ struct Field{
                 dup=dup1+dup2;
                 if(dup*D*D*D>lp) continue;
                 val[x][y][z]=id;
+                blocks.push_back({type, {x, y, z}});
                 break;
             }
         }
@@ -190,7 +196,7 @@ struct Field{
 };
 
 struct Puzzle{
-    Field f1=Field(f[0], r[0]), f2=Field(f[1], r[1]);
+    Field f1=Field(1, f[0], r[0]), f2=Field(2, f[1], r[1]);
     int idx=0;
 
     void random_set(){
@@ -305,12 +311,12 @@ int main(int argc, char* argv[]){
     init();
     // get_argv(argc, argv);
     Puzzle puzzle;
-    // rep3(i, 3000, 1){
-    //     // cout<< i <<endl;
-    //     puzzle.random_set();
-    //     if(puzzle.check_complete()) break;
-    // }
-    
+    rep3(i, 3000, 1){
+        // cout<< i <<endl;
+        puzzle.random_set();
+        if(puzzle.check_complete()) break;
+    }
+
     puzzle.print_ans();
 
     return 0;
