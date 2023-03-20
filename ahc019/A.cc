@@ -91,15 +91,26 @@ struct Field{
         rep(i, D){
             rep(j, D){
                 if(sif[i][j]==0){
-                    rep(k, D) val[i][k][j]=-1;
+                    rep(k, D) val[j][k][i]=-1;
                 }
                 if(sir[i][j]==0){
-                    rep(k, D) val[k][i][j]=-1;
+                    rep(k, D) val[k][j][i]=-1;
                 }
             }
         }
     }
 
+    void random_set(int id){
+        while(1){
+            int x=mt()%D;
+            int y=mt()%D;
+            int z=mt()%D;
+            if(val[x][y][z]==0){
+                val[x][y][z]=id;
+                break;
+            }
+        }
+    }
     void print_val(){
         rep(i, D) rep(j, D) rep(k, D) cout<< val[i][j][k] SP;
         cout<<endl;
@@ -108,9 +119,65 @@ struct Field{
 
 struct Puzzle{
     Field f1=Field(f[0], r[0]), f2=Field(f[1], r[1]);
-    Puzzle(){}
-    void init(){
 
+    bool check_complete(){
+        rep(i, D){
+            rep(j, D){
+                if(f[0][i][j]==0){
+                    rep(k, D){
+                        if(f1.val[j][k][i]>0) return false;
+                    }
+                }else{
+                    rep(k, D){
+                        if(f1.val[j][k][i]>0) continue;
+                    }
+                    return false;
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(f[1][i][j]==0){
+                    rep(k, D){
+                        if(f2.val[j][k][i]>0) return false;
+                    }
+                }else{
+                    rep(k, D){
+                        if(f2.val[j][k][i]>0) continue;
+                    }
+                    return false;
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(r[0][i][j]==0){
+                    rep(k, D){
+                        if(f1.val[k][j][i]>0) return false;
+                    }
+                }else{
+                    rep(k, D){
+                        if(f1.val[k][j][i]>0) continue;
+                    }
+                    return false;
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(r[1][i][j]==0){
+                    rep(k, D){
+                        if(f2.val[k][j][i]>0) return false;
+                    }
+                }else{
+                    rep(k, D){
+                        if(f2.val[k][j][i]>0) continue;
+                    }
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     void print_ans(){
         f1.print_val();
