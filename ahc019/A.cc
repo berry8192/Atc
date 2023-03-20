@@ -148,12 +148,14 @@ matrix get_rot(int rx, int ry, int rz){
 struct Blocks{
     int type;
     matrix rot;
+    Pos pos;
     vector<Pos> cubes;
 
     Blocks(){}
     Blocks(int ftype, Pos ipos){
         type=ftype;
-        cubes.push_back(ipos);
+        pos=ipos;
+        cubes.push_back({0, 0, 0});
         if(type==2) rot=get_rot(mt()%4, mt()%4, mt()%4);
         else rot=get_rot(0, 0, 0);
     }
