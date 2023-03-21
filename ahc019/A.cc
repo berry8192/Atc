@@ -261,21 +261,21 @@ struct Field{
         // cout<< "shuffle_set" <<endl;
         vector<set<Space>::iterator> itrs;
         bool found=false;
-        cout<< "sz: " << spaces.size() <<endl;
+        // cout<< "sz: " << spaces.size() <<endl;
         for(auto itr=spaces.begin();itr!=spaces.end();itr++){
             Space spa=*itr;
             Pos pos=spa.pos;
-            assert(!pos.is_out_of_bounce());
+            // assert(!pos.is_out_of_bounce());
             if(val[pos.x][pos.y][pos.z]!=0){
                 itr=spaces.erase(itr);
                 continue;
             }
-            pos.print();
+            // pos.print();
             itrs.push_back(itr);
             if(itrs.size()>=5) break;
         }
         int min_dup=9;
-        cout<< "itrs:" << itrs.size() <<endl;
+        // cout<< "itrs:" << itrs.size() <<endl;
         set<Space>::iterator min_itr;
         rep(i, itrs.size()){
             int dup1=0, dup2=0;
@@ -364,7 +364,7 @@ struct Puzzle{
     int idx=0;
 
     bool random_set(){
-        cout<< "random_set" <<endl;
+        // cout<< "random_set" <<endl;
         idx++;
         return (f1.random_set(idx) && f2.random_set(idx));
     }
@@ -518,7 +518,7 @@ int main(int argc, char* argv[]){
 
         Puzzle puzzle;
         rep3(i, 1000, 1){
-            cout<< "i: " << i <<endl;
+            // cout<< "i: " << i <<endl;
             bool success_create=false;
             // cout<< i <<endl;
             success_create=(puzzle.shuffle_set() || success_create);
