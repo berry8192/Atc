@@ -187,6 +187,7 @@ struct Blocks{
 
 struct Field{
     int type;
+    vector<Pos> emp; //後ろから使う空きリスト
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
     vector<Blocks> blocks;
 
@@ -207,6 +208,15 @@ struct Field{
                 }
             }
         }
+        
+        rep(i, D){
+            rep(j, D){
+                rep(k, D){
+                    if(val[i][j][k]==0) emp.push_back({i, j, k});
+                }
+            }
+        }
+        shuffle(all(emp), mt);
     }
 
     bool random_set(int id){
