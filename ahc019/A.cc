@@ -27,8 +27,8 @@ double start_temp=10000000.0;
 double end_temp=10000.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=1;
+auto seed=(unsigned)time(NULL);
+// int seed=1;
 mt19937 mt(seed);
 
 template <class T> void PV(T pvv) {
@@ -213,6 +213,7 @@ struct Field{
             rep(j, D){
                 rep(k, D){
                     if(val[i][j][k]==0) emp.push_back({i, j, k});
+                    // cout<< val[i][j][k] SP;
                 }
             }
         }
@@ -237,6 +238,52 @@ struct Field{
                 blocks.push_back({id, type, {x, y, z}});
                 return true;
             }
+        }
+        return false;
+    }
+    bool shuffle_set(int id){
+        vector<Pos> cand_pos;
+        vector<int> emp_idx;
+        vector<int> del_idx;
+        int cur=emp.size();
+        while(cur>0){
+            cur--;
+            int emp_end=cur;
+            Pos pos=emp[emp_end];
+            if(val[pos.x][pos.y][pos.z]!=0){
+                del_idx.push_back(emp_end);
+                continue;
+            }
+            cand_pos.push_back(pos);
+            emp_idx.push_back(emp_end);
+            if(cand_pos.size()>=5) break;
+        }
+        int min_dup=9, min_idx=-1;
+        rep(i, cand_pos.size()){
+            cout<< emp_idx[i] <<endl;
+            int dup1=0, dup2=0;
+            int x=cand_pos[i].x;
+            int y=cand_pos[i].y;
+            int z=cand_pos[i].z;
+            rep(i, D){
+                if(val[i][y][z]>0) dup1=1;
+                if(val[x][i][z]>0) dup2=1;
+                if(dup1+dup2==2) break;
+            }
+            if(dup1+dup2<min_dup){
+                min_dup=dup1+dup2;
+                min_idx=emp_idx[i];
+                cout<< min_idx SP << min_dup <<endl;
+            }
+        }
+        if(min_idx!=-1){
+            Pos pos=cand_pos[min_idx];
+            // cout<< pos.is_out_of_bounce() <<endl;
+            val[pos.x][pos.y][pos.z]=id;
+            blocks.push_back({id, type, pos});
+            emp.erase(cand_pos.begin()+min_idx);
+            rep(i, del_idx.size()) emp.erase(cand_pos.begin()+del_idx[i]);
+            return true;
         }
         return false;
     }
@@ -298,9 +345,16 @@ struct Puzzle{
     int idx=0;
 
     bool random_set(){
-        // cout<< "random_set" <<endl;
+        cout<< "random_set" <<endl;
         idx++;
         return (f1.random_set(idx) && f2.random_set(idx));
+    }
+    bool shuffle_set(){
+        // cout<< "shuffle_set" <<endl;
+        idx++;
+        bool b1=f1.shuffle_set(idx);
+        bool b2=f2.shuffle_set(idx);
+        return (b1 && b2);
     }
     bool random_extend(){
         // cout<< "random_extend" <<endl;
@@ -445,12 +499,12 @@ int main(int argc, char* argv[]){
 
         Puzzle puzzle;
         rep3(i, 1000, 1){
-            // cout<< "i: " << i <<endl;
+            cout<< "i: " << i <<endl;
             bool success_create=false;
             // cout<< i <<endl;
-            success_create=puzzle.random_set() || success_create;
+            success_create|=puzzle.shuffle_set();
             // cout<< i <<endl;
-            rep(j, 5+i) success_create=puzzle.random_extend() || success_create;
+            rep(j, 5+i) success_create|=puzzle.random_extend();
             if(success_create==false) break;
             if(puzzle.check_complete()){
                 // puzzle.print_ans();
