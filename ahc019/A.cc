@@ -90,19 +90,26 @@ struct Pos{
     bool is_out_of_bounce(){
         //cout<< "out_of_bounce" <<endl;
         if(x<0 || D<=x || y<0 || D<=y || z<0 || D<=z){
-            print();
+            // print();
             return true;
         }
         return false;
     }
     void print(){
-        cout<< "(" << x << ", " << y << ", " << z << ")";
+        cout<< "(" << x << ", " << y << ", " << z << ")" <<endl;
     }
     Pos operator+(const Pos pos){
         Pos rtn;
         rtn.x=x+pos.x;
         rtn.y=y+pos.y;
         rtn.z=z+pos.z;
+        return rtn;
+    }
+    Pos operator-(const Pos pos){
+        Pos rtn;
+        rtn.x=x-pos.x;
+        rtn.y=y-pos.y;
+        rtn.z=z-pos.z;
         return rtn;
     }
 };
@@ -127,6 +134,12 @@ struct matrix {
         }
         return res;
     }
+    Pos operator*(const Pos &in) const {
+        int x=data[0][0]*in.x+data[0][1]*in.y+data[0][2]*in.z;
+        int y=data[1][0]*in.x+data[1][1]*in.y+data[1][2]*in.z;
+        int z=data[2][0]*in.x+data[2][1]*in.y+data[2][2]*in.z;
+        return {x, y, z};
+    }
     void print(){
         rep(i, 3){
             rep(j, 3){
@@ -146,18 +159,29 @@ matrix get_rot(int rx, int ry, int rz){
 }
 
 struct Blocks{
+    int id;
     int type;
-    matrix rot;
+    matrix rot, rotinv;
     Pos pos;
     vector<Pos> cubes;
 
     Blocks(){}
-    Blocks(int ftype, Pos ipos){
+    Blocks(int iid, int ftype, Pos ipos){
+        id=iid;
         type=ftype;
         pos=ipos;
         cubes.push_back({0, 0, 0});
-        if(type==2) rot=get_rot(mt()%4, mt()%4, mt()%4);
-        else rot=get_rot(0, 0, 0);
+        if(type==2){
+            int rx=mt()%4, ry=mt()%4, rz=mt()%4;
+            rot=get_rot(rx, ry, rz);
+            rx=(4-rx)%4;
+            ry=(4-ry)%4;
+            rz=(4-rz)%4;
+            rotinv=get_rot(rx, ry, rz);
+        }else{
+            rot=get_rot(0, 0, 0);
+            rotinv=rot;
+        }
     }
 };
 
@@ -202,24 +226,54 @@ struct Field{
                 dup=dup1+dup2;
                 if(dup*D*D*D>lp) continue;
                 val[x][y][z]=id;
-                blocks.push_back({type, {x, y, z}});
+                blocks.push_back({id, type, {x, y, z}});
                 break;
             }
         }
     }
     Pos f1_fetch_space(int block_id){
+        assert(0<=block_id);
+        assert(block_id<blocks.size());
         int lp=0;
-        while(1){
+        rep(i, 100){
             int cube_id=mt()%blocks[block_id].cubes.size();
             lp++;
-            Pos pos=blocks[block_id].cubes[cube_id];
-            rep(i, 6){
+            Pos pos=blocks[block_id].pos+blocks[block_id].cubes[cube_id];
+            if(pos.is_out_of_bounce()){
+                pos.print();
+                continue;
+                assert(!pos.is_out_of_bounce());
+            }
+            assert(val[pos.x][pos.y][pos.z]==blocks[block_id].id);
+            vector<int> shu(6);
+            rep(i, 6) shu[i]=i;
+            shuffle(all(shu), mt);
+            rep(lp, 6){
+                int i=shu[lp];
                 Pos npos=pos+d6[i];
                 if(npos.is_out_of_bounce()) continue;
-                if(val[npos.x][npos.y][npos.z]==0) return npos;
+                // cout<< "not Oob" <<endl;
+                if(val[npos.x][npos.y][npos.z]==0) return npos-blocks[block_id].pos;
             }
-            if(lp>100) return {-1, -1, -1};
         }
+        return {-9999, 0, 0};
+    }
+    bool f2_is_usable_space(int block_id, Pos ivec){
+        Pos pos=blocks[block_id].pos;
+        Pos vec=blocks[block_id].rot*ivec;
+        Pos npos=pos+vec;
+        if(npos.is_out_of_bounce()) return false;
+        if(val[npos.x][npos.y][npos.z]==0){
+            val[npos.x][npos.y][npos.z]=blocks[block_id].id;
+            return true;
+        }
+        return false;
+    }
+    void f1_add_cube(int block_id, Pos vec){
+        blocks[block_id].cubes.push_back(vec);
+        Pos npos=blocks[block_id].pos+vec;
+        assert(val[npos.x][npos.y][npos.z]==0);
+        val[npos.x][npos.y][npos.z]=blocks[block_id].id;
     }
     void print_val(){
         rep(i, D) rep(j, D) rep(k, D){
@@ -240,11 +294,17 @@ struct Puzzle{
         f2.random_set(idx);
     }
     void random_extend(){
-        int idx=mt()%f1.blocks.size();
-        Pos pos=f1.f1_fetch_space(idx);
-        if(pos.is_out_of_bounce()) return;
-        f1.random_set(idx);
-        f2.random_set(idx);
+        rep(i, 100){
+            int block_id=mt()%f1.blocks.size();
+            Pos vec1=f1.f1_fetch_space(block_id);
+            // vec1.print();
+            if(vec1.x==-9999) continue;
+            // cout<< "f1" <<endl;
+            if(!f2.f2_is_usable_space(block_id, vec1)) continue;
+            f1.f1_add_cube(block_id, vec1);
+            // cout<< "extend!" <<endl;
+            break;
+        }
     }
     bool check_complete(){
         rep(i, D){
@@ -356,6 +416,8 @@ int main(int argc, char* argv[]){
     rep3(i, 3000, 1){
         // cout<< i <<endl;
         puzzle.random_set();
+        // cout<< i <<endl;
+        rep(j, 5+i) puzzle.random_extend();
         if(puzzle.check_complete()) break;
     }
 
