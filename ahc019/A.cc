@@ -209,13 +209,11 @@ struct Field{
         }
     }
 
-    void random_set(int id){
-        int lp=0;
-        while(1){
+    bool random_set(int id){
+        rep(i, D*D*D*10){
             int x=mt()%D;
             int y=mt()%D;
             int z=mt()%D;
-            lp++;
             if(val[x][y][z]==0){
                 // cout<< lp <<endl;
                 int dup1=0, dup2=0, dup;
@@ -224,12 +222,13 @@ struct Field{
                     if(val[x][i][z]>0) dup2=1;
                 }
                 dup=dup1+dup2;
-                if(dup*D*D*D>lp) continue;
+                if(dup*D*D*D>i) continue;
                 val[x][y][z]=id;
                 blocks.push_back({id, type, {x, y, z}});
-                break;
+                return true;
             }
         }
+        return false;
     }
     Pos f1_fetch_space(int block_id){
         assert(0<=block_id);
@@ -288,13 +287,14 @@ struct Puzzle{
     Field f1=Field(1, f[0], r[0]), f2=Field(2, f[1], r[1]);
     int idx=0;
 
-    void random_set(){
+    bool random_set(){
+        // cout<< "random_set" <<endl;
         idx++;
-        f1.random_set(idx);
-        f2.random_set(idx);
+        return (f1.random_set(idx) && f2.random_set(idx));
     }
-    void random_extend(){
-        rep(i, 100){
+    bool random_extend(){
+        // cout<< "random_extend" <<endl;
+        rep(i, 10*D*D*D){
             int block_id=mt()%f1.blocks.size();
             Pos vec1=f1.f1_fetch_space(block_id);
             // vec1.print();
@@ -303,8 +303,9 @@ struct Puzzle{
             if(!f2.f2_is_usable_space(block_id, vec1)) continue;
             f1.f1_add_cube(block_id, vec1);
             // cout<< "extend!" <<endl;
-            break;
+            return true;
         }
+        return false;
     }
     bool check_complete(){
         rep(i, D){
@@ -381,6 +382,15 @@ struct Puzzle{
         }
         return true;
     }
+    ll calc_score(){
+        double base=1000000000.0;
+        double sig=0.0;
+        rep(i, f1.blocks.size()){
+            sig+=1.0/f1.blocks[i].cubes.size();
+        }
+        ll rtn=round(base*sig);
+        return rtn;
+    }
     void print_ans(){
         cout<< idx <<endl;
         f1.print_val();
@@ -412,16 +422,46 @@ int main(int argc, char* argv[]){
 
     init();
     // get_argv(argc, argv);
-    Puzzle puzzle;
-    rep3(i, 3000, 1){
-        // cout<< i <<endl;
-        puzzle.random_set();
-        // cout<< i <<endl;
-        rep(j, 5+i) puzzle.random_extend();
-        if(puzzle.check_complete()) break;
+    bool created=false;
+    ll best_score=lmax;
+    Puzzle best;
+    int lp=0;
+    while (true){
+        lp++;
+        // if(lp==3) break;
+        current = chrono::system_clock::now(); // 現在時刻
+        double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+        if (delta > TIME_LIMIT) break;
+
+        Puzzle puzzle;
+        rep3(i, 1000, 1){
+            // cout<< "i: " << i <<endl;
+            bool success_create=false;
+            // cout<< i <<endl;
+            success_create=puzzle.random_set() || success_create;
+            // cout<< i <<endl;
+            rep(j, 5+i) success_create=puzzle.random_extend() || success_create;
+            if(success_create==false) break;
+            if(puzzle.check_complete()){
+                // puzzle.print_ans();
+                if(!created){
+                    best=puzzle;
+                    created=true;
+                }else{
+                    ll score=puzzle.calc_score();
+                    // cout<< "lp: " << lp SP << score <<endl;
+                    if(score<best_score){
+                        best_score=score;
+                        best=puzzle;
+                    }
+                }
+                break;
+            }
+        }
     }
 
-    puzzle.print_ans();
+    // cout<< "lp: " << lp <<endl;
+    best.print_ans();
 
     return 0;
 }
