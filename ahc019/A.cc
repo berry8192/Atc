@@ -27,8 +27,8 @@ double start_temp=10000000.0;
 double end_temp=10000.0;
 
 // 乱数の準備
-auto seed=(unsigned)time(NULL);
-// int seed=1;
+// auto seed=(unsigned)time(NULL);
+int seed=1;
 mt19937 mt(seed);
 
 template <class T> void PV(T pvv) {
@@ -115,6 +115,23 @@ struct Pos{
 };
 Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
 
+struct Space{
+    ll prio;
+    Pos pos;
+    int bid;
+
+    Space(){}
+    Space(Pos ipos, int ibid=-1){
+        prio=mt();
+        pos=ipos;
+        bid=ibid;
+    }
+
+    bool operator<(const Space &in) const{
+		return prio<in.prio;
+	};
+};
+
 struct matrix {
     vector<vector<int>> data;
 
@@ -187,9 +204,9 @@ struct Blocks{
 
 struct Field{
     int type;
-    vector<Pos> emp; //後ろから使う空きリスト
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
     vector<Blocks> blocks;
+    set<Space> spaces;
 
     Field(){}
     Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
@@ -212,12 +229,11 @@ struct Field{
         rep(i, D){
             rep(j, D){
                 rep(k, D){
-                    if(val[i][j][k]==0) emp.push_back({i, j, k});
+                    if(val[i][j][k]==0) spaces.insert({{i, j, k}});
                     // cout<< val[i][j][k] SP;
                 }
             }
         }
-        shuffle(all(emp), mt);
     }
 
     bool random_set(int id){
@@ -242,29 +258,31 @@ struct Field{
         return false;
     }
     bool shuffle_set(int id){
-        vector<Pos> cand_pos;
-        vector<int> emp_idx;
-        vector<int> del_idx;
-        int cur=emp.size();
-        while(cur>0){
-            cur--;
-            int emp_end=cur;
-            Pos pos=emp[emp_end];
+        // cout<< "shuffle_set" <<endl;
+        vector<set<Space>::iterator> itrs;
+        bool found=false;
+        cout<< "sz: " << spaces.size() <<endl;
+        for(auto itr=spaces.begin();itr!=spaces.end();itr++){
+            Space spa=*itr;
+            Pos pos=spa.pos;
+            assert(!pos.is_out_of_bounce());
             if(val[pos.x][pos.y][pos.z]!=0){
-                del_idx.push_back(emp_end);
+                itr=spaces.erase(itr);
                 continue;
             }
-            cand_pos.push_back(pos);
-            emp_idx.push_back(emp_end);
-            if(cand_pos.size()>=5) break;
+            pos.print();
+            itrs.push_back(itr);
+            if(itrs.size()>=5) break;
         }
-        int min_dup=9, min_idx=-1;
-        rep(i, cand_pos.size()){
-            cout<< emp_idx[i] <<endl;
+        int min_dup=9;
+        cout<< "itrs:" << itrs.size() <<endl;
+        set<Space>::iterator min_itr;
+        rep(i, itrs.size()){
             int dup1=0, dup2=0;
-            int x=cand_pos[i].x;
-            int y=cand_pos[i].y;
-            int z=cand_pos[i].z;
+            Space spa=*itrs[i];
+            int x=spa.pos.x;
+            int y=spa.pos.y;
+            int z=spa.pos.z;
             rep(i, D){
                 if(val[i][y][z]>0) dup1=1;
                 if(val[x][i][z]>0) dup2=1;
@@ -272,17 +290,18 @@ struct Field{
             }
             if(dup1+dup2<min_dup){
                 min_dup=dup1+dup2;
-                min_idx=emp_idx[i];
-                cout<< min_idx SP << min_dup <<endl;
+                min_itr=itrs[i];
+                found=true;
             }
         }
-        if(min_idx!=-1){
-            Pos pos=cand_pos[min_idx];
-            // cout<< pos.is_out_of_bounce() <<endl;
+        // cout<< "#1" <<endl;
+        if(found){
+            Space spa=*min_itr;
+            Pos pos=spa.pos;
+            spaces.erase(min_itr);
             val[pos.x][pos.y][pos.z]=id;
             blocks.push_back({id, type, pos});
-            emp.erase(cand_pos.begin()+min_idx);
-            rep(i, del_idx.size()) emp.erase(cand_pos.begin()+del_idx[i]);
+            // cout<< "blocks.push_back({id, type, pos});" <<endl;
             return true;
         }
         return false;
@@ -502,9 +521,9 @@ int main(int argc, char* argv[]){
             cout<< "i: " << i <<endl;
             bool success_create=false;
             // cout<< i <<endl;
-            success_create|=puzzle.shuffle_set();
+            success_create=(puzzle.shuffle_set() || success_create);
             // cout<< i <<endl;
-            rep(j, 5+i) success_create|=puzzle.random_extend();
+            rep(j, 5+i) success_create=(puzzle.random_extend() || success_create);
             if(success_create==false) break;
             if(puzzle.check_complete()){
                 // puzzle.print_ans();
