@@ -95,6 +95,10 @@ struct Pos{
         }
         return false;
     }
+    int get_id(int id){
+        // print();
+        return 3375*id+225*x+15*y+z;
+    }
     void print(){
         cout<< "(" << x << ", " << y << ", " << z << ")" <<endl;
     }
@@ -123,6 +127,7 @@ struct Space{
     Space(){}
     Space(Pos ipos, int ibid=-1){
         prio=mt();
+        // cout<< prio <<endl;
         pos=ipos;
         bid=ibid;
     }
@@ -208,6 +213,7 @@ struct Field{
     vector<Blocks> blocks;
     set<Space> spaces;
     set<Space> extends;
+    set<int> dup_ext;
 
     Field(){}
     Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
@@ -258,25 +264,38 @@ struct Field{
         }
         return false;
     }
-    void add_ext(Blocks block){
+    // 絶対位置を受け取る
+    void f1_add_ext(int block_id, Pos pos){
+        // cout<< "f1_add_ext" <<endl;
+        assert(type==1);
         rep(i, 6){
-            Pos npos=block.pos+d6[i];
+            Pos npos=pos+d6[i];
+            // npos.print();
             if(npos.is_out_of_bounce()) continue;
+            int ext_id=npos.get_id(block_id);
+            // cout<< ext_id <<endl;
+            if(dup_ext.find(ext_id)!=dup_ext.end()) continue;
+            dup_ext.insert(ext_id);
             // cout<< "not Oob" <<endl;
-            if(val[npos.x][npos.y][npos.z]==0) extends.insert(npos);
+            if(val[npos.x][npos.y][npos.z]==0){
+                // cout<< "add extend" <<endl;
+                // blockの相対位置をつめる
+                extends.insert({npos-blocks[block_id-1].pos, block_id});
+            }
         }
     }
     bool shuffle_set(int id){
         // cout<< "shuffle_set" <<endl;
+        // if(spaces.empty()) return false;
         vector<set<Space>::iterator> itrs;
         bool found=false;
-        // cout<< "sz: " << spaces.size() <<endl;
         for(auto itr=spaces.begin();itr!=spaces.end();itr++){
             Space spa=*itr;
             Pos pos=spa.pos;
             // assert(!pos.is_out_of_bounce());
             if(val[pos.x][pos.y][pos.z]!=0){
                 itr=spaces.erase(itr);
+                if(spaces.empty()) break;
                 continue;
             }
             // pos.print();
@@ -309,13 +328,27 @@ struct Field{
             Pos pos=spa.pos;
             spaces.erase(min_itr);
             val[pos.x][pos.y][pos.z]=id;
-            Blocks block={id, type, pos};
-            blocks.push_back(block);
-            add_ext(block);
+            blocks.push_back({id, type, pos});
+            if(type==1){
+                // cout<< "set f1: ";
+                // pos.print();
+                f1_add_ext(id, pos);
+            }
             // cout<< "blocks.push_back({id, type, pos});" <<endl;
             return true;
         }
         return false;
+    }
+    Space f1_fetch_extend(){
+        // cout<< "f1_fetch_extend" <<endl;
+        assert(type==1);
+        while(!extends.empty()){
+            Space space=*extends.begin();
+            Pos abpos=space.pos+blocks[space.bid-1].pos;
+            extends.erase(extends.begin());
+            if(val[abpos.x][abpos.y][abpos.z]==0) return space;
+        }
+        return {{-9999, 0, 0}};
     }
     Pos f1_fetch_space(int block_id){
         assert(0<=block_id);
@@ -345,21 +378,26 @@ struct Field{
         return {-9999, 0, 0};
     }
     bool f2_is_usable_space(int block_id, Pos ivec){
-        Pos pos=blocks[block_id].pos;
-        Pos vec=blocks[block_id].rot*ivec;
+        // cout<< "f2_is_usable_space" <<endl;
+        Pos pos=blocks[block_id-1].pos;
+        Pos vec=blocks[block_id-1].rot*ivec;
         Pos npos=pos+vec;
         if(npos.is_out_of_bounce()) return false;
         if(val[npos.x][npos.y][npos.z]==0){
-            val[npos.x][npos.y][npos.z]=blocks[block_id].id;
+            val[npos.x][npos.y][npos.z]=block_id;
             return true;
         }
         return false;
     }
     void f1_add_cube(int block_id, Pos vec){
-        blocks[block_id].cubes.push_back(vec);
-        Pos npos=blocks[block_id].pos+vec;
+        // cout<< "f1_add_cube" <<endl;
+        // cout<< "block_id: " << block_id-1 SP << "blocks.sz: " << blocks.size() <<endl;
+        blocks[block_id-1].cubes.push_back(vec);
+        Pos npos=blocks[block_id-1].pos+vec;
+        // npos.print();
         assert(val[npos.x][npos.y][npos.z]==0);
-        val[npos.x][npos.y][npos.z]=blocks[block_id].id;
+        val[npos.x][npos.y][npos.z]=block_id;
+        f1_add_ext(block_id, npos);
     }
     void print_val(){
         rep(i, D) rep(j, D) rep(k, D){
@@ -402,19 +440,18 @@ struct Puzzle{
         return false;
     }
     bool shuffle_extend(){
-        // cout<< "random_extend" <<endl;
-        rep(i, 10*D*D*D){
-            int block_id=mt()%f1.blocks.size();
-            Pos vec1=f1.f1_fetch_space(block_id);
-            // vec1.print();
-            if(vec1.x==-9999) continue;
-            // cout<< "f1" <<endl;
+        // cout<< "shuffle_extend" <<endl;
+        while(1){
+            Space space=f1.f1_fetch_extend();
+            if(space.pos.x==-9999) return false; // extendsの在庫切れ
+            int block_id=space.bid;
+            Pos vec1=space.pos;
             if(!f2.f2_is_usable_space(block_id, vec1)) continue;
             f1.f1_add_cube(block_id, vec1);
-            // cout<< "extend!" <<endl;
-            return true;
+            break;
         }
-        return false;
+        // cout<< "extend!" <<endl;
+        return true;
     }
     bool check_complete(){
         rep(i, D){
@@ -537,7 +574,8 @@ int main(int argc, char* argv[]){
     int lp=0;
     while (true){
         lp++;
-        // if(lp==3) break;
+        // if(lp>1) break;
+        // if(lp%100==0) cout<< "lp: " << lp <<endl;
         current = chrono::system_clock::now(); // 現在時刻
         double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
         if (delta > TIME_LIMIT) break;
@@ -547,21 +585,30 @@ int main(int argc, char* argv[]){
             // cout<< "i: " << i <<endl;
             bool success_create=false;
             // cout<< i <<endl;
-            success_create=(puzzle.shuffle_set() || success_create);
+            if(puzzle.shuffle_set()) success_create=true;
+            // if(success_create) cout<< "set" <<endl;
             // cout<< i <<endl;
-            rep(j, D) success_create=(puzzle.shuffle_extend() || success_create);
+            // cout<< "bext: " << puzzle.f1.extends.size() <<endl;
+            rep(j, i%(D*D)){
+                // cout<< "j: " << j <<endl;
+                if(puzzle.shuffle_extend()) success_create=true;
+            }
+            // cout<< "aext: " << puzzle.f1.extends.size() <<endl;
             if(success_create==false) break;
             if(puzzle.check_complete()){
                 // puzzle.print_ans();
+                // rep(j, D*D) puzzle.shuffle_extend();
                 if(!created){
                     best=puzzle;
                     created=true;
+                    // cout<< "lp: " << lp SP << best_score <<endl;
                 }else{
                     ll score=puzzle.calc_score();
                     if(score<best_score){
                         best_score=score;
                         best=puzzle;
-                        // cout<< "lp: " << lp SP << score <<endl;
+                        // cout<< "lp: " << lp SP << best_score <<endl;
+                        // puzzle.print_ans();
                     }
                 }
                 break;
