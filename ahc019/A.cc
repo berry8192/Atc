@@ -207,6 +207,7 @@ struct Field{
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
     vector<Blocks> blocks;
     set<Space> spaces;
+    set<Space> extends;
 
     Field(){}
     Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
@@ -257,6 +258,14 @@ struct Field{
         }
         return false;
     }
+    void add_ext(Blocks block){
+        rep(i, 6){
+            Pos npos=block.pos+d6[i];
+            if(npos.is_out_of_bounce()) continue;
+            // cout<< "not Oob" <<endl;
+            if(val[npos.x][npos.y][npos.z]==0) extends.insert(npos);
+        }
+    }
     bool shuffle_set(int id){
         // cout<< "shuffle_set" <<endl;
         vector<set<Space>::iterator> itrs;
@@ -300,7 +309,9 @@ struct Field{
             Pos pos=spa.pos;
             spaces.erase(min_itr);
             val[pos.x][pos.y][pos.z]=id;
-            blocks.push_back({id, type, pos});
+            Blocks block={id, type, pos};
+            blocks.push_back(block);
+            add_ext(block);
             // cout<< "blocks.push_back({id, type, pos});" <<endl;
             return true;
         }
@@ -376,6 +387,21 @@ struct Puzzle{
         return (b1 && b2);
     }
     bool random_extend(){
+        // cout<< "random_extend" <<endl;
+        rep(i, 10*D*D*D){
+            int block_id=mt()%f1.blocks.size();
+            Pos vec1=f1.f1_fetch_space(block_id);
+            // vec1.print();
+            if(vec1.x==-9999) continue;
+            // cout<< "f1" <<endl;
+            if(!f2.f2_is_usable_space(block_id, vec1)) continue;
+            f1.f1_add_cube(block_id, vec1);
+            // cout<< "extend!" <<endl;
+            return true;
+        }
+        return false;
+    }
+    bool shuffle_extend(){
         // cout<< "random_extend" <<endl;
         rep(i, 10*D*D*D){
             int block_id=mt()%f1.blocks.size();
@@ -523,7 +549,7 @@ int main(int argc, char* argv[]){
             // cout<< i <<endl;
             success_create=(puzzle.shuffle_set() || success_create);
             // cout<< i <<endl;
-            rep(j, 5+i) success_create=(puzzle.random_extend() || success_create);
+            rep(j, D) success_create=(puzzle.shuffle_extend() || success_create);
             if(success_create==false) break;
             if(puzzle.check_complete()){
                 // puzzle.print_ans();
@@ -532,10 +558,10 @@ int main(int argc, char* argv[]){
                     created=true;
                 }else{
                     ll score=puzzle.calc_score();
-                    // cout<< "lp: " << lp SP << score <<endl;
                     if(score<best_score){
                         best_score=score;
                         best=puzzle;
+                        // cout<< "lp: " << lp SP << score <<endl;
                     }
                 }
                 break;
