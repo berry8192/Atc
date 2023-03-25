@@ -329,8 +329,9 @@ struct Field{
             spaces.erase(min_itr);
             val[pos.x][pos.y][pos.z]=id;
             blocks.push_back({id, type, pos});
+            // cout<< type SP << "blocks.size() " << blocks.size() <<endl;
             if(type==1){
-                // cout<< "set f1: ";
+                // cout<< id SP << "set f1: ";
                 // pos.print();
                 f1_add_ext(id, pos);
             }
@@ -379,6 +380,7 @@ struct Field{
     }
     bool f2_is_usable_space(int block_id, Pos ivec){
         // cout<< "f2_is_usable_space" <<endl;
+        // cout<< "sz:id " << blocks.size() SP << block_id-1 <<endl;
         Pos pos=blocks[block_id-1].pos;
         Pos vec=blocks[block_id-1].rot*ivec;
         Pos npos=pos+vec;
@@ -394,6 +396,7 @@ struct Field{
         // cout<< "block_id: " << block_id-1 SP << "blocks.sz: " << blocks.size() <<endl;
         blocks[block_id-1].cubes.push_back(vec);
         Pos npos=blocks[block_id-1].pos+vec;
+        // cout<< block_id SP << "extend f1: ";
         // npos.print();
         assert(val[npos.x][npos.y][npos.z]==0);
         val[npos.x][npos.y][npos.z]=block_id;
@@ -417,12 +420,13 @@ struct Puzzle{
         idx++;
         return (f1.random_set(idx) && f2.random_set(idx));
     }
-    bool shuffle_set(){
+    int shuffle_set(){
         // cout<< "shuffle_set" <<endl;
         idx++;
         bool b1=f1.shuffle_set(idx);
         bool b2=f2.shuffle_set(idx);
-        return (b1 && b2);
+        // cout<< "b1b2: " << b1 << b2 <<endl;
+        return (b1*2+b2);
     }
     bool random_extend(){
         // cout<< "random_extend" <<endl;
@@ -575,7 +579,7 @@ int main(int argc, char* argv[]){
     while (true){
         lp++;
         // if(lp>1) break;
-        // if(lp%100==0) cout<< "lp: " << lp <<endl;
+        // if(lp%1==0) cout<< "lp: " << lp <<endl;
         current = chrono::system_clock::now(); // 現在時刻
         double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
         if (delta > TIME_LIMIT) break;
@@ -585,11 +589,17 @@ int main(int argc, char* argv[]){
             // cout<< "i: " << i <<endl;
             bool success_create=false;
             // cout<< i <<endl;
-            if(puzzle.shuffle_set()) success_create=true;
+            int set_return=puzzle.shuffle_set();
+            if(set_return==3){
+                success_create=true;
+            }else if(set_return!=0){
+                // cout<< "miss" <<endl;
+                break;
+            }
             // if(success_create) cout<< "set" <<endl;
             // cout<< i <<endl;
             // cout<< "bext: " << puzzle.f1.extends.size() <<endl;
-            rep(j, i%(D*D)){
+            rep(j, mt()%(lp%(D*D)+1)){
                 // cout<< "j: " << j <<endl;
                 if(puzzle.shuffle_extend()) success_create=true;
             }
