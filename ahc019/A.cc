@@ -402,6 +402,56 @@ struct Field{
         val[npos.x][npos.y][npos.z]=block_id;
         f1_add_ext(block_id, npos);
     }
+    int fail_fill(int &id){
+        int cnt=0;
+        rep(i, D){
+            rep(j, D){
+                if(f[type-1][i][j]==1){
+                    int flag=1;
+                    rep(k, D){
+                        if(val[j][k][i]>0){
+                            flag=0;
+                            break;
+                        }
+                    }
+                    if(flag){
+                        rep(k, D){
+                            if(val[j][k][i]==0 && r[type-1][i][j]==1){
+                                id++;
+                                val[j][k][i]=id;
+                                cnt++;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(r[type-1][i][j]==0){
+                    int flag=1;
+                    rep(k, D){
+                        if(val[k][j][i]>0){
+                            flag=0;
+                            break;
+                        }
+                    }
+                    if(flag){
+                        rep(k, D){
+                            if(val[k][j][i]==0 && f[type-1][i][j]==1){
+                                id++;
+                                val[k][j][i]=id;
+                                cnt++;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return cnt;
+    }
     void print_val(){
         rep(i, D) rep(j, D) rep(k, D){
             if(val[i][j][k]==-1) cout<< "0 ";
@@ -414,6 +464,7 @@ struct Field{
 struct Puzzle{
     Field f1=Field(1, f[0], r[0]), f2=Field(2, f[1], r[1]);
     int idx=0;
+    int pena=0;
 
     bool random_set(){
         // cout<< "random_set" <<endl;
@@ -456,6 +507,10 @@ struct Puzzle{
         }
         // cout<< "extend!" <<endl;
         return true;
+    }
+    void fail_fill(){
+        pena=f1.fail_fill(idx)+f2.fail_fill(idx);
+        // cout<< pena <<endl;
     }
     bool check_complete(){
         rep(i, D){
@@ -538,7 +593,7 @@ struct Puzzle{
         rep(i, f1.blocks.size()){
             sig+=1.0/f1.blocks[i].cubes.size();
         }
-        ll rtn=round(base*sig);
+        ll rtn=round(base*sig)+pena;
         return rtn;
     }
     void print_ans(){
@@ -588,24 +643,45 @@ int main(int argc, char* argv[]){
         rep3(i, 1000, 1){
             // cout<< "i: " << i <<endl;
             bool success_create=false;
+            bool fill_ok=false;
             // cout<< i <<endl;
             int set_return=puzzle.shuffle_set();
             if(set_return==3){
                 success_create=true;
             }else if(set_return!=0){
                 // cout<< "miss" <<endl;
-                break;
+                puzzle.fail_fill();
+                if(puzzle.check_complete()){
+                    // cout<< "fill1" <<endl;
+                    fill_ok=true;
+                }else{
+                    // puzzle.print_ans();
+                    // exit(0);
+                    // cout<< "fail1" <<endl;
+                    break;
+                }
             }
             // if(success_create) cout<< "set" <<endl;
             // cout<< i <<endl;
             // cout<< "bext: " << puzzle.f1.extends.size() <<endl;
-            rep(j, mt()%(lp%(D*D)+1)){
-                // cout<< "j: " << j <<endl;
-                if(puzzle.shuffle_extend()) success_create=true;
+            if(!fill_ok){
+                rep(j, mt()%(lp%(D*D)+1)){
+                    // cout<< "j: " << j <<endl;
+                    if(puzzle.shuffle_extend()) success_create=true;
+                }
+                // cout<< "aext: " << puzzle.f1.extends.size() <<endl;
+                if(success_create==false){
+                    puzzle.fail_fill();
+                    if(puzzle.check_complete()){
+                        // cout<< "fill2" <<endl;
+                        fill_ok=true;
+                    }else{
+                        // cout<< "fail2" <<endl;
+                        break;
+                    }
+                }
             }
-            // cout<< "aext: " << puzzle.f1.extends.size() <<endl;
-            if(success_create==false) break;
-            if(puzzle.check_complete()){
+            if(fill_ok || puzzle.check_complete()){
                 // puzzle.print_ans();
                 // rep(j, D*D) puzzle.shuffle_extend();
                 if(!created){
