@@ -17,6 +17,7 @@ using namespace std;
 // 定数周り
 int INF=1000000000;
 int imax=2147483647;
+ll lb32=2147483648;
 ll lmax=9223372036854775807;
 int icos[]={1, 0, -1, 0};
 int isin[]={0, 1, 0, -1};
@@ -126,7 +127,7 @@ struct Space{
 
     Space(){}
     Space(Pos ipos, int ibid=-1){
-        prio=mt();
+        prio=int(mt())*lb32+int(mt());
         // cout<< prio <<endl;
         pos=ipos;
         bid=ibid;
@@ -205,12 +206,16 @@ struct Blocks{
             rotinv=rot;
         }
     }
+
+    bool operator<(const Blocks &in) const{
+		return id<in.id;
+	};
 };
 
 struct Field{
     int type;
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
-    vector<Blocks> blocks;
+    map<int, Blocks> blocks;
     set<Space> spaces;
     set<Space> extends;
     set<int> dup_ext;
@@ -244,7 +249,7 @@ struct Field{
     }
 
     bool random_set(int id){
-        rep(i, D*D*D*10){
+        /*rep(i, D*D*D*10){
             int x=mt()%D;
             int y=mt()%D;
             int z=mt()%D;
@@ -258,10 +263,10 @@ struct Field{
                 dup=dup1+dup2;
                 if(dup*D*D*D>i) continue;
                 val[x][y][z]=id;
-                blocks.push_back({id, type, {x, y, z}});
+                blocks.insert({id, type, {x, y, z}});
                 return true;
             }
-        }
+        }*/
         return false;
     }
     // 絶対位置を受け取る
@@ -280,7 +285,7 @@ struct Field{
             if(val[npos.x][npos.y][npos.z]==0){
                 // cout<< "add extend" <<endl;
                 // blockの相対位置をつめる
-                extends.insert({npos-blocks[block_id-1].pos, block_id});
+                extends.insert({npos-blocks[block_id].pos, block_id});
             }
         }
     }
@@ -328,11 +333,12 @@ struct Field{
             Pos pos=spa.pos;
             spaces.erase(min_itr);
             val[pos.x][pos.y][pos.z]=id;
-            blocks.push_back({id, type, pos});
+            blocks[id]=Blocks({id, type, pos});
             // cout<< type SP << "blocks.size() " << blocks.size() <<endl;
             if(type==1){
                 // cout<< id SP << "set f1: ";
                 // pos.print();
+                // auto block_itr=blocks.find({block_id, 0, {0, 0, 0}});
                 f1_add_ext(id, pos);
             }
             // cout<< "blocks.push_back({id, type, pos});" <<endl;
@@ -345,14 +351,15 @@ struct Field{
         assert(type==1);
         while(!extends.empty()){
             Space space=*extends.begin();
-            Pos abpos=space.pos+blocks[space.bid-1].pos;
+            Pos abpos=space.pos+blocks[space.bid].pos;
+            // abpos.print();
             extends.erase(extends.begin());
             if(val[abpos.x][abpos.y][abpos.z]==0) return space;
         }
         return {{-9999, 0, 0}};
     }
     Pos f1_fetch_space(int block_id){
-        assert(0<=block_id);
+        /*assert(0<=block_id);
         assert(block_id<blocks.size());
         int lp=0;
         rep(i, 100){
@@ -375,15 +382,16 @@ struct Field{
                 // cout<< "not Oob" <<endl;
                 if(val[npos.x][npos.y][npos.z]==0) return npos-blocks[block_id].pos;
             }
-        }
+        }*/
         return {-9999, 0, 0};
     }
     bool f2_is_usable_space(int block_id, Pos ivec){
         // cout<< "f2_is_usable_space" <<endl;
         // cout<< "sz:id " << blocks.size() SP << block_id-1 <<endl;
-        Pos pos=blocks[block_id-1].pos;
-        Pos vec=blocks[block_id-1].rot*ivec;
+        Pos pos=blocks[block_id].pos;
+        Pos vec=blocks[block_id].rot*ivec;
         Pos npos=pos+vec;
+        // npos.print();
         if(npos.is_out_of_bounce()) return false;
         if(val[npos.x][npos.y][npos.z]==0){
             val[npos.x][npos.y][npos.z]=block_id;
@@ -394,8 +402,8 @@ struct Field{
     void f1_add_cube(int block_id, Pos vec){
         // cout<< "f1_add_cube" <<endl;
         // cout<< "block_id: " << block_id-1 SP << "blocks.sz: " << blocks.size() <<endl;
-        blocks[block_id-1].cubes.push_back(vec);
-        Pos npos=blocks[block_id-1].pos+vec;
+        blocks[block_id].cubes.push_back(vec);
+        Pos npos=blocks[block_id].pos+vec;
         // cout<< block_id SP << "extend f1: ";
         // npos.print();
         assert(val[npos.x][npos.y][npos.z]==0);
@@ -481,7 +489,7 @@ struct Puzzle{
     }
     bool random_extend(){
         // cout<< "random_extend" <<endl;
-        rep(i, 10*D*D*D){
+        /*rep(i, 10*D*D*D){
             int block_id=mt()%f1.blocks.size();
             Pos vec1=f1.f1_fetch_space(block_id);
             // vec1.print();
@@ -491,7 +499,7 @@ struct Puzzle{
             f1.f1_add_cube(block_id, vec1);
             // cout<< "extend!" <<endl;
             return true;
-        }
+        }*/
         return false;
     }
     bool shuffle_extend(){
@@ -500,6 +508,7 @@ struct Puzzle{
             Space space=f1.f1_fetch_extend();
             if(space.pos.x==-9999) return false; // extendsの在庫切れ
             int block_id=space.bid;
+            // cout<< block_id <<endl;
             Pos vec1=space.pos;
             if(!f2.f2_is_usable_space(block_id, vec1)) continue;
             f1.f1_add_cube(block_id, vec1);
@@ -590,8 +599,8 @@ struct Puzzle{
     ll calc_score(){
         double base=1000000000.0;
         double sig=0.0;
-        rep(i, f1.blocks.size()){
-            sig+=1.0/f1.blocks[i].cubes.size();
+        for(auto itr=f1.blocks.begin();itr!=f1.blocks.end();itr++){
+            sig+=1.0/(*itr).second.cubes.size();
         }
         ll rtn=round(base*sig)+pena;
         return rtn;
@@ -650,7 +659,7 @@ int main(int argc, char* argv[]){
                 success_create=true;
             }else if(set_return!=0){
                 // cout<< "miss" <<endl;
-                puzzle.fail_fill();
+                // puzzle.fail_fill();
                 if(puzzle.check_complete()){
                     // cout<< "fill1" <<endl;
                     fill_ok=true;
