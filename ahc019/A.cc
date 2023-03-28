@@ -127,14 +127,14 @@ struct Space{
 
     Space(){}
     Space(Pos ipos, int ibid=-1){
-        prio=int(mt())*lb32+int(mt());
+        prio=mt();
         // cout<< prio <<endl;
         pos=ipos;
         bid=ibid;
     }
 
     bool operator<(const Space &in) const{
-		return prio<in.prio;
+		return prio!=in.prio ? prio<in.prio : bid<in.bid;
 	};
 };
 
@@ -212,6 +212,21 @@ struct Blocks{
 	};
 };
 
+// struct LeftBlock{
+//     ll prio;
+//     int bid;
+
+//     LeftBlock(){}
+//     LeftBlock(int ibid=-1){
+//         prio=mt();
+//         bid=ibid;
+//     }
+
+//     bool operator<(const LeftBlock &in) const{
+// 		return prio!=in.prio ? prio<in.prio : bid<in.bid;
+// 	};
+// };
+
 struct Field{
     int type;
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
@@ -219,6 +234,7 @@ struct Field{
     set<Space> spaces;
     set<Space> extends;
     set<int> dup_ext;
+    // set<LeftBlock> left_blocks;
 
     Field(){}
     Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
@@ -286,6 +302,8 @@ struct Field{
                 // cout<< "add extend" <<endl;
                 // blockの相対位置をつめる
                 extends.insert({npos-blocks[block_id].pos, block_id});
+                // left_blocks.insert(block_id);
+                // cout<< "gen: " << block_id <<endl;
             }
         }
     }
@@ -341,7 +359,7 @@ struct Field{
                 // auto block_itr=blocks.find({block_id, 0, {0, 0, 0}});
                 f1_add_ext(id, pos);
             }
-            // cout<< "blocks.push_back({id, type, pos});" <<endl;
+            // cout<< "extend: " << id <<endl;
             return true;
         }
         return false;
@@ -409,6 +427,11 @@ struct Field{
         assert(val[npos.x][npos.y][npos.z]==0);
         val[npos.x][npos.y][npos.z]=block_id;
         f1_add_ext(block_id, npos);
+    }
+    void del_block(){
+        auto itr=blocks;
+        // make_spaces();
+        // blocks
     }
     int fail_fill(int &id){
         int cnt=0;
@@ -516,6 +539,13 @@ struct Puzzle{
         }
         // cout<< "extend!" <<endl;
         return true;
+    }
+    void del_block(){
+        // int idx=f1.blocks.begin();
+        // space追加
+        // extend追加
+        // block削除
+        
     }
     void fail_fill(){
         pena=f1.fail_fill(idx)+f2.fail_fill(idx);
@@ -649,48 +679,21 @@ int main(int argc, char* argv[]){
         if (delta > TIME_LIMIT) break;
 
         Puzzle puzzle;
+        puzzle.shuffle_set();
+        int mul=sqrt(mt()%50)/3*D+1;
+        int streak=0;
+        int mib=1000;
         rep3(i, 1000, 1){
             // cout<< "i: " << i <<endl;
-            bool success_create=false;
-            bool fill_ok=false;
-            // cout<< i <<endl;
-            int set_return=puzzle.shuffle_set();
-            if(set_return==3){
-                success_create=true;
-            }else if(set_return!=0){
-                // cout<< "miss" <<endl;
-                // puzzle.fail_fill();
-                if(puzzle.check_complete()){
-                    // cout<< "fill1" <<endl;
-                    fill_ok=true;
-                }else{
-                    // puzzle.print_ans();
-                    // exit(0);
-                    // cout<< "fail1" <<endl;
-                    break;
-                }
+            if(mt()%D==0){
+                if(mib<puzzle.f1.blocks.size()) break;
+                if(puzzle.shuffle_set()!=3) break;
+            }else{
+                if(!puzzle.shuffle_extend()) streak++;
+                if(streak>D*2) break;
             }
-            // if(success_create) cout<< "set" <<endl;
-            // cout<< i <<endl;
-            // cout<< "bext: " << puzzle.f1.extends.size() <<endl;
-            if(!fill_ok){
-                rep(j, mt()%(lp%(D*D)+1)){
-                    // cout<< "j: " << j <<endl;
-                    if(puzzle.shuffle_extend()) success_create=true;
-                }
-                // cout<< "aext: " << puzzle.f1.extends.size() <<endl;
-                if(success_create==false){
-                    puzzle.fail_fill();
-                    if(puzzle.check_complete()){
-                        // cout<< "fill2" <<endl;
-                        fill_ok=true;
-                    }else{
-                        // cout<< "fail2" <<endl;
-                        break;
-                    }
-                }
-            }
-            if(fill_ok || puzzle.check_complete()){
+
+            if(puzzle.check_complete()){
                 // puzzle.print_ans();
                 // rep(j, D*D) puzzle.shuffle_extend();
                 if(!created){
@@ -700,6 +703,7 @@ int main(int argc, char* argv[]){
                 }else{
                     ll score=puzzle.calc_score();
                     if(score<best_score){
+                        mib=min(mib, int(puzzle.f1.blocks.size()));
                         best_score=score;
                         best=puzzle;
                         // cout<< "lp: " << lp SP << best_score <<endl;
