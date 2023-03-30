@@ -23,7 +23,8 @@ int icos[]={1, 0, -1, 0};
 int isin[]={0, 1, 0, -1};
 
 //焼きなましの定数
-double TIME_LIMIT=5900.0;
+// double TIME_LIMIT=5900.0;
+double TIME_LIMIT=190.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
 
@@ -184,7 +185,8 @@ matrix get_rot(int rx, int ry, int rz){
 struct Blocks{
     int id;
     int type;
-    matrix rot, rotinv;
+    matrix rot;
+    // matrix rotinv;
     Pos pos;
     vector<Pos> cubes;
 
@@ -200,10 +202,10 @@ struct Blocks{
             rx=(4-rx)%4;
             ry=(4-ry)%4;
             rz=(4-rz)%4;
-            rotinv=get_rot(rx, ry, rz);
+            // rotinv=get_rot(rx, ry, rz);
         }else{
-            rot=get_rot(0, 0, 0);
-            rotinv=rot;
+            // rot=get_rot(0, 0, 0);
+            // rotinv=rot;
         }
     }
 
@@ -234,22 +236,33 @@ struct Field{
     set<Space> spaces;
     set<Space> extends;
     set<int> dup_ext;
+    vector<vector<int>> front_count, right_count;
+    int front_remain=0, right_remain=0;
     // set<LeftBlock> left_blocks;
 
     Field(){}
     Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
         type=ftype;
+        // cout<< type <<endl;
         val.resize(D);
         rep(i, D) val[i].resize(D);
         rep(i, D) rep(j, D) val[i][j].resize(D);
+        front_count.resize(D);
+        rep(i, D) front_count[i].resize(D);
+        right_count.resize(D);
+        rep(i, D) right_count[i].resize(D);
 
         rep(i, D){
             rep(j, D){
                 if(sif[i][j]==0){
                     rep(k, D) val[j][k][i]=-1;
+                }else{
+                    front_remain++;
                 }
                 if(sir[i][j]==0){
                     rep(k, D) val[k][j][i]=-1;
+                }else{
+                    right_remain++;
                 }
             }
         }
@@ -263,7 +276,38 @@ struct Field{
             }
         }
     }
+    // Field vector<vector<int>> front_count, right_count を作り、シルエットに対応しているブロックが何個存在するか(0~D)をメモしておく。
+    // Field front_remain, right_remainで埋めたいけど埋められていないシルエット数を求める
+    // fは[x][y][z]=[z][x], rは[x][y][z]=[z][y]
+    void set_val(Pos pos, int value){
+        // cout<< type SP << "set_val: " << value <<endl;
+        // cout<< "pos: ";
+        // pos.print();
+        assert(!pos.is_out_of_bounce());
+        // 変化がないのはおかしい
+        // cout<< val[pos.x][pos.y][pos.z] SP << value <<endl;
+        assert(val[pos.x][pos.y][pos.z]!=value);
+        int effect=1;
+        if(value==0) effect=-1;
+        val[pos.x][pos.y][pos.z]=value;
 
+        front_count[pos.z][pos.x]+=effect;
+        int tmpf=front_count[pos.z][pos.x];
+        assert(tmpf>=0);
+        assert(tmpf<=D);
+        if(tmpf==0) front_remain++;
+        else if(tmpf==1 && value) front_remain--;
+        assert(front_remain>=0);
+
+        right_count[pos.z][pos.y]+=effect;
+        int tmpr=right_count[pos.z][pos.y];
+        assert(tmpr>=0);
+        assert(tmpr<=D);
+        if(tmpr==0) right_remain++;
+        else if(tmpr==1 && value) right_remain--;
+        assert(right_remain>=0);
+        // cout<< "end set_val" <<endl;
+    }
     bool random_set(int id){
         /*rep(i, D*D*D*10){
             int x=mt()%D;
@@ -286,29 +330,27 @@ struct Field{
         return false;
     }
     // 絶対位置を受け取る
-    void f1_add_ext(int block_id, Pos pos){
+    void f1_add_ext(int block_id, Pos pos, bool direct=false){
         // cout<< "f1_add_ext" <<endl;
         assert(type==1);
         rep(i, 6){
-            Pos npos=pos+d6[i];
-            // npos.print();
+            Pos npos;
+            if(direct) npos=pos;
+            else npos=pos+d6[i];
             if(npos.is_out_of_bounce()) continue;
             int ext_id=npos.get_id(block_id);
-            // cout<< ext_id <<endl;
             if(dup_ext.find(ext_id)!=dup_ext.end()) continue;
             dup_ext.insert(ext_id);
-            // cout<< "not Oob" <<endl;
             if(val[npos.x][npos.y][npos.z]==0){
-                // cout<< "add extend" <<endl;
                 // blockの相対位置をつめる
                 extends.insert({npos-blocks[block_id].pos, block_id});
-                // left_blocks.insert(block_id);
+                if(direct) return;
                 // cout<< "gen: " << block_id <<endl;
             }
         }
     }
     bool shuffle_set(int id){
-        // cout<< "shuffle_set" <<endl;
+        // cout<< type SP << "shuffle_set" <<endl;
         // if(spaces.empty()) return false;
         vector<set<Space>::iterator> itrs;
         bool found=false;
@@ -350,7 +392,7 @@ struct Field{
             Space spa=*min_itr;
             Pos pos=spa.pos;
             spaces.erase(min_itr);
-            val[pos.x][pos.y][pos.z]=id;
+            set_val(pos, id);
             blocks[id]=Blocks({id, type, pos});
             // cout<< type SP << "blocks.size() " << blocks.size() <<endl;
             if(type==1){
@@ -405,87 +447,110 @@ struct Field{
     }
     bool f2_is_usable_space(int block_id, Pos ivec){
         // cout<< "f2_is_usable_space" <<endl;
-        // cout<< "sz:id " << blocks.size() SP << block_id-1 <<endl;
+        assert(type==2);
         Pos pos=blocks[block_id].pos;
-        Pos vec=blocks[block_id].rot*ivec;
+        Pos vec;
+        if(type==2) vec=blocks[block_id].rot*ivec;
+        else vec=ivec;
         Pos npos=pos+vec;
         // npos.print();
         if(npos.is_out_of_bounce()) return false;
         if(val[npos.x][npos.y][npos.z]==0){
-            val[npos.x][npos.y][npos.z]=block_id;
+            set_val(npos, block_id);
+            blocks[block_id].cubes.push_back(vec);
             return true;
         }
         return false;
     }
     void f1_add_cube(int block_id, Pos vec){
         // cout<< "f1_add_cube" <<endl;
-        // cout<< "block_id: " << block_id-1 SP << "blocks.sz: " << blocks.size() <<endl;
         blocks[block_id].cubes.push_back(vec);
         Pos npos=blocks[block_id].pos+vec;
         // cout<< block_id SP << "extend f1: ";
         // npos.print();
         assert(val[npos.x][npos.y][npos.z]==0);
-        val[npos.x][npos.y][npos.z]=block_id;
+        set_val(npos, block_id);
         f1_add_ext(block_id, npos);
     }
-    void del_block(){
-        auto itr=blocks;
-        // make_spaces();
-        // blocks
+    void del_block(int block_id){
+        // cout<< "type" << type SP << "del_block" <<endl;
+        vector<Pos> cubes=blocks[block_id].cubes;
+        Pos base=blocks[block_id].pos;
+        // cout<< "cube size: " << cubes.size() <<endl;
+        rep(i, cubes.size()){
+            Pos pos=cubes[i]+base;
+            // init val
+            // assert(val[pos.x][pos.y][pos.z]==block_id);
+            set_val(pos, 0);
+            // add space
+            spaces.insert(pos);
+        }
+        if(type==2) return;
+        rep(i, cubes.size()){
+            Pos pos=cubes[i]+base;
+            rep(j, 6){
+                Pos npos=pos+d6[j];
+                if(npos.is_out_of_bounce()) continue;
+                int value=val[npos.x][npos.y][npos.z];
+                if(value>0){
+                    f1_add_ext(value, pos, true);
+                }
+            }
+        }
     }
     int fail_fill(int &id){
         int cnt=0;
-        rep(i, D){
-            rep(j, D){
-                if(f[type-1][i][j]==1){
-                    int flag=1;
-                    rep(k, D){
-                        if(val[j][k][i]>0){
-                            flag=0;
-                            break;
-                        }
-                    }
-                    if(flag){
-                        rep(k, D){
-                            if(val[j][k][i]==0 && r[type-1][i][j]==1){
-                                id++;
-                                val[j][k][i]=id;
-                                cnt++;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        rep(i, D){
-            rep(j, D){
-                if(r[type-1][i][j]==0){
-                    int flag=1;
-                    rep(k, D){
-                        if(val[k][j][i]>0){
-                            flag=0;
-                            break;
-                        }
-                    }
-                    if(flag){
-                        rep(k, D){
-                            if(val[k][j][i]==0 && f[type-1][i][j]==1){
-                                id++;
-                                val[k][j][i]=id;
-                                cnt++;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        // rep(i, D){
+        //     rep(j, D){
+        //         if(f[type-1][i][j]==1){
+        //             int flag=1;
+        //             rep(k, D){
+        //                 if(val[j][k][i]>0){
+        //                     flag=0;
+        //                     break;
+        //                 }
+        //             }
+        //             if(flag){
+        //                 rep(k, D){
+        //                     if(val[j][k][i]==0 && r[type-1][i][j]==1){
+        //                         id++;
+        //                         val[j][k][i]=id;
+        //                         cnt++;
+        //                         break;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // rep(i, D){
+        //     rep(j, D){
+        //         if(r[type-1][i][j]==0){
+        //             int flag=1;
+        //             rep(k, D){
+        //                 if(val[k][j][i]>0){
+        //                     flag=0;
+        //                     break;
+        //                 }
+        //             }
+        //             if(flag){
+        //                 rep(k, D){
+        //                     if(val[k][j][i]==0 && f[type-1][i][j]==1){
+        //                         id++;
+        //                         val[k][j][i]=id;
+        //                         cnt++;
+        //                         break;
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
         return cnt;
     }
-    void print_val(){
+    void print_val(int dif){
         rep(i, D) rep(j, D) rep(k, D){
-            if(val[i][j][k]==-1) cout<< "0 ";
+            if(val[i][j][k]<=0) cout<< "0 ";
             else cout<< val[i][j][k] SP;
         }
         cout<<endl;
@@ -502,13 +567,13 @@ struct Puzzle{
         idx++;
         return (f1.random_set(idx) && f2.random_set(idx));
     }
-    int shuffle_set(){
+    bool shuffle_set(){
         // cout<< "shuffle_set" <<endl;
         idx++;
         bool b1=f1.shuffle_set(idx);
         bool b2=f2.shuffle_set(idx);
         // cout<< "b1b2: " << b1 << b2 <<endl;
-        return (b1*2+b2);
+        return (b1 && b2);
     }
     bool random_extend(){
         // cout<< "random_extend" <<endl;
@@ -541,104 +606,117 @@ struct Puzzle{
         return true;
     }
     void del_block(){
-        // int idx=f1.blocks.begin();
-        // space追加
-        // extend追加
-        // block削除
-        
+        int id=(*f1.blocks.begin()).first;
+        // cout<< "!delete: " << id <<endl;
+        f1.del_block(id);
+        f2.del_block(id);
+        f1.blocks.erase(id);
+        f2.blocks.erase(id);
     }
     void fail_fill(){
         pena=f1.fail_fill(idx)+f2.fail_fill(idx);
         // cout<< pena <<endl;
     }
     bool check_complete(){
-        rep(i, D){
-            rep(j, D){
-                if(f[0][i][j]==0){
-                    rep(k, D){
-                        if(f1.val[j][k][i]>0) return false;
-                    }
-                }else{
-                    int flag=1;
-                    rep(k, D){
-                        if(f1.val[j][k][i]>0){
-                            flag=0;
-                            break;
-                        }
-                    }
-                    if(flag) return false;
-                }
-            }
-        }
-        rep(i, D){
-            rep(j, D){
-                if(f[1][i][j]==0){
-                    rep(k, D){
-                        if(f2.val[j][k][i]>0) return false;
-                    }
-                }else{
-                    int flag=1;
-                    rep(k, D){
-                        if(f2.val[j][k][i]>0){
-                            flag=0;
-                            break;
-                        }
-                    }
-                    if(flag) return false;
-                }
-            }
-        }
-        rep(i, D){
-            rep(j, D){
-                if(r[0][i][j]==0){
-                    rep(k, D){
-                        if(f1.val[k][j][i]>0) return false;
-                    }
-                }else{
-                    int flag=1;
-                    rep(k, D){
-                        if(f1.val[k][j][i]>0){
-                            flag=0;
-                            break;
-                        }
-                    }
-                    if(flag) return false;
-                }
-            }
-        }
-        rep(i, D){
-            rep(j, D){
-                if(r[1][i][j]==0){
-                    rep(k, D){
-                        if(f2.val[k][j][i]>0) return false;
-                    }
-                }else{
-                    int flag=1;
-                    rep(k, D){
-                        if(f2.val[k][j][i]>0){
-                            flag=0;
-                            break;
-                        }
-                    }
-                    if(flag) return false;
-                }
-            }
-        }
+        // cout<< f1.front_remain SP << f1.right_remain SP << f2.front_remain SP << f2.right_remain <<endl;
+        return (!f1.front_remain && !f1.right_remain && !f2.front_remain && !f2.right_remain);
+        // rep(i, D){
+        //     rep(j, D){
+        //         if(f[0][i][j]==0){
+        //             rep(k, D){
+        //                 if(f1.val[j][k][i]>0) return false;
+        //             }
+        //         }else{
+        //             int flag=1;
+        //             rep(k, D){
+        //                 if(f1.val[j][k][i]>0){
+        //                     flag=0;
+        //                     break;
+        //                 }
+        //             }
+        //             if(flag) return false;
+        //         }
+        //     }
+        // }
+        // rep(i, D){
+        //     rep(j, D){
+        //         if(f[1][i][j]==0){
+        //             rep(k, D){
+        //                 if(f2.val[j][k][i]>0) return false;
+        //             }
+        //         }else{
+        //             int flag=1;
+        //             rep(k, D){
+        //                 if(f2.val[j][k][i]>0){
+        //                     flag=0;
+        //                     break;
+        //                 }
+        //             }
+        //             if(flag) return false;
+        //         }
+        //     }
+        // }
+        // rep(i, D){
+        //     rep(j, D){
+        //         if(r[0][i][j]==0){
+        //             rep(k, D){
+        //                 if(f1.val[k][j][i]>0) return false;
+        //             }
+        //         }else{
+        //             int flag=1;
+        //             rep(k, D){
+        //                 if(f1.val[k][j][i]>0){
+        //                     flag=0;
+        //                     break;
+        //                 }
+        //             }
+        //             if(flag) return false;
+        //         }
+        //     }
+        // }
+        // rep(i, D){
+        //     rep(j, D){
+        //         if(r[1][i][j]==0){
+        //             rep(k, D){
+        //                 if(f2.val[k][j][i]>0) return false;
+        //             }
+        //         }else{
+        //             int flag=1;
+        //             rep(k, D){
+        //                 if(f2.val[k][j][i]>0){
+        //                     flag=0;
+        //                     break;
+        //                 }
+        //             }
+        //             if(flag) return false;
+        //         }
+        //     }
+        // }
         return true;
     }
     ll calc_score(){
         double base=1000000000.0;
         double sig=0.0;
+        // cout<< f1.blocks.size() <<endl;
         for(auto itr=f1.blocks.begin();itr!=f1.blocks.end();itr++){
+            // cout<< (*itr).first SP;
             sig+=1.0/(*itr).second.cubes.size();
         }
+        // cout<< endl;
         ll rtn=round(base*sig)+pena;
         return rtn;
     }
     void print_ans(){
+        int mi=999;
+        rep(i, D) rep(j, D) rep(k, D){
+            if(f1.val[i][j][k]>0){
+                mi=min(mi, f1.val[i][j][k]);
+            }
+        }
         cout<< idx <<endl;
-        f1.print_val();
-        f2.print_val();
+        // cout<< idx-mi <<endl;
+        f1.print_val(mi);
+        f2.print_val(mi);
     }
 };
 
@@ -666,52 +744,48 @@ int main(int argc, char* argv[]){
 
     init();
     // get_argv(argc, argv);
-    bool created=false;
     ll best_score=lmax;
     Puzzle best;
     int lp=0;
+
+    Puzzle puzzle;
+    puzzle.shuffle_set();
+    int mul=sqrt(mt()%50)/3*D+1;
+    int mib=1000;
+    bool no_shuffle=false;
+
     while (true){
         lp++;
-        // if(lp>1) break;
+        // if(lp>300) break;
         // if(lp%1==0) cout<< "lp: " << lp <<endl;
         current = chrono::system_clock::now(); // 現在時刻
         double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
         if (delta > TIME_LIMIT) break;
-
-        Puzzle puzzle;
-        puzzle.shuffle_set();
-        int mul=sqrt(mt()%50)/3*D+1;
-        int streak=0;
-        int mib=1000;
-        rep3(i, 1000, 1){
-            // cout<< "i: " << i <<endl;
-            if(mt()%D==0){
-                if(mib<puzzle.f1.blocks.size()) break;
-                if(puzzle.shuffle_set()!=3) break;
-            }else{
-                if(!puzzle.shuffle_extend()) streak++;
-                if(streak>D*2) break;
+        // cout<< "i: " << i <<endl;
+        if(no_shuffle || mt()%D==0){
+            // if(mib<puzzle.f1.blocks.size()) break;
+            if(!puzzle.shuffle_set()){
+                puzzle.del_block();
+                // break;
             }
+            no_shuffle=false;
+        }else{
+            if(!puzzle.shuffle_extend()) no_shuffle=true;
+        }
 
-            if(puzzle.check_complete()){
+        if(puzzle.check_complete()){
+            // puzzle.print_ans();
+            while(puzzle.shuffle_extend()){}
+            ll score=puzzle.calc_score();
+            // cout<< "lp: " << lp SP << score <<endl;
+            if(score<best_score){
+                mib=min(mib, int(puzzle.f1.blocks.size()));
+                best_score=score;
+                best=puzzle;
+                // cout<< "lp: " << lp SP << best_score <<endl;
                 // puzzle.print_ans();
-                // rep(j, D*D) puzzle.shuffle_extend();
-                if(!created){
-                    best=puzzle;
-                    created=true;
-                    // cout<< "lp: " << lp SP << best_score <<endl;
-                }else{
-                    ll score=puzzle.calc_score();
-                    if(score<best_score){
-                        mib=min(mib, int(puzzle.f1.blocks.size()));
-                        best_score=score;
-                        best=puzzle;
-                        // cout<< "lp: " << lp SP << best_score <<endl;
-                        // puzzle.print_ans();
-                    }
-                }
-                break;
             }
+        // break;
         }
     }
 
