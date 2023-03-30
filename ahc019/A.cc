@@ -23,8 +23,8 @@ int icos[]={1, 0, -1, 0};
 int isin[]={0, 1, 0, -1};
 
 //焼きなましの定数
-// double TIME_LIMIT=5900.0;
-double TIME_LIMIT=190.0;
+double TIME_LIMIT=5900.0;
+// double TIME_LIMIT=190.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
 
@@ -309,7 +309,7 @@ struct Field{
         // cout<< "end set_val" <<endl;
     }
     bool random_set(int id){
-        /*rep(i, D*D*D*10){
+        rep(i, D*D*D*10){
             int x=mt()%D;
             int y=mt()%D;
             int z=mt()%D;
@@ -323,10 +323,10 @@ struct Field{
                 dup=dup1+dup2;
                 if(dup*D*D*D>i) continue;
                 val[x][y][z]=id;
-                blocks.insert({id, type, {x, y, z}});
+                blocks[id]={id, type, {x, y, z}};
                 return true;
             }
-        }*/
+        }
         return false;
     }
     // 絶対位置を受け取る
@@ -358,6 +358,7 @@ struct Field{
             Space spa=*itr;
             Pos pos=spa.pos;
             // assert(!pos.is_out_of_bounce());
+            if(front_count[pos.z][pos.x] && right_count[pos.z][pos.y]) continue;
             if(val[pos.x][pos.y][pos.z]!=0){
                 itr=spaces.erase(itr);
                 if(spaces.empty()) break;
@@ -620,79 +621,87 @@ struct Puzzle{
     bool check_complete(){
         // cout<< f1.front_remain SP << f1.right_remain SP << f2.front_remain SP << f2.right_remain <<endl;
         return (!f1.front_remain && !f1.right_remain && !f2.front_remain && !f2.right_remain);
-        // rep(i, D){
-        //     rep(j, D){
-        //         if(f[0][i][j]==0){
-        //             rep(k, D){
-        //                 if(f1.val[j][k][i]>0) return false;
-        //             }
-        //         }else{
-        //             int flag=1;
-        //             rep(k, D){
-        //                 if(f1.val[j][k][i]>0){
-        //                     flag=0;
-        //                     break;
-        //                 }
-        //             }
-        //             if(flag) return false;
-        //         }
-        //     }
-        // }
-        // rep(i, D){
-        //     rep(j, D){
-        //         if(f[1][i][j]==0){
-        //             rep(k, D){
-        //                 if(f2.val[j][k][i]>0) return false;
-        //             }
-        //         }else{
-        //             int flag=1;
-        //             rep(k, D){
-        //                 if(f2.val[j][k][i]>0){
-        //                     flag=0;
-        //                     break;
-        //                 }
-        //             }
-        //             if(flag) return false;
-        //         }
-        //     }
-        // }
-        // rep(i, D){
-        //     rep(j, D){
-        //         if(r[0][i][j]==0){
-        //             rep(k, D){
-        //                 if(f1.val[k][j][i]>0) return false;
-        //             }
-        //         }else{
-        //             int flag=1;
-        //             rep(k, D){
-        //                 if(f1.val[k][j][i]>0){
-        //                     flag=0;
-        //                     break;
-        //                 }
-        //             }
-        //             if(flag) return false;
-        //         }
-        //     }
-        // }
-        // rep(i, D){
-        //     rep(j, D){
-        //         if(r[1][i][j]==0){
-        //             rep(k, D){
-        //                 if(f2.val[k][j][i]>0) return false;
-        //             }
-        //         }else{
-        //             int flag=1;
-        //             rep(k, D){
-        //                 if(f2.val[k][j][i]>0){
-        //                     flag=0;
-        //                     break;
-        //                 }
-        //             }
-        //             if(flag) return false;
-        //         }
-        //     }
-        // }
+    }
+    bool simple_check_complete(){
+        rep(i, D){
+            rep(j, D){
+                if(f[0][i][j]==0){
+                    rep(k, D){
+                        if(f1.val[j][k][i]>0) return false;
+                    }
+                }else{
+                    int flag=1;
+                    rep(k, D){
+                        if(f1.val[j][k][i]>0){
+                            flag=0;
+                            break;
+                        }
+                    }
+                    if(flag) return false;
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(f[1][i][j]==0){
+                    rep(k, D){
+                        if(f2.val[j][k][i]>0) return false;
+                    }
+                }else{
+                    int flag=1;
+                    rep(k, D){
+                        if(f2.val[j][k][i]>0){
+                            flag=0;
+                            break;
+                        }
+                    }
+                    if(flag) return false;
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(r[0][i][j]==0){
+                    rep(k, D){
+                        if(f1.val[k][j][i]>0) return false;
+                    }
+                }else{
+                    int flag=1;
+                    rep(k, D){
+                        if(f1.val[k][j][i]>0){
+                            flag=0;
+                            break;
+                        }
+                    }
+                    if(flag) return false;
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                if(r[1][i][j]==0){
+                    rep(k, D){
+                        if(f2.val[k][j][i]>0) return false;
+                    }
+                }else{
+                    int flag=1;
+                    rep(k, D){
+                        if(f2.val[k][j][i]>0){
+                            flag=0;
+                            break;
+                        }
+                    }
+                    if(flag) return false;
+                }
+            }
+        }
         return true;
+    }
+    void init_best(){
+        rep3(i, 3000, 1){
+            random_set();
+            if(simple_check_complete()) return;
+        }
     }
     ll calc_score(){
         double base=1000000000.0;
@@ -745,47 +754,55 @@ int main(int argc, char* argv[]){
     init();
     // get_argv(argc, argv);
     ll best_score=lmax;
-    Puzzle best;
     int lp=0;
 
-    Puzzle puzzle;
+    Puzzle puzzle, best;
     puzzle.shuffle_set();
+    best.init_best();
     int mul=sqrt(mt()%50)/3*D+1;
     int mib=1000;
     bool no_shuffle=false;
 
     while (true){
         lp++;
-        // if(lp>300) break;
+        // if(lp>1) break;
         // if(lp%1==0) cout<< "lp: " << lp <<endl;
         current = chrono::system_clock::now(); // 現在時刻
         double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
         if (delta > TIME_LIMIT) break;
-        // cout<< "i: " << i <<endl;
-        if(no_shuffle || mt()%D==0){
-            // if(mib<puzzle.f1.blocks.size()) break;
-            if(!puzzle.shuffle_set()){
-                puzzle.del_block();
+ 
+        Puzzle puzzle;
+        puzzle.shuffle_set();
+        int mul=sqrt(mt()%50)/3*D+1;
+        int mib=1000;
+        bool no_shuffle=false;
+        rep3(i, 1000, 1){
+            // cout<< "i: " << i <<endl;
+            if(no_shuffle || mt()%mul==0){
+                if(mib<puzzle.f1.blocks.size()) break;
+                if(!puzzle.shuffle_set()){
+                    // puzzle.del_block();
+                    break;
+                }
+                no_shuffle=false;
+            }else{
+                if(!puzzle.shuffle_extend()) no_shuffle=true;
+            }
+ 
+            if(puzzle.check_complete()){
+                // puzzle.print_ans();
+                while(puzzle.shuffle_extend()){}
+                ll score=puzzle.calc_score();
+                // cout<< "lp: " << lp SP << score <<endl;
+                if(score<best_score){
+                    mib=min(mib, int(puzzle.f1.blocks.size()));
+                    best_score=score;
+                    best=puzzle;
+                    // cout<< "lp: " << lp SP << best_score <<endl;
+                    // puzzle.print_ans();
+                }
                 // break;
             }
-            no_shuffle=false;
-        }else{
-            if(!puzzle.shuffle_extend()) no_shuffle=true;
-        }
-
-        if(puzzle.check_complete()){
-            // puzzle.print_ans();
-            while(puzzle.shuffle_extend()){}
-            ll score=puzzle.calc_score();
-            // cout<< "lp: " << lp SP << score <<endl;
-            if(score<best_score){
-                mib=min(mib, int(puzzle.f1.blocks.size()));
-                best_score=score;
-                best=puzzle;
-                // cout<< "lp: " << lp SP << best_score <<endl;
-                // puzzle.print_ans();
-            }
-        // break;
         }
     }
 
