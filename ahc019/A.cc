@@ -197,11 +197,16 @@ struct Blocks{
         pos=ipos;
         cubes.push_back({0, 0, 0});
         if(type==2){
-            int rx=mt()%4, ry=mt()%4, rz=mt()%4;
+            int rnd=mt();
+            int rx=(rnd&3);
+            rnd=(rnd>>3);
+            int ry=(rnd&3);
+            rnd=(rnd>>3);
+            int rz=(rnd&3);
             rot=get_rot(rx, ry, rz);
-            rx=(4-rx)%4;
-            ry=(4-ry)%4;
-            rz=(4-rz)%4;
+            // rx=(4-rx)%4;
+            // ry=(4-ry)%4;
+            // rz=(4-rz)%4;
             // rotinv=get_rot(rx, ry, rz);
         }else{
             // rot=get_rot(0, 0, 0);
@@ -210,7 +215,7 @@ struct Blocks{
     }
 
     bool operator<(const Blocks &in) const{
-		return id<in.id;
+		return cubes.size()<in.cubes.size();
 	};
 };
 
@@ -283,29 +288,29 @@ struct Field{
         // cout<< type SP << "set_val: " << value <<endl;
         // cout<< "pos: ";
         // pos.print();
-        assert(!pos.is_out_of_bounce());
+        // assert(!pos.is_out_of_bounce());
         // 変化がないのはおかしい
         // cout<< val[pos.x][pos.y][pos.z] SP << value <<endl;
-        assert(val[pos.x][pos.y][pos.z]!=value);
+        // assert(val[pos.x][pos.y][pos.z]!=value);
         int effect=1;
         if(value==0) effect=-1;
         val[pos.x][pos.y][pos.z]=value;
 
         front_count[pos.z][pos.x]+=effect;
         int tmpf=front_count[pos.z][pos.x];
-        assert(tmpf>=0);
-        assert(tmpf<=D);
+        // assert(tmpf>=0);
+        // assert(tmpf<=D);
         if(tmpf==0) front_remain++;
         else if(tmpf==1 && value) front_remain--;
-        assert(front_remain>=0);
+        // assert(front_remain>=0);
 
         right_count[pos.z][pos.y]+=effect;
         int tmpr=right_count[pos.z][pos.y];
-        assert(tmpr>=0);
-        assert(tmpr<=D);
+        // assert(tmpr>=0);
+        // assert(tmpr<=D);
         if(tmpr==0) right_remain++;
         else if(tmpr==1 && value) right_remain--;
-        assert(right_remain>=0);
+        // assert(right_remain>=0);
         // cout<< "end set_val" <<endl;
     }
     bool random_set(int id){
@@ -332,7 +337,7 @@ struct Field{
     // 絶対位置を受け取る
     void f1_add_ext(int block_id, Pos pos, bool direct=false){
         // cout<< "f1_add_ext" <<endl;
-        assert(type==1);
+        // assert(type==1);
         rep(i, 6){
             Pos npos;
             if(direct) npos=pos;
@@ -358,12 +363,12 @@ struct Field{
             Space spa=*itr;
             Pos pos=spa.pos;
             // assert(!pos.is_out_of_bounce());
-            if(front_count[pos.z][pos.x] && right_count[pos.z][pos.y]) continue;
             if(val[pos.x][pos.y][pos.z]!=0){
                 itr=spaces.erase(itr);
                 if(spaces.empty()) break;
                 continue;
             }
+            if(front_count[pos.z][pos.x] && right_count[pos.z][pos.y]) continue;
             // pos.print();
             itrs.push_back(itr);
             if(itrs.size()>=5) break;
@@ -409,12 +414,13 @@ struct Field{
     }
     Space f1_fetch_extend(){
         // cout<< "f1_fetch_extend" <<endl;
-        assert(type==1);
+        // assert(type==1);
         while(!extends.empty()){
             Space space=*extends.begin();
             Pos abpos=space.pos+blocks[space.bid].pos;
             // abpos.print();
             extends.erase(extends.begin());
+            // if(front_count[abpos.z][abpos.x] && right_count[abpos.z][abpos.y]) continue;
             if(val[abpos.x][abpos.y][abpos.z]==0) return space;
         }
         return {{-9999, 0, 0}};
@@ -448,7 +454,7 @@ struct Field{
     }
     bool f2_is_usable_space(int block_id, Pos ivec){
         // cout<< "f2_is_usable_space" <<endl;
-        assert(type==2);
+        // assert(type==2);
         Pos pos=blocks[block_id].pos;
         Pos vec;
         if(type==2) vec=blocks[block_id].rot*ivec;
@@ -457,6 +463,7 @@ struct Field{
         // npos.print();
         if(npos.is_out_of_bounce()) return false;
         if(val[npos.x][npos.y][npos.z]==0){
+            // if(front_count[pos.z][pos.x] && right_count[pos.z][pos.y]) false;
             set_val(npos, block_id);
             blocks[block_id].cubes.push_back(vec);
             return true;
@@ -469,7 +476,7 @@ struct Field{
         Pos npos=blocks[block_id].pos+vec;
         // cout<< block_id SP << "extend f1: ";
         // npos.print();
-        assert(val[npos.x][npos.y][npos.z]==0);
+        // assert(val[npos.x][npos.y][npos.z]==0);
         set_val(npos, block_id);
         f1_add_ext(block_id, npos);
     }
@@ -700,8 +707,9 @@ struct Puzzle{
     void init_best(){
         rep3(i, 3000, 1){
             random_set();
-            if(simple_check_complete()) return;
+            if(simple_check_complete()) break;
         }
+        // while(shuffle_extend()){}
     }
     ll calc_score(){
         double base=1000000000.0;
@@ -756,8 +764,7 @@ int main(int argc, char* argv[]){
     ll best_score=lmax;
     int lp=0;
 
-    Puzzle puzzle, best;
-    puzzle.shuffle_set();
+    Puzzle best;
     best.init_best();
     int mul=sqrt(mt()%50)/3*D+1;
     int mib=1000;
@@ -766,10 +773,11 @@ int main(int argc, char* argv[]){
     while (true){
         lp++;
         // if(lp>1) break;
-        // if(lp%1==0) cout<< "lp: " << lp <<endl;
-        current = chrono::system_clock::now(); // 現在時刻
-        double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
-        if (delta > TIME_LIMIT) break;
+        if(!(lp&127)){
+            current = chrono::system_clock::now(); // 現在時刻
+            double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+            if (delta > TIME_LIMIT) break;
+        }
  
         Puzzle puzzle;
         puzzle.shuffle_set();
