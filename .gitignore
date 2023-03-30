@@ -7,3 +7,4 @@ Cargo.lock
 Cargo.toml
 target
 external*
+test.txt
