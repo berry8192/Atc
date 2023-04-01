@@ -29,8 +29,8 @@ double start_temp=10000000.0;
 double end_temp=10000.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed=1;
+auto seed=(unsigned)time(NULL);
+// int seed=1;
 mt19937 mt(seed);
 
 template <class T> void PV(T pvv) {
@@ -97,9 +97,9 @@ struct Pos{
         }
         return false;
     }
-    int get_id(int id){
+    int get_id(){
         // print();
-        return 3375*id+225*x+15*y+z;
+        return D*D*x+D*y+z;
     }
     void print(){
         cout<< "(" << x << ", " << y << ", " << z << ")" <<endl;
@@ -219,6 +219,41 @@ struct Blocks{
 	};
 };
 
+struct UnionFind {
+    vector<int> par; // par[i]:iの親の番号　(例) par[3] = 2 : 3の親が2
+    vector<int> siz; // siz[i]:iの属する木に含まれる点の数
+    int max_size=0;
+
+    UnionFind(){}
+    UnionFind(int N) : par(N) { //最初は全てが根であるとして初期化
+        for(int i = 0; i < N; i++) par[i] = i;
+        siz.resize(par.size(), 1); 
+    }
+
+    void add_v(){
+        int sz=par.size();
+        par.push_back(sz);
+    }
+    int root(int x) { // データxが属する木の根を再帰で得る：root(x) = {xの木の根}
+        if (par[x] == x) return x;
+        return par[x] = root(par[x]);
+    }
+    void unite(int x, int y) { // xとyの木を併合
+        int rx = root(x); //xの根をrx
+        int ry = root(y); //yの根をry
+        if (rx == ry) return; //xとyの根が同じ(=同じ木にある)時はそのまま
+        if(siz[rx]<siz[ry]) swap(rx,ry);
+        par[ry] = rx; //xとyの根が同じでない(=同じ木にない)時：xの根rxをyの根ryにつける
+		siz[rx]+=siz[ry]; //根で管理
+        max_size=max(max_size, siz[rx]);
+    }
+    bool same(int x, int y) { // 2つのデータx, yが属する木が同じならtrueを返す
+        int rx = root(x);
+        int ry = root(y);
+        return rx == ry;
+    }
+};
+
 struct Field{
     int type;
     vector<vector<vector<int>>> val; //-1のときNG、0のとき空、それ以外block
@@ -226,7 +261,7 @@ struct Field{
     set<Space> spaces;
     vector<vector<int>> front_count, right_count;
     int front_remain=0, right_remain=0;
-    // set<LeftBlock> left_blocks;
+    UnionFind uf;
 
     Field(){}
     Field(int ftype, vector<vector<int>> sif, vector<vector<int>> sir){
@@ -239,6 +274,7 @@ struct Field{
         rep(i, D) front_count[i].resize(D);
         right_count.resize(D);
         rep(i, D) right_count[i].resize(D);
+        uf=UnionFind(D*D*D);
 
         rep(i, D){
             rep(j, D){
@@ -304,6 +340,12 @@ struct Field{
         Pos pos=spa.pos;
         spaces.erase(itr);
         set_val(pos, id);
+        uf.add_v();
+        rep(j, 6){
+            Pos npos=pos+d6[j];
+            if(npos.is_out_of_bounce()) continue;
+            if(val[npos.x][npos.y][npos.z]==-2) uf.unite(pos.get_id(), npos.get_id());
+        }
         // blocks[id]=Blocks({id, type, pos});
         return true;
     }
@@ -321,6 +363,35 @@ struct Field{
             }
         }
         return false;
+    }
+    void make_cube(int fig){
+        cout<< "make_cube " << fig <<endl;
+        set<Space> list;
+        rep(i, fig){
+            Pos pos=blocks[i].pos;
+            rep(j, 6){
+                Pos npos=pos+d6[j];
+                if(npos.is_out_of_bounce()) continue;
+                if(val[npos.x][npos.y][npos.z]==-2) list.insert({npos, i+1});
+            }
+        }
+        while(!list.empty()){
+            Space space=*list.begin();
+            cout<< "prio: " << space.prio <<endl;
+            list.erase(list.begin());
+            Pos pos=space.pos;
+            pos.print();
+            if(val[pos.x][pos.y][pos.z]==-2){
+                val[pos.x][pos.y][pos.z]=space.bid;
+                rep(j, 6){
+                    Pos npos=pos+d6[j];
+                    if(npos.is_out_of_bounce()) continue;
+                    if(val[npos.x][npos.y][npos.z]==-2){
+                        list.insert({npos, space.bid});
+                    }
+                }
+            }
+        }
     }
     void remap_blocks(){
         // cout<< "remap_blocks " << blocks.size() <<endl;
@@ -349,8 +420,12 @@ struct Puzzle{
     int idx=0;
 
     void init_block_list(){
-        while(f1.front_remain || f1.right_remain){
-            f1.shuffle_set(-2);
+        int cnt=0;
+        while(f1.front_remain || f1.right_remain || f1.uf.max_size!=cnt){
+            cout<< f1.uf.max_size SP << cnt <<endl;
+            cnt++;
+            if(!f1.shuffle_set(-2)) exit(0);
+            if(cnt==100) exit(0);
         }
     }
     void make_block(int fig){
@@ -359,6 +434,9 @@ struct Puzzle{
             idx++;
             f1.make_block(idx);
         }
+    }
+    void make_cube(int fig){
+        f1.make_cube(fig);
     }
     void remap_blocks(int type=-1){
         if(type!=1) f2.remap_blocks();
@@ -433,11 +511,13 @@ int main(int argc, char* argv[]){
  
         Puzzle puzzle;
         puzzle.init_block_list();
-        // cout<< "puzzle.init_block_list();" <<endl;
-        puzzle.make_block(D);
-        // cout<< "puzzle.make_block(D);" <<endl;
+        cout<< "#" <<endl;
+        puzzle.make_block(10);
+        cout<< "#" <<endl;
+        puzzle.make_cube(10);
+        cout<< "#" <<endl;
         puzzle.remap_blocks(1);
-        // cout<< "puzzle.remap_blocks(1);" <<endl;
+        cout<< "#" <<endl;
         puzzle.print_ans();
         return 0;
  
