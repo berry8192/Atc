@@ -863,7 +863,7 @@ int main(int argc, char* argv[]){
 
     Puzzle best;
     best.init_best();
-    Puzzle base=best;
+    best.minimum();
     int mul=sqrt(mt()%50)/3*D+1;
     int mib=1000;
     bool no_shuffle=false;
@@ -876,20 +876,6 @@ int main(int argc, char* argv[]){
             current = chrono::system_clock::now(); // 現在時刻
             delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
             if(delta > TIME_LIMIT) break;
-        }
-        if(mini_mode || (best_score==lmax && delta*1.2 > TIME_LIMIT)){
-            // cout<< "lp: " << lp <<endl;
-            Puzzle puzzle=base;
-            puzzle.minimum();
-            ll score=puzzle.calc_mini();
-            if(score<best_score){
-                best_score=score;
-                best=puzzle;
-                // cout<< "lp: " << lp SP << best_score <<endl;
-                // puzzle.print_ans();
-            }
-            mini_mode=true;
-            continue;
         }
  
         Puzzle puzzle;
@@ -933,4 +919,3 @@ int main(int argc, char* argv[]){
 
     return 0;
 }
-
