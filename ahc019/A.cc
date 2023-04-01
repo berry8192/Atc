@@ -119,7 +119,7 @@ struct Pos{
         return rtn;
     }
 };
-Pos d6[]={{0, 0, 1}, {0, 0, -1}, {0, 1, 0}, {0, -1, 0}, {1, 0, 0}, {-1, 0, 0}};
+Pos d6[]={{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {-1, 0, 0}, {0, -1, 0}, {0, 0, -1}};
 
 struct Space{
     ll prio;
@@ -506,6 +506,75 @@ struct Field{
             }
         }
     }
+    bool merge_blocks(bool dry_run){
+        // cout<< "merge_blocks" <<endl;
+        int p=mt()%(D*D*D);
+        rep(i, D*D*D){
+            p=(p+1)%(D*D*D);
+            int x=p%D;
+            int y=(p/D)%D;
+            int z=(p/(D*D))%D;
+
+            Pos pos={x, y, z};
+            assert(!pos.is_out_of_bounce());
+            // pos.print();
+            if(val[pos.x][pos.y][pos.z]>0){
+                rep(j, 3){
+                    Pos npos=pos+d6[j];
+                    if(!npos.is_out_of_bounce()){
+                        // cout<< "npos: ";
+                        // npos.print();
+                        if(val[npos.x][npos.y][npos.z]>0){
+                            if(dry_run) return true;
+                            val[pos.x][pos.y][pos.z]=val[npos.x][npos.y][npos.z]-10000;
+                            val[npos.x][npos.y][npos.z]-=10000;
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    int fix_number(){
+        // cout<< "fix_number" <<endl;
+        int cnt=0;
+        map<int, int> mp;
+        rep(i, D){
+            rep(j, D){
+                rep(k, D){
+                    if(0<val[i][j][k]){
+                        if(mp[val[i][j][k]]==0){
+                            cnt++;
+                            mp[val[i][j][k]]=cnt;
+                        }
+                    }
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                rep(k, D){
+                    if(val[i][j][k]<-1){
+                        if(mp[val[i][j][k]]==0){
+                            cnt++;
+                            mp[val[i][j][k]]=cnt;
+                        }
+                    }
+                }
+            }
+        }
+        rep(i, D){
+            rep(j, D){
+                rep(k, D){
+                    if(val[i][j][k]<-1 || 0<val[i][j][k]){
+                        val[i][j][k]=mp[val[i][j][k]];
+                    }
+                }
+            }
+        }
+        return cnt;
+    }
     int fail_fill(int &id){
         int cnt=0;
         // rep(i, D){
@@ -711,6 +780,15 @@ struct Puzzle{
         }
         // while(shuffle_extend()){}
     }
+    void minimum(){
+        while(true){
+            if(!f1.merge_blocks(true)) break;
+            if(!f2.merge_blocks(false)) break;
+            f1.merge_blocks(false);
+        }
+        idx=f1.fix_number();
+        f2.fix_number();
+    }
     ll calc_score(){
         double base=1000000000.0;
         double sig=0.0;
@@ -720,6 +798,24 @@ struct Puzzle{
             sig+=1.0/(*itr).second.cubes.size();
         }
         // cout<< endl;
+        ll rtn=round(base*sig)+pena;
+        return rtn;
+    }
+    ll calc_mini(){
+        map<int, double> mp;
+        rep(i, D){
+            rep(j, D){
+                rep(k, D){
+                    if(0<f1.val[i][j][k]) mp[f1.val[i][j][k]]++;
+                }
+            }
+        }
+        double base=1000000000.0;
+        double sig=0.0;
+        for(auto itr=mp.begin();itr!=mp.end();itr++){
+            // cout<< (*itr).first SP;
+            sig+=1.0/(*itr).second;
+        }
         ll rtn=round(base*sig)+pena;
         return rtn;
     }
@@ -757,6 +853,7 @@ void get_argv(int argc, char* argv[]){
 int main(int argc, char* argv[]){
     //開始時間の計測
     std::chrono::system_clock::time_point start, current;
+    double delta;
     start = chrono::system_clock::now();
 
     init();
@@ -766,17 +863,33 @@ int main(int argc, char* argv[]){
 
     Puzzle best;
     best.init_best();
+    Puzzle base=best;
     int mul=sqrt(mt()%50)/3*D+1;
     int mib=1000;
     bool no_shuffle=false;
+    bool mini_mode=false;
 
     while (true){
         lp++;
         // if(lp>1) break;
         if(!(lp&127)){
             current = chrono::system_clock::now(); // 現在時刻
-            double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
-            if (delta > TIME_LIMIT) break;
+            delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+            if(delta > TIME_LIMIT) break;
+        }
+        if(mini_mode || (best_score==lmax && delta*1.2 > TIME_LIMIT)){
+            // cout<< "lp: " << lp <<endl;
+            Puzzle puzzle=base;
+            puzzle.minimum();
+            ll score=puzzle.calc_mini();
+            if(score<best_score){
+                best_score=score;
+                best=puzzle;
+                // cout<< "lp: " << lp SP << best_score <<endl;
+                // puzzle.print_ans();
+            }
+            mini_mode=true;
+            continue;
         }
  
         Puzzle puzzle;
@@ -812,6 +925,7 @@ int main(int argc, char* argv[]){
                 // break;
             }
         }
+        // if(best_score!=lmax) break;
     }
 
     // cout<< "lp: " << lp <<endl;
