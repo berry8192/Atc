@@ -215,7 +215,7 @@ struct Blocks{
     }
 
     bool operator<(const Blocks &in) const{
-		return cubes.size()<in.cubes.size();
+		return id<in.id;
 	};
 };
 
@@ -307,6 +307,34 @@ struct Field{
         // blocks[id]=Blocks({id, type, pos});
         return true;
     }
+    bool make_block(int id){
+        int lp=0;
+        while(lp<10000){
+            lp++;
+            int x=mt()%D;
+            int y=mt()%D;
+            int z=mt()%D;
+            if(val[x][y][z]==-2){
+                blocks.push_back({id, type, {x, y, z}});
+                val[x][y][z]=id;
+                return true;
+            }
+        }
+        return false;
+    }
+    void remap_blocks(){
+        // cout<< "remap_blocks " << blocks.size() <<endl;
+        rep(i, blocks.size()){
+            Pos base=blocks[i].pos;
+            rep(j, blocks[i].cubes.size()){
+                Pos pos=base+blocks[i].cubes[j];
+                // cout<< i SP << j SP;
+                // pos.print();
+                assert(!pos.is_out_of_bounce());
+                val[pos.x][pos.y][pos.z]=blocks[i].id;
+            }
+        }
+    }
     void print_val(){
         rep(i, D) rep(j, D) rep(k, D){
             if(val[i][j][k]==-1) cout<< "0 ";
@@ -320,18 +348,21 @@ struct Puzzle{
     Field f1=Field(1, f[0], r[0]), f2=Field(2, f[1], r[1]);
     int idx=0;
 
-    bool shuffle_set(){
-        // cout<< "shuffle_set" <<endl;
-        idx++;
-        bool b1=f1.shuffle_set(idx);
-        bool b2=f2.shuffle_set(idx);
-        // cout<< "b1b2: " << b1 << b2 <<endl;
-        return (b1 && b2);
-    }
     void init_block_list(){
         while(f1.front_remain || f1.right_remain){
             f1.shuffle_set(-2);
         }
+    }
+    void make_block(int fig){
+        // cout<< "make_block " << fig <<endl;
+        rep(i, fig){
+            idx++;
+            f1.make_block(idx);
+        }
+    }
+    void remap_blocks(int type=-1){
+        if(type!=1) f2.remap_blocks();
+        if(type!=2) f1.remap_blocks();
     }
     bool check_complete(){
         // cout<< f1.front_remain SP << f1.right_remain SP << f2.front_remain SP << f2.right_remain <<endl;
@@ -402,6 +433,11 @@ int main(int argc, char* argv[]){
  
         Puzzle puzzle;
         puzzle.init_block_list();
+        // cout<< "puzzle.init_block_list();" <<endl;
+        puzzle.make_block(D);
+        // cout<< "puzzle.make_block(D);" <<endl;
+        puzzle.remap_blocks(1);
+        // cout<< "puzzle.remap_blocks(1);" <<endl;
         puzzle.print_ans();
         return 0;
  
