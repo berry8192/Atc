@@ -33,10 +33,6 @@ double end_temp=10000.0;
 int seed=1;
 mt19937 mt(seed);
 
-double MUL_SUR=50;
-double DENSITY_DIV=12.0;
-int DENSITY_TYPE=2;
-
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
 	rep(i, pvv.size()-1) cout << pvv[i] SP;
@@ -51,8 +47,6 @@ template <class T> void PS(T ps) {
 //入力
 int D;
 vector<vector<vector<int>>> f, r;
-vector<int> nextto(5);
-int density=0;
 
 void inpt(){
     // cout<< "inpt" <<endl;
@@ -839,34 +833,8 @@ struct Puzzle{
     }
 };
 
-void calc_nextto(vector<vector<int>> vv){
-    rep(i, D){
-        rep(j, D){
-            if(vv[i][j]==0) continue;
-            int cnt=0;
-            rep(k, 4){
-                int x=i+icos[k];
-                int y=j+isin[k];
-                if(0<=x && x<D && 0<=y && y<D && vv[x][y]==1){
-                    cnt++;
-                }
-            }
-            nextto[cnt]++;
-        }
-    }
-}
-void calc_nextto_all(){
-    calc_nextto(f[0]);
-    calc_nextto(f[1]);
-    calc_nextto(r[0]);
-    calc_nextto(r[1]);
-    // PV(nextto);
-    rep(i, 5){
-        if(DENSITY_TYPE==1) density+=i*nextto[i];
-        else if(DENSITY_TYPE==2) density+=i*i*nextto[i];
-        // cout<< density <<endl;
-    }
-}
+// グローバル
+// vector<vector<vector<matrix>>> rot;
 
 void init(){
     inpt();
@@ -880,9 +848,6 @@ void get_argv(int argc, char* argv[]){
         args.push_back(stof(tmp));
         // cout<< args[i-1] <<endl;
     }
-    MUL_SUR=args[0];
-    DENSITY_DIV=args[1];
-    DENSITY_TYPE=args[2];
 }
 
 int main(int argc, char* argv[]){
@@ -893,19 +858,21 @@ int main(int argc, char* argv[]){
 
     init();
     // get_argv(argc, argv);
-    calc_nextto_all();
     ll best_score=lmax;
     int lp=0;
 
-    // cout<< MUL_SUR SP << DENSITY_DIV SP << DENSITY_TYPE <<endl;
     Puzzle best;
     best.init_best();
     best.minimum();
+    int mul=sqrt(mt()%50)/3*D+1;
+    int mib=1000;
+    bool no_shuffle=false;
+    bool mini_mode=false;
 
     while (true){
         lp++;
         // if(lp>1) break;
-        if(!(lp&63)){
+        if(!(lp&127)){
             current = chrono::system_clock::now(); // 現在時刻
             delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
             if(delta > TIME_LIMIT) break;
@@ -913,15 +880,12 @@ int main(int argc, char* argv[]){
  
         Puzzle puzzle;
         puzzle.shuffle_set();
-        int mul=sqrt(mt()%int(MUL_SUR))/3*D+1;
-        mul=int(mul*(1.0*density/(D*D*DENSITY_DIV)))+1;
-        // cout<< density <<endl;
-        // return 0;
+        int mul=sqrt(mt()%50)/3*D+1;
         int mib=1000;
         bool no_shuffle=false;
         rep3(i, 1000, 1){
             // cout<< "i: " << i <<endl;
-            if(no_shuffle || mt()%(mul+i/4)==0){
+            if(no_shuffle || mt()%mul==0){
                 if(mib<puzzle.f1.blocks.size()) break;
                 if(!puzzle.shuffle_set()){
                     // puzzle.del_block();
