@@ -43,6 +43,7 @@ struct Prime{
 		}
 	}
 
+	// 素因数分解
 	map<ll, int> prime_factorization(ll x){
 		map<ll, int> rtn;
 		ll max_prime=prime_number[prime_number.size()-1];
@@ -57,6 +58,26 @@ struct Prime{
 		}
 		if(x!=1) rtn[x]++;
 		return rtn;
+	}
+	// 約数列挙
+	vector<ll> map_divisor_enumeration(map<ll, int> mp){
+		vector<ll> tmp={1}, ad;
+		ll mul;
+		
+		for (auto p : mp) {
+			mul=1;
+			ad.clear();
+			ll key = p.first;
+			int value = p.second;
+			
+			rep(j, value){
+				mul*=key;
+				rep(k, tmp.size()) ad.push_back(tmp[k]*mul);
+			}
+			rep(j, ad.size()) tmp.push_back(ad[j]);
+		}
+		sort(all(tmp));
+		return tmp;
 	}
 };
 
@@ -73,6 +94,8 @@ int main(){
 	PV(prime.prime_number);
 	cout<< "prime_factorization: " << m << endl;
 	PM(prime.prime_factorization(m));
+	cout<< "prime_factorization: " << m << endl;
+	PV(prime.map_divisor_enumeration(prime.prime_factorization(m)));
 
 	return 0;
 }
