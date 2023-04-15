@@ -36,13 +36,18 @@ template <class T>void PVV(T pvv) {
 int main(){
 
 	int n, a, b, p, q;
-	vector<int> aa, bb;
+	vector<int> aa(n+1), bb(n+1);
 
 	cin>> n >> a >> b >> p >> q;
 
-	rep(i, n) cin >> v[i];
-	sort(all(v));
-	PV(v);
+	aa[a]=0;
+	bb[b]=0;
+	rep3(i, n+1, a+1){
+
+	}
+	rep3(i, n+1, b+1){
+
+	}
 
 	rep(i, n) {
 		if (v[i]) ans++;
