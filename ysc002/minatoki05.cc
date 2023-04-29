@@ -168,7 +168,7 @@ int main(){
                 auto itr=travel.tour.begin()+idx;
                 travel.tour.erase(itr);
             }else if(type==3){
-                // ステーション挿入
+                // ステーション移動
                 idx=mt()%M_SIZE+N_SIZE;
                 mov={int(mt()%21-10), int(mt()%21-10)};
                 travel.wp[idx].pos+=mov;
