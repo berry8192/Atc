@@ -18,7 +18,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=985;
+double TIME_LIMIT=9850;
 double start_temp=100.0;
 double end_temp=10.0;
 
@@ -107,6 +107,7 @@ struct Travel{
 //入力など
 int n, m;
 Pos planets[N_SIZE];
+Pos initial_pos[M_SIZE]={{167, 167}, {500, 167}, {834, 167}, {334, 500}, {667, 500}, {167, 834}, {500, 834}, {834, 834}};
 
 void inpt(){
     cin>> n >> m;
@@ -128,7 +129,7 @@ int main(){
 
     Travel base;
     rep(i, N_SIZE) base.wp.push_back({1, planets[i]});
-    rep(i, M_SIZE) base.wp.push_back({2, {int(mt()%1001), int(mt()%1001)}});
+    rep(i, M_SIZE) base.wp.push_back({2, initial_pos[i]});
 
     Travel best=base;
     best.zatsu_ans();
