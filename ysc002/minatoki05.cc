@@ -18,7 +18,7 @@ int imax=2147483647;
 ll lmax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=9850;
+double TIME_LIMIT=985;
 double start_temp=100.0;
 double end_temp=10.0;
 
