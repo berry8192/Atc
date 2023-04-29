@@ -20,7 +20,7 @@ ll lmax=9223372036854775807;
 //焼きなましの定数
 double TIME_LIMIT=985;
 double start_temp=100.0;
-double end_temp=10.0;
+double end_temp=1.0;
 
 //乱数の準備
 // int seed=1;
@@ -43,8 +43,26 @@ struct Pos{
     bool is_oob(){
         return (x<0 || y<0 || 1000<x || 1000<y);
     }
+    void fix_oob(){
+        x=max(0, min(1000, x));
+        y=max(0, min(1000, y));
+    }
     int euclid(Pos p){
-        return (p.x-x)*(p.x-x)+(p.y-y)*(p.y-y);
+        int rtn=0;
+        if(abs(p.x-x)>1000){
+            cout<< x SP << p.x <<endl;
+            // exit(0);
+        }
+        assert(abs(p.x-x)<1000);
+        assert(abs(p.y-y)<1000);
+        rtn+=(p.x-x)*(p.x-x);
+        rtn+=(p.y-y)*(p.y-y);
+        assert(rtn>=0);
+        return rtn;
+        // return (p.x-x)*(p.x-x)+(p.y-y)*(p.y-y);
+    }
+    double angle(Pos p){
+        return atan2(y-p.y, x-p.x);
     }
     void operator+=(const Pos pos){
         x+=pos.x;
@@ -64,16 +82,19 @@ struct WayPoint{
 
     int dist(WayPoint wp){
         int dis=pos.euclid(wp.pos);
+        assert(dis>=0);
         if(t==1) dis*=ALPHA;
         if(wp.t==1) dis*=ALPHA;
+        assert(dis>=0);
         return dis;
     }
 };
 
 struct Travel{
-    Pos stations[M_SIZE];
     vector<WayPoint> wp;
     vector<int> tour;
+    vector<int> sta_route;
+    vector<vector<pair<double, int>>> cluster;
 
     int score(){
         set<int> st;
@@ -98,6 +119,84 @@ struct Travel{
         }
     }
 
+    void reset_cluster(){
+        // cout<< "reset_cluster" <<endl;
+        cluster.clear();
+        cluster.resize(M_SIZE);
+        rep3(i, N_SIZE, 1){
+            int idx;
+            int mi=imax;
+            rep3(j, N_SIZE+M_SIZE, N_SIZE){
+                int dis=wp[j].pos.euclid(wp[i].pos);
+                if(dis<mi){
+                    mi=dis;
+                    idx=j;
+                }
+            }
+            cluster[idx-N_SIZE].push_back({wp[i].pos.angle(wp[idx].pos), i});
+        }
+        rep(i, M_SIZE) sort(all(cluster[i]));
+    }
+    void reset_sta_route(){
+        // cout<< "reset_sta_route" <<endl;
+        vector<pair<double, int>> pai;
+        Pos cent={500, 500};
+        rep3(i, N_SIZE+M_SIZE, N_SIZE) pai.push_back({wp[i].pos.angle(cent), i-N_SIZE});
+        sort(all(pai));
+        int idx;
+        rep(i, M_SIZE){
+            if(pai[i].second==0){
+                idx=i;
+                break;
+            }
+        }
+        sta_route.clear();
+        rep(i, M_SIZE){
+            sta_route.push_back(pai[(i+idx)%M_SIZE].second);
+            // cout<< sta_route[i] <<endl;
+        }
+    }
+    void reset_pla_route(){
+        // cout<< "reset_pla_route" <<endl;
+        tour.clear();
+        tour.push_back(0);
+        rep(i, M_SIZE){
+            // cout<< "i: " << sta_route[i] <<endl;
+            tour.push_back(sta_route[i]+N_SIZE);
+            rep(j, cluster[sta_route[i]].size()){
+                // cout<< "j: " << j <<endl;
+                tour.push_back(cluster[sta_route[i]][j].second);
+                tour.push_back(sta_route[i]+N_SIZE);
+            }
+        }
+        tour.push_back(0);
+    }
+    void cut_route(){
+        rep(i, tour.size()-2){
+            if(tour[i]<N_SIZE && tour[i+1]>=N_SIZE && tour[i+2]<N_SIZE){
+                int bef=wp[tour[i]].dist(wp[tour[i+1]])+wp[tour[i+2]].dist(wp[tour[i+1]]);
+                int aft=wp[tour[i]].dist(wp[tour[i+2]]);
+                assert(bef>=0);
+                assert(aft>=0);
+                if(aft<bef){
+                    // cout<< bef SP <<aft <<endl;
+                    auto itr=tour.begin()+i+1;
+                    tour.erase(itr);
+                }
+            }
+        }
+    }
+    void move_station(){
+        // cout<< "move_station" <<endl;
+        int idx=mt()%M_SIZE+N_SIZE;
+        wp[idx].pos+={int(mt()%21-10), int(mt()%21-10)};
+        wp[idx].pos.fix_oob();
+        assert(!wp[idx].pos.is_oob());
+        reset_cluster();
+        reset_sta_route();
+        reset_pla_route();
+        cut_route();
+    }
     void zatsu_ans(){
         rep(i, N_SIZE) tour.push_back(i);
         tour.push_back(0);
@@ -150,47 +249,18 @@ int main(){
         // if(lp==400000) break;
 
         Travel travel=best;
-        int rp=mt()%1+1;
-        int ng=0;
-        rep(i, rp){
-            int type=mt()%3+1;
-            int idx, val;
-            Pos mov;
-            //cout<< "type:" << type <<endl;
-            if(type==1){
-                // 訪問追加
-                idx=mt()%(travel.tour.size()-2)+1;
-                val=mt()%travel.wp.size();
-                auto itr=travel.tour.begin()+idx;
-                travel.tour.insert(itr, val);
-            }else if(type==2){
-                // 訪問削除
-                idx=mt()%(travel.tour.size()-2)+1;
-                auto itr=travel.tour.begin()+idx;
-                travel.tour.erase(itr);
-            }else if(type==3){
-                // ステーション移動
-                idx=mt()%M_SIZE+N_SIZE;
-                mov={int(mt()%21-10), int(mt()%21-10)};
-                travel.wp[idx].pos+=mov;
-                if(travel.wp[idx].pos.is_oob()){
-                    ng=1;
-                    break;
-                }
-            }else{
-                // ステーション削除
-            }
-        }
-        if(ng) continue;
+        travel.move_station();
 
         // 温度関数
         double temp = start_temp + (end_temp - start_temp) * chrono::duration_cast<chrono::milliseconds>(current - start).count() / TIME_LIMIT;
-        // double temp=100;
+        // temp=10;
         // 遷移確率関数(最大化の場合)
         double prob = exp((travel.score()-best.score())/temp);
+        // cout<< travel.score() <<endl;
+        // cout<< best.score() <<endl;
 
         if (prob > (mt()%imax)/(double)imax) { // 確率probで遷移する
-            // if(lp%1000==0){
+            // if(lp%100==0){
             //     cout<< "lp:" << lp <<endl;
             //     cout<< best.score() <<endl;
             // }
