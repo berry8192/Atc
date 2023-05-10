@@ -1,43 +1,33 @@
-#include <bits/stdc++.h>
-
-#define rep(i, n) for (int i = 0; i < (int)(n); i++)
-#define all(v) v.begin(), v.end()
-#define SP << " " 
-#define LLi long long int
-
+#include <iostream>
+#include <vector>
+#include <algorithm>
 using namespace std;
 
-int imax=2147483647;
-long long int llimax=9223372036854775807;
+int main() {
+    int N, M;
+    cin >> N >> M;
 
-//int型vectorを出力
-void PV(vector<int> pvv) {
-	rep(i, pvv.size()) cout << pvv[i] SP;
-	cout << endl;
-}
+    vector<pair<int, int>> v(M);
 
-//LLi型vectorを出力
-void PVL(vector<LLi> pvv) {
-	rep(i, pvv.size()) cout << pvv[i] SP;
-	cout << endl;
-}
+    for (int i = 0; i < M; i++) {
+        int A, C;
+        cin >> A >> C;
+        v[i] = make_pair(C, A);
+    }
 
-int main(){
+    sort(v.begin(), v.end());
 
-	int n, ans=0;
-	vector<int> v;
+    long long ans=0;
+    for (int i = 0; i < M; i++) {
+        // cout << v[i].second << " " << v[i].first << endl;
+        long long a, b;
+        a=__gcd(uint(N), uint(v[i].second));
+        b=N/a-1;
+        N=a;
+        ans+=a*b*v[i].first;
+    }
+    if(N!=1) ans=-1;
+    cout<< ans <<endl;
 
-	cin>> n;
-	v.resize(n);
-
-	rep(i, n) cin >> v[i];
-
-	rep(i, n) {
-		if (v[i]) ans++;
-	}
-
-	if(n==0) cout<< "Yes" << endl;
-	else cout<< "No" << endl;
- 
-	return 0;
+    return 0;
 }
