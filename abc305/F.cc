@@ -35,44 +35,42 @@ template <class T>void PVV(T pvv) {
 
 int main(){
 
-	int n, m, k;
+	int n, m, k, cur=1, tmp;
 	string s;
 	cin>> n >> m;
-	vector<int> v, prev={1};
-	int e[110][110];
-	rep(i, 110){
-		rep(j, 110){
-			e[i][j]=0;
-		}
-	}
+	vector<int> seen(n+1), prev(n+1);
+	vector<set<int>> st(n+1);
+
 	rep(lp, n*2){
 		cin>> k;
 		if(k==-1) return 1;
-		v.clear();
-		v.resize(k);
 		rep(i, k){
-			cin>> v[i];
-			if(v[i]==n){
+			cin>> tmp;
+			if(tmp==n){
 				cout<< n <<endl;
 				cin>> s;
 				return 0;
 			}
+			if(!seen[cur]) st[cur].insert(tmp);
 		}
-		int pre=prev[prev.size()-1];
+		seen[cur]=1;
 		int flag=0;
-		rep(i, k){
-			if(e[pre][v[i]]==0 && e[v[i]][pre]==0){
-				e[pre][v[i]]=1;
-				cout<< v[i] <<endl;
-				prev.push_back(v[i]);
-				flag=1;
-				break;
+		while(!st[cur].empty()){
+			int nxt=*st[cur].begin();
+			if(seen[nxt]){
+				st[cur].erase(nxt);
+				continue;
 			}
+			prev[nxt]=cur;
+			cout<< nxt <<endl;
+			st[cur].erase(nxt);
+			cur=nxt;
+			flag=1;
+			break;
 		}
 		if(flag) continue;
-		cout<< pre <<endl;
-		prev.pop_back();
-
+		cout<< prev[cur] <<endl;
+		cur=prev[cur];
 	}
 	cout<< "WA" <<endl;
  
