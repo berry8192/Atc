@@ -47,20 +47,53 @@ struct itv{
 	}
 };
 
-int main(){
+struct edge{
+	int to;
+	int co;
 
-	int n;
-	vector<xxxx> v;
+	bool operator<(const edge &in) const{
+		return co!=in.co ? co<in.co : to<in.to;
+	};
+};
+// クラスカル法とかやりたいときに使う
+struct s_edge{
+	int to;
+	int from;
+	int co;
 
-	cin>> n;
-	v.resize(n);
+	bool operator<(const s_edge &in) const{
+		return co!=in.co ? co<in.co : to<in.to ? to<in.to : from<in.from;
+	};
+};
+struct Graph{
+	vector<vector<edge>> g;
+	vector<s_edge> edges;
 
-	for(int i=0;i<n;i++){
-		cin>> v[i].x1 >> v[i].x2 >> v[i].x3;
+	void init(int nn, int mm, bool weight=false, bool directed=false){
+		// n頂点、m辺、重み有無、有向無向
+		int uu, vv, ww;
+		g.resize(nn);
+
+		for(int i=0;i<mm;i++){
+			cin>> uu >> vv;
+			uu--;
+			vv--;
+			if(weight) cin>> ww;
+			else ww=1;
+
+			g[uu].push_back({vv, ww});
+			edges.push_back({uu, vv, ww});
+			if(!directed){
+				g[vv].push_back({uu, ww});
+				edges.push_back({vv, uu, ww});
+			}
+		}
 	}
+};
 
-	sort(v.begin(), v.end());
-
-	for(int i=0;i<v.size();i++) cout<< v[i].x1 << " " << v[i].x2 << " " << v[i].x3 << endl;
-
+int main(){
+	int n, m;
+	cin>> n >> m;
+	Graph graph;
+	graph.init(n, m, false, true);
 }
