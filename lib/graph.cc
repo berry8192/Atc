@@ -48,10 +48,10 @@ struct Graph{
 			else ww=1;
 
 			g[uu].push_back({vv, ww});
-			edges.push_back({uu, vv, ww});
+			edges.push_back({uu, vv, ww}); // edges
 			if(!directed){
 				g[vv].push_back({uu, ww});
-				edges.push_back({vv, uu, ww});
+				edges.push_back({vv, uu, ww}); // edges
 			}
 		}
 	}
