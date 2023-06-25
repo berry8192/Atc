@@ -55,6 +55,25 @@ struct Graph{
 			}
 		}
 	}
+	void board_init(vector<string> bb){
+		// #.形式のboardを想定
+		// 頂点番号は2重forの順に0から
+		int hei=bb.size();
+		int wid=bb[0].size();
+		g.resize(hei*wid);
+
+		for(int i=0;i<hei-1;i++){
+			for(int j=0;j<wid-1;j++){
+				if(bb[i][j]=='.' && bb[i+1][j]=='.'){
+					int ww=1;
+					g[i*wid+j].push_back({(i+1)*wid+j, ww});
+					g[(i+1)*wid+j].push_back({i*wid+j, ww});
+					// edges.push_back({i*wid+j, (i+1)*wid+j, 1}); // edges
+					// edges.push_back({(i+1)*wid+j, i*wid+j, 1}); // edges
+				}
+			}
+		}
+	}
 };
 
 int main(){
