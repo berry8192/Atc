@@ -33,7 +33,8 @@ struct Node;
 struct Pyra;
 
 int n=30;
-vector<vector<Node>> b(30);
+vector<Node> b(500);
+int rot;
 
 struct Pos{
 	int h, w;
@@ -94,7 +95,7 @@ struct Want{
 };
 
 struct Pyra{
-	vector<vector<Node>> node;
+	vector<Node> node;
 	vector<pair<Pos, Pos>> mov;
 	set<Want> move_list;
 
@@ -109,7 +110,7 @@ struct Pyra{
 	}
 
 	void swp(Pos p1, Pos p2){
-		swap(node[p1.h][p1.w], node[p2.h][p2.w]);
+		swap(node[(p1.h*(p1.h+1)/2)+p1.w], node[p2.h*(p2.h+1)/2+p2.w]);
 		mov.push_back({p1, p2});
 		// cout<< "end swp" <<endl;
 	}
@@ -124,7 +125,7 @@ struct Pyra{
 		swp(p1, npos);
 	}
 	void reset_move_list(int hh, int ww){
-		auto itr=move_list.find({node[hh][ww].want_down, hh, ww});
+		auto itr=move_list.find({node[hh*(hh+1)/2+ww].want_down, hh, ww});
 		if(itr!=move_list.end()) move_list.erase(itr);
 		is_err(hh, ww, false);
 	}
@@ -140,9 +141,8 @@ struct Pyra{
 			if(npos.is_oob()) continue;
 
 			// 自分の数字が対象よりいくつ大きいか
-			int diff=node[hh][ww].num-node[npos.h][npos.w].num;
-			if(diff>0) diff=1+diff*(mt()%21+90)/100;
-			else diff=0;
+			int diff=node[hh*(hh+1)/2+ww].num-node[npos.h*(npos.h+1)/2+npos.w].num;
+			diff=1+diff*(mt()%8+100)/100;
 			// cout<< "is err diff: " << diff <<endl;
 			if(i>=2){
 				// // 左のノードが比較対象
@@ -180,7 +180,7 @@ struct Pyra{
 			if(!npos.is_oob()) reset_move_list(npos.h, npos.w);
 		}
 		if(max_diff_idx!=-1 && !exec){
-			node[hh][ww].want_down=max_diff;
+			node[hh*(hh+1)/2+ww].want_down=max_diff;
 			move_list.insert({max_diff, hh, ww});
 		}
 
@@ -203,10 +203,12 @@ struct Pyra{
 
 void inpt(){
 	int tmp;
+	int lop=0;
 	rep(i, n){
 		rep(j, i+1){
 			cin>> tmp;
-			b[i].push_back({tmp, {i, j}});
+			b[lop]={tmp, {i, j}};
+			lop++;
 		}
 	}
 }
@@ -231,15 +233,9 @@ int main(){
 		Pyra pyra;
 		pyra.init();
 
-		// int rot=0;
-		// int prob=(1<<(mt()%15+3));
+		rot=0;
 		while(!pyra.move_list.empty()){
-			// rot++;
-			// if(rot%prob==0){
-			// 	int hh=sqrt(mt()%(n*n));
-			// 	int ww=mt()%(hh+1);
-			// 	pyra.random_move(hh, ww);
-			// }
+			rot++;
 			auto ml=*pyra.move_list.begin();
 			// cout<< ml.val SP << ml.h SP << ml.w <<endl;
 			pyra.move_list.erase(pyra.move_list.begin());
@@ -272,6 +268,8 @@ int main(){
 		// cout<< pyra.calc_score() <<endl;
 		if(pyra.calc_score()<best.calc_score()){
 			best=pyra;
+			// cout<< best.calc_score() <<endl;
+			// cout<< "rot" << rot <<endl;
 		}
 	}
 	// cout<< "lp: " << lp <<endl;
