@@ -44,9 +44,9 @@ struct Graph{
 		g.resize(nn);
 
 		for(int i=0;i<mm;i++){
-			cin>> uu >> vv;
+			cin>> uu;
 			uu--;
-			vv--;
+			vv=i;
 			if(weight) cin>> ww;
 			else ww=1;
 
@@ -99,9 +99,17 @@ struct Graph{
 	}
 };
 
+//int型vectorを出力
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) cout << pvv[i] SP;
+	cout<< pvv[pvv.size()-1] <<endl;
+}
+
 int main(){
-	int n, m;
-	cin>> n >> m;
+	int n;
+	cin>> n;
 	Graph graph;
-	graph.init(n, m, false, true);
+	graph.init(n, n, false, true);
+	PV(graph.bfs(0));
 }
