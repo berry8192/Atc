@@ -25,11 +25,10 @@ double end_temp=10000.0;
 int seed=1;
 mt19937 mt(seed);
 
-struct Pos;
+struct Compare;
 struct Space;
 
 int l, n, s;
-Pos exit_cells[110];
 
 // 構造体
 struct Pos{
@@ -59,6 +58,8 @@ struct Pos{
     }
 };
 
+Pos exit_cells[110];
+
 struct Compare{
 	int idx;
 	int val;
@@ -76,7 +77,7 @@ struct Space{
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
-        compare.resize(l);
+        compare.resize(n);
     }
 
     void sample_placement(){
@@ -86,7 +87,7 @@ struct Space{
             }
         }
         rep(i, n){
-            p[e_cells[i].y][e_cells[i].x]=(i+1)*10;
+            p[e_cells[i].y][e_cells[i].x]=i*10;
         }
         print_placement();
     }
@@ -102,7 +103,7 @@ struct Space{
         rep(i, n) e[i]=compare[i].idx;
     }
     int measurement(int i, Pos pos){
-        cout<< i+1 SP << pos.y SP << pos.x <<endl;
+        cout<< i SP << pos.y SP << pos.x <<endl;
         int tmp;
         cin>> tmp;
         return tmp;
@@ -118,7 +119,7 @@ struct Space{
     }
     void print_ans(){
         cout<< "-1 -1 -1" <<endl;
-        rep(i, n) cout<< e[i]+1 <<endl;
+        rep(i, n) cout<< e[i] <<endl;
     }
 };
 
@@ -139,7 +140,8 @@ int main(){
     inpt();
     Space space;
     space.init();
-
+    space.sample_placement();
+    space.sample_measurement();
 
     space.print_ans();
 
