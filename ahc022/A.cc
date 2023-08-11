@@ -41,7 +41,7 @@ struct Pos{
         x=xx;
     }
 
-    void loop(){
+    void bounce(){
         y=(y+l)%l;
         x=(x+l)%l;
     }
@@ -63,6 +63,8 @@ struct Pos{
 };
 
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+Pos d9[]={{0, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 0}, {1, 1}, {-1, 1}, {1, -1}, {1, 1}};
+
 Pos exit_cells[110];
 
 struct Compare{
@@ -88,7 +90,7 @@ struct Space{
     void sample_placement(){
         rep(i, l){
             rep(j, l){
-                p[i][j]=0;
+                p[i][j]=-1;
             }
         }
         rep(i, n){
@@ -113,8 +115,8 @@ struct Space{
         rep(i, n){
             rep(j, 4){
                 Pos npos=e_cells[i]+d4[j];
-                npos.loop();
-                if(p[npos.y][npos.x]==0) p[npos.y][npos.x]=i*5;
+                npos.bounce();
+                if(p[npos.y][npos.x]==-1) p[npos.y][npos.x]=i*5;
             }
         }
     }
@@ -138,7 +140,8 @@ struct Space{
     void print_placement(){
         rep(i, l){
             rep(j, l){
-                cout<< p[i][j] SP;
+                if(p[i][j]==-1) cout<< 0 SP;
+                else cout<< p[i][j] SP;
             }
             cout<< endl;
         }
@@ -174,3 +177,25 @@ int main(){
 
     return 0;
 }
+
+// 1つのセルが何個の情報を持てるか決める
+  // Sのみに依存
+// 配置
+  // どの相対座標たちを使うかを決める
+    // 最初はマンハッタンが近い点から取る
+// 計測
+// N回に1回までなら間違えてもいい
+  // 被った二つを戦わせられるため
+  // N回に2回以上被ってもなんとかなる可能性はあるが、
+  // N回に2回以上被る事象が3000回に0.5回未満であればOK
+
+// 信頼区間メモ
+// 　σ　0.682689492137086
+// ２σ　0.954499736103641
+// ３σ　0.997300203936740
+// ４σ　0.999936657516326
+// ５σ　0.999999426696856
+// ６σ　0.999999998026825
+// ７σ　0.999999999997440
+// ８σ　0.999999999999999
+// ９σ　1.000000000000000
