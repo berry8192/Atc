@@ -28,7 +28,7 @@ mt19937 mt(seed);
 struct Compare;
 struct Space;
 
-int l, n, s;
+int l, n, s, s_try;
 
 // 構造体
 struct Pos{
@@ -93,7 +93,11 @@ struct Space{
     }
     void sample_measurement(){
         rep(i, n){
-            compare[i]={i, measurement(i, {0, 0})};
+            int tmp=0;
+            rep(j, s_try){
+                tmp+=measurement(i, {0, 0});
+            }
+            compare[i]={i, tmp/s_try};
         }
         // guess();
         sample_guess();
@@ -104,7 +108,7 @@ struct Space{
         rep(i, n) e[i]=compare[i].idx;
     }
     void sample_guess(){
-        rep(i, n) e[i]=compare[i].val/10;
+        rep(i, n) e[i]=round(compare[i].val/10.0);
     }
     int measurement(int i, Pos pos){
         cout<< i SP << pos.y SP << pos.x <<endl;
@@ -129,6 +133,7 @@ struct Space{
 
 void inpt(){
     cin>> l >> n >> s;
+    s_try=int(sqrt(s))*2+1;
 
     rep(i, n){
         cin>> exit_cells[i].y >> exit_cells[i].x;
