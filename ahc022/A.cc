@@ -194,11 +194,16 @@ struct Space{
     }
     void measurement(){
         // PM(setting_e_cells_map);
+        // outputFile<< cells_setting[0].size() <<endl;
         rep(i, n){
             ll base=1;
             ll setting=0;
             rep(j, cells_setting[i].size()){
-                int tmp=query(i, dm[j]);
+                int lp=(s*4+999)/1000;
+                // int lp=9500/(n*cells_setting[i].size());
+                if(lp%2==0) lp++;
+                while(lp*n*cells_setting[i].size()>10000) lp-=2;
+                int tmp=multi_query(i, dm[j], lp);
                 if(tmp==-1) exit(0);
                 // outputFile<< "tmp: " << tmp <<endl;
                 int idx=round(1.0*tmp/(8*s));
@@ -234,6 +239,24 @@ struct Space{
             e[i]=round(compare[i].val/10.0);
             e[i]=max(0, min(n-1, e[i]));
         }
+    }
+    int multi_query(int i, Pos pos, int lp){
+        map<int, int> mp;
+        rep(j, lp){
+            int tmp=query(i, pos);
+            tmp=round(1.0*tmp/(8*s));
+            mp[tmp]++;
+        }
+        int ma=0;
+        int mai;
+        for(auto m : mp){
+            if(ma<m.second){
+                mai=m.first;
+                ma=m.second;
+            }
+        }
+
+        return allowable_cell[mai];
     }
     int query(int i, Pos pos){
         cout<< i SP << pos.y SP << pos.x <<endl;
