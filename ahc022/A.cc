@@ -69,7 +69,7 @@ struct Pos{
 };
 
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-Pos d9[]={{0, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 0}, {1, 1}, {-1, 1}, {1, -1}, {1, 1}};
+Pos dm[]={{0, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 0}, {1, 1}, {-1, 1}, {1, -1}, {1, 1}, {0, 2}, {-2, 0}, {0, -2}, {2, 0}, {0, 3}, {-3, 0}, {0, -3}, {3, 0}, {2, 1}, {-2, 1}, {2, -1}, {2, 1}, {1, 2}, {-1, 2}, {1, -2}, {1, 2}};
 
 Pos exit_cells[110];
 
@@ -83,17 +83,19 @@ struct Compare{
 };
 
 struct Space{
-    Pos e_cells[110];
-    int p[110][110];
-    vector<Compare> compare;
-    int e[110];
-    vector<int> cells_info;
+    Pos e_cells[110]; // 入力をコピーしてくる
+    int p[110][110]; // システムに渡す配置
+    vector<Compare> compare; // 計測結果保存用かつ並べ替え用
+    int e[110]; // 出力するE
+    vector<int> cells_info; // セルに設定する値のリスト
+    int cisz; // セルから得られる情報量
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
         compare.resize(n);
         for(int i=0;i<=1000;i+=8*s) cells_info.push_back(i);
         if(cells_info.size()==1) cells_info.push_back(1000);
+        cisz=cells_info.size();
     }
 
     void sample_placement(){
@@ -194,7 +196,10 @@ int main(){
       // 0から8Sずつ置いていけばいい
 // 配置
   // どの相対座標たちを使うかを決める
-    // 最初はマンハッタンが近い点から取る
+    // 最初はマンハッタンが近い点から取る（25個用意した）
+    // 一旦先頭から必ず使うようにしていく
+      // cells_infoの長さをciszとしてcisz進数の数字として管理
+      // それらがN個のセルで被らないようにすればOK 
 // 計測
 // N回に1回までなら間違えてもいい
   // 被った二つを戦わせられるため
