@@ -59,20 +59,66 @@ struct Pos{
     }
 };
 
+struct Compare{
+	int idx;
+	int val;
+
+	bool operator<(const Compare &in) const{
+		return val!=in.val ? val<in.val : idx<in.idx;
+	};
+};
+
 struct Space{
     Pos e_cells[110];
+    int p[110][110];
+    vector<Compare> compare;
+    int e[110];
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
+        compare.resize(l);
     }
 
-    void placement(){
-
+    void sample_placement(){
+        rep(i, l){
+            rep(j, l){
+                p[i][j]=0;
+            }
+        }
+        rep(i, n){
+            p[e_cells[i].y][e_cells[i].x]=(i+1)*10;
+        }
+        print_placement();
     }
-    void measurement(){
-        
+    void sample_measurement(){
+        rep(i, n){
+            compare[i]={i, measurement(i, e_cells[i])};
+        }
+        guess();
+    }
+
+    void guess(){
+        sort(all(compare));
+        rep(i, n) e[i]=compare[i].idx;
+    }
+    int measurement(int i, Pos pos){
+        cout<< i+1 SP << pos.y SP << pos.x <<endl;
+        int tmp;
+        cin>> tmp;
+        return tmp;
+    }
+
+    void print_placement(){
+        rep(i, l){
+            rep(j, l){
+                cout<< p[i][j] SP;
+            }
+            cout<< endl;
+        }
     }
     void print_ans(){
+        cout<< "-1 -1 -1" <<endl;
+        rep(i, n) cout<< e[i]+1 <<endl;
     }
 };
 
