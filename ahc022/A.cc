@@ -173,12 +173,15 @@ struct Space{
         rep(i, n){
             int tmp=0;
             rep(j, s_try){
-                tmp+=measurement(i, {0, 0});
+                tmp+=query(i, {0, 0});
             }
             compare[i]={i, tmp/s_try};
         }
         // sort_guess();
         sample_guess();
+    }
+    void measurement(){
+
     }
 
     void normalize_placement(){
@@ -200,7 +203,7 @@ struct Space{
             e[i]=max(0, min(n-1, e[i]));
         }
     }
-    int measurement(int i, Pos pos){
+    int query(int i, Pos pos){
         cout<< i SP << pos.y SP << pos.x <<endl;
         int tmp;
         cin>> tmp;
@@ -241,7 +244,7 @@ int main(){
     Space space;
     space.init();
     space.placement();
-    space.sample_measurement();
+    space.measurement();
 
     space.print_ans();
 
