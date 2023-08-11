@@ -93,14 +93,18 @@ struct Space{
     }
     void sample_measurement(){
         rep(i, n){
-            compare[i]={i, measurement(i, e_cells[i])};
+            compare[i]={i, measurement(i, {0, 0})};
         }
-        guess();
+        // guess();
+        sample_guess();
     }
 
     void guess(){
         sort(all(compare));
         rep(i, n) e[i]=compare[i].idx;
+    }
+    void sample_guess(){
+        rep(i, n) e[i]=compare[i].val/10;
     }
     int measurement(int i, Pos pos){
         cout<< i SP << pos.y SP << pos.x <<endl;
