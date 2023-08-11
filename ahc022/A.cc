@@ -202,7 +202,7 @@ struct Space{
                 if(tmp==-1) exit(0);
                 // outputFile<< "tmp: " << tmp <<endl;
                 int idx=round(1.0*tmp/(8*s));
-                setting*=base*idx;
+                setting+=base*idx;
                 base*=acsz;
             }
             // outputFile<< setting <<endl;
