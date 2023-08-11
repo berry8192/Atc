@@ -42,7 +42,7 @@ mt19937 mt(seed);
 struct Compare;
 struct Space;
 
-int l, n, s, s_try;
+int l, n, s;
 
 // 構造体
 struct Pos{
@@ -170,6 +170,7 @@ struct Space{
         }
     }
     void sample_measurement(){
+        int s_try=int(sqrt(s))*2+1;
         rep(i, n){
             int tmp=0;
             rep(j, s_try){
@@ -227,7 +228,6 @@ struct Space{
 
 void inpt(){
     cin>> l >> n >> s;
-    s_try=int(sqrt(s))*2+1;
 
     rep(i, n){
         cin>> exit_cells[i].y >> exit_cells[i].x;
