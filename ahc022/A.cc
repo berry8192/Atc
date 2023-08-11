@@ -11,6 +11,12 @@
 using namespace std;
 // using namespace atcoder;
 
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) cout << pvv[i] SP;
+	cout<< pvv[pvv.size()-1] <<endl;
+}
+
 int imax=2147483647;
 long long llimax=9223372036854775807;
 
@@ -81,10 +87,13 @@ struct Space{
     int p[110][110];
     vector<Compare> compare;
     int e[110];
+    vector<int> cells_info;
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
         compare.resize(n);
+        for(int i=0;i<=1000;i+=8*s) cells_info.push_back(i);
+        if(cells_info.size()==1) cells_info.push_back(1000);
     }
 
     void sample_placement(){
@@ -180,6 +189,9 @@ int main(){
 
 // 1つのセルが何個の情報を持てるか決める
   // Sのみに依存
+    // 一旦4σを完全に信頼する方針で行く
+    // あとで2000ケースから何回間違えているかを調べる
+      // 0から8Sずつ置いていけばいい
 // 配置
   // どの相対座標たちを使うかを決める
     // 最初はマンハッタンが近い点から取る
