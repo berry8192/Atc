@@ -12,6 +12,7 @@ using namespace std;
 // using namespace atcoder;
 
 // std::ofstream outputFile("log.csv");
+
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
@@ -199,7 +200,7 @@ struct Space{
             rep(j, cells_setting[i].size()){
                 int tmp=query(i, dm[j]);
                 if(tmp==-1) exit(0);
-                // outputFile<< "tmp: " << setting <<endl;
+                // outputFile<< "tmp: " << tmp <<endl;
                 int idx=round(1.0*tmp/(8*s));
                 setting*=base*idx;
                 base*=acsz;
