@@ -177,7 +177,7 @@ struct Space{
             }
             compare[i]={i, tmp/s_try};
         }
-        // guess();
+        // sort_guess();
         sample_guess();
     }
 
@@ -190,7 +190,7 @@ struct Space{
             }
         }
     }
-    void guess(){
+    void sort_guess(){
         sort(all(compare));
         rep(i, n) e[i]=compare[i].idx;
     }
