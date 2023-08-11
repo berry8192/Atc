@@ -41,6 +41,10 @@ struct Pos{
         x=xx;
     }
 
+    void loop(){
+        y=(y+l)%l;
+        x=(x+l)%l;
+    }
     void print(){
         cout<< "(" << y << ", " << x << ")" <<endl;
     }
@@ -58,6 +62,7 @@ struct Pos{
     }
 };
 
+Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 Pos exit_cells[110];
 
 struct Compare{
@@ -89,6 +94,7 @@ struct Space{
         rep(i, n){
             p[e_cells[i].y][e_cells[i].x]=i*10;
         }
+        normalize_placement();
         print_placement();
     }
     void sample_measurement(){
@@ -103,12 +109,24 @@ struct Space{
         sample_guess();
     }
 
+    void normalize_placement(){
+        rep(i, n){
+            rep(j, 4){
+                Pos npos=e_cells[i]+d4[j];
+                npos.loop();
+                if(p[npos.y][npos.x]==0) p[npos.y][npos.x]=i*5;
+            }
+        }
+    }
     void guess(){
         sort(all(compare));
         rep(i, n) e[i]=compare[i].idx;
     }
     void sample_guess(){
-        rep(i, n) e[i]=round(compare[i].val/10.0);
+        rep(i, n){
+            e[i]=round(compare[i].val/10.0);
+            e[i]=max(0, min(n-1, e[i]));
+        }
     }
     int measurement(int i, Pos pos){
         cout<< i SP << pos.y SP << pos.x <<endl;
