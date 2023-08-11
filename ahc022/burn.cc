@@ -26,9 +26,10 @@ int seed=1;
 mt19937 mt(seed);
 
 struct Pos;
+struct Space;
 
 int l, n, s;
-Pos yx[110];
+Pos exit_cells[110];
 
 // 構造体
 struct Pos{
@@ -59,11 +60,17 @@ struct Pos{
 };
 
 struct Space{
+    Pos e_cells[110];
 
     void init(){
+        rep(i, n) e_cells[i]=exit_cells[i];
     }
 
-    ll calc_score(){
+    void placement(){
+
+    }
+    void measurement(){
+        
     }
     void print_ans(){
     }
@@ -73,7 +80,7 @@ void inpt(){
     cin>> l >> n >> s;
 
     rep(i, n){
-        cin>> yx[i].y >> yx[i].x;
+        cin>> exit_cells[i].y >> exit_cells[i].x;
     }
 }
 
