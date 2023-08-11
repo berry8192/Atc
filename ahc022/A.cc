@@ -11,18 +11,27 @@
 using namespace std;
 // using namespace atcoder;
 
+std::ofstream outputFile("log.csv");
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
-	rep(i, pvv.size()-1) cout << pvv[i] SP;
-	cout<< pvv[pvv.size()-1] <<endl;
+	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+	outputFile<< pvv[pvv.size()-1] <<endl;
 }
 template <class T>void PVV(T pvv) {
 	rep(i, pvv.size()){
 		rep(j, pvv[i].size()){
-			cout << pvv[i][j] SP;
+			outputFile << pvv[i][j] SP;
 		}
-		cout << endl;
+		outputFile << endl;
 	}
+}
+template <class T> void PM(T pm) {
+    // cout<< "{";
+	for(auto m : pm){
+		outputFile<< "(" << m.first << "->" << m.second << "), ";
+	}
+	// cout<< "}";
+	outputFile<<endl;
 }
 
 int imax=2147483647;
@@ -97,7 +106,8 @@ struct Space{
     int e[110]; // 出力するE
     vector<int> allowable_cell; // セルに設定できる値のリスト
     int acsz; // セルから得られる情報量
-    vector<vector<int>> cells_setting; // セルの各地点にどの値を設定しているか
+    vector<vector<int>> cells_setting; // セルの各地点にどの値を設定しているか、allowable_cellの添え字にすると欲しい値になる
+    map<ll, int> setting_e_cells_map;
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
@@ -127,10 +137,10 @@ struct Space{
             }
         }
         vector<ll> current_cells_setting(n);
-        int base=1;
+        ll base=1;
         rep(i, 25){
             // マンハッタン距離3以内のセルは25個ある
-            set<ll> setting_set;
+            map<ll, int> setting_map;
             rep(j, n){
                 Pos npos=e_cells[j]+dm[i];
                 npos.bounce();
@@ -159,11 +169,11 @@ struct Space{
                     }
                 }
                 current_cells_setting[j]+=base*set_val;
-                setting_set.insert(current_cells_setting[j]);
+                setting_map[current_cells_setting[j]]=j;
             }
-            if(setting_set.size()==n){
+            if(setting_map.size()==n){
+                setting_e_cells_map=setting_map;
                 print_placement();
-                PVV(cells_setting);
                 break;
             }
             base*=acsz;
@@ -182,7 +192,25 @@ struct Space{
         sample_guess();
     }
     void measurement(){
-
+        PM(setting_e_cells_map);
+        rep(i, n){
+            ll base=1;
+            ll setting=0;
+            rep(j, cells_setting[i].size()){
+                int tmp=query(i, dm[j]);
+                int idx=round(1.0*tmp/(8*s));
+                setting*=base*idx;
+                base*=acsz;
+            }
+            outputFile<< setting <<endl;
+            // PM(setting_e_cells_map);
+            if(setting_e_cells_map.find(setting)!=setting_e_cells_map.end()){
+                e[i]=setting_e_cells_map[setting];
+            }else{
+                // 算出したsettingが見当たらないときはとりあえず0と答える
+                e[i]=0;
+            }
+        }
     }
 
     void normalize_placement(){
