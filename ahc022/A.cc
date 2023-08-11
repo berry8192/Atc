@@ -16,6 +16,14 @@ template <class T> void PV(T pvv) {
 	rep(i, pvv.size()-1) cout << pvv[i] SP;
 	cout<< pvv[pvv.size()-1] <<endl;
 }
+template <class T>void PVV(T pvv) {
+	rep(i, pvv.size()){
+		rep(j, pvv[i].size()){
+			cout << pvv[i][j] SP;
+		}
+		cout << endl;
+	}
+}
 
 int imax=2147483647;
 long long llimax=9223372036854775807;
@@ -87,15 +95,17 @@ struct Space{
     int p[110][110]; // システムに渡す配置
     vector<Compare> compare; // 計測結果保存用かつ並べ替え用
     int e[110]; // 出力するE
-    vector<int> cells_info; // セルに設定する値のリスト
-    int cisz; // セルから得られる情報量
+    vector<int> allowable_cell; // セルに設定できる値のリスト
+    int acsz; // セルから得られる情報量
+    vector<vector<int>> cells_setting; // セルの各地点にどの値を設定しているか
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
         compare.resize(n);
-        for(int i=0;i<=1000;i+=8*s) cells_info.push_back(i);
-        if(cells_info.size()==1) cells_info.push_back(1000);
-        cisz=cells_info.size();
+        for(int i=0;i<=1000;i+=8*s) allowable_cell.push_back(i);
+        if(allowable_cell.size()==1) allowable_cell.push_back(1000);
+        acsz=allowable_cell.size();
+        cells_setting.resize(n);
     }
 
     void sample_placement(){
@@ -109,6 +119,55 @@ struct Space{
         }
         normalize_placement();
         print_placement();
+    }
+    void placement(){
+        rep(i, l){
+            rep(j, l){
+                p[i][j]=-1;
+            }
+        }
+        vector<ll> current_cells_setting(n);
+        int base=1;
+        rep(i, 25){
+            // マンハッタン距離3以内のセルは25個ある
+            set<ll> setting_set;
+            rep(j, n){
+                Pos npos=e_cells[j]+dm[i];
+                npos.bounce();
+                int p_val=p[npos.y][npos.x];
+                int set_val;
+                if(p_val==-1){
+                    // 値が入っていなければ自由に設定する
+                    int idx;
+                    if(n<(1<<i)){
+                        // なかなか決まらないときはランダムにする
+                        idx=mt()%acsz;
+                    }else{
+                        idx=j/(1<<i)%acsz;
+                    }
+                    p[npos.y][npos.x]=allowable_cell[idx];
+                    cells_setting[j].push_back(idx);
+                    set_val=idx;
+                }else{
+                    // 値が入っている場合はその値を反映させる
+                    if(p_val==1000){
+                        cells_setting[j].push_back(1);
+                        set_val=1;
+                    }else{
+                        cells_setting[j].push_back(p_val/(8*s));
+                        set_val=p_val/(8*s);
+                    }
+                }
+                current_cells_setting[j]+=base*set_val;
+                setting_set.insert(current_cells_setting[j]);
+            }
+            if(setting_set.size()==n){
+                print_placement();
+                PVV(cells_setting);
+                break;
+            }
+            base*=acsz;
+        }
     }
     void sample_measurement(){
         rep(i, n){
@@ -181,7 +240,7 @@ int main(){
     inpt();
     Space space;
     space.init();
-    space.sample_placement();
+    space.placement();
     space.sample_measurement();
 
     space.print_ans();
@@ -198,7 +257,7 @@ int main(){
   // どの相対座標たちを使うかを決める
     // 最初はマンハッタンが近い点から取る（25個用意した）
     // 一旦先頭から必ず使うようにしていく
-      // cells_infoの長さをciszとしてcisz進数の数字として管理
+      // allowable_cellsの長さをacszとしてacsz進数の数字として管理
       // それらがN個のセルで被らないようにすればOK 
 // 計測
 // N回に1回までなら間違えてもいい
