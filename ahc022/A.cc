@@ -11,28 +11,28 @@
 using namespace std;
 // using namespace atcoder;
 
-std::ofstream outputFile("log.csv");
-template <class T> void PV(T pvv) {
-	if(!pvv.size()) return;
-	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
-	outputFile<< pvv[pvv.size()-1] <<endl;
-}
-template <class T>void PVV(T pvv) {
-	rep(i, pvv.size()){
-		rep(j, pvv[i].size()){
-			outputFile << pvv[i][j] SP;
-		}
-		outputFile << endl;
-	}
-}
-template <class T> void PM(T pm) {
-    // cout<< "{";
-	for(auto m : pm){
-		outputFile<< "(" << m.first << "->" << m.second << "), ";
-	}
-	// cout<< "}";
-	outputFile<<endl;
-}
+// std::ofstream outputFile("log.csv");
+// template <class T> void PV(T pvv) {
+// 	if(!pvv.size()) return;
+// 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+// 	outputFile<< pvv[pvv.size()-1] <<endl;
+// }
+// template <class T>void PVV(T pvv) {
+// 	rep(i, pvv.size()){
+// 		rep(j, pvv[i].size()){
+// 			outputFile << pvv[i][j] SP;
+// 		}
+// 		outputFile << endl;
+// 	}
+// }
+// template <class T> void PM(T pm) {
+//     // cout<< "{";
+// 	for(auto m : pm){
+// 		outputFile<< "(" << m.first << "->" << m.second << "), ";
+// 	}
+// 	// cout<< "}";
+// 	outputFile<<endl;
+// }
 
 int imax=2147483647;
 long long llimax=9223372036854775807;
@@ -192,17 +192,19 @@ struct Space{
         sample_guess();
     }
     void measurement(){
-        PM(setting_e_cells_map);
+        // PM(setting_e_cells_map);
         rep(i, n){
             ll base=1;
             ll setting=0;
             rep(j, cells_setting[i].size()){
                 int tmp=query(i, dm[j]);
+                if(tmp==-1) exit(0);
+                // outputFile<< "tmp: " << setting <<endl;
                 int idx=round(1.0*tmp/(8*s));
                 setting*=base*idx;
                 base*=acsz;
             }
-            outputFile<< setting <<endl;
+            // outputFile<< setting <<endl;
             // PM(setting_e_cells_map);
             if(setting_e_cells_map.find(setting)!=setting_e_cells_map.end()){
                 e[i]=setting_e_cells_map[setting];
