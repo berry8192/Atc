@@ -87,7 +87,7 @@ struct Pos{
 };
 
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-Pos dm[]={{0, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 0}, {1, 1}, {-1, 1}, {1, -1}, {1, 1}, {0, 2}, {-2, 0}, {0, -2}, {2, 0}, {0, 3}, {-3, 0}, {0, -3}, {3, 0}, {2, 1}, {-2, 1}, {2, -1}, {2, 1}, {1, 2}, {-1, 2}, {1, -2}, {1, 2}};
+Pos dm[]={{0, 0}, {0, 1}, {-1, 0}, {0, -1}, {1, 0}, {1, 1}, {-1, 1}, {1, -1}, {-1, -1}, {0, 2}, {-2, 0}, {0, -2}, {2, 0}, {0, 3}, {-3, 0}, {0, -3}, {3, 0}, {2, 1}, {-2, 1}, {2, -1}, {-2, -1}, {1, 2}, {-1, 2}, {1, -2}, {-1, -2}};
 
 Pos exit_cells[110];
 
@@ -128,7 +128,7 @@ struct Space{
         rep(i, n){
             p[e_cells[i].y][e_cells[i].x]=i*10;
         }
-        normalize_placement();
+        half_normalize_placement();
         print_placement();
     }
     void placement(){
@@ -174,11 +174,12 @@ struct Space{
             }
             if(setting_map.size()==n){
                 setting_e_cells_map=setting_map;
-                print_placement();
                 break;
             }
             base*=acsz;
         }
+        normalize_placement();
+        print_placement();
     }
     void sample_measurement(){
         int s_try=int(sqrt(s))*2+1;
@@ -220,6 +221,37 @@ struct Space{
     }
 
     void normalize_placement(){
+        vector<Pos> emp;
+        rep(i, l){
+            rep(j, l){
+                if(p[i][j]==-1) emp.push_back({i, j});
+            }
+        }
+        // cout<< "normalize_placement: " << emp.size() <<endl;
+        rep(lp, 100){
+            rep(i, emp.size()){
+                normalize4(emp[i]);
+            }
+            repr(i, emp.size()){
+                normalize4(emp[i]);
+            }
+        }
+    }
+    void normalize4(Pos pos){
+        int su=0;
+        int div=0;
+        rep(j, 4){
+            Pos npos=pos+d4[j];
+            npos.bounce();
+            if(p[npos.y][npos.x]!=-1){
+                su+=p[npos.y][npos.x];
+                div++;
+            }
+        }
+        // outputFile<< su SP << div <<endl;
+        if(div) p[pos.y][pos.x]=su/div;
+    }
+    void half_normalize_placement(){
         rep(i, n){
             rep(j, 4){
                 Pos npos=e_cells[i]+d4[j];
@@ -276,8 +308,9 @@ struct Space{
     void print_placement(){
         rep(i, l){
             rep(j, l){
-                if(p[i][j]==-1) cout<< 0 SP;
+                if(p[i][j]==-1) cout<< 500 SP;
                 else cout<< p[i][j] SP;
+                // cout<< p[i][j] SP;
             }
             cout<< endl;
         }
