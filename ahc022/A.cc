@@ -200,7 +200,7 @@ struct Space{
             ll base=1;
             ll setting=0;
             rep(j, cells_setting[i].size()){
-                int lp=(s*4+999)/1000;
+                int lp=(s*8+999)/1000;
                 // int lp=9500/(n*cells_setting[i].size());
                 while(lp*n*cells_setting[i].size()>10000) lp--;
                 int idx;
@@ -350,7 +350,8 @@ int main(){
   // Sのみに依存
     // 一旦4σを完全に信頼する方針で行く
     // あとで2000ケースから何回間違えているかを調べる
-      // 0から8Sずつ置いていけばいい
+      // 全然100%に近づかない
+    // 0から8Sずつ置いていけばいい
 // 配置
   // どの相対座標たちを使うかを決める
     // 最初はマンハッタンが近い点から取る（25個用意した）
