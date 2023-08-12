@@ -201,12 +201,10 @@ struct Space{
             rep(j, cells_setting[i].size()){
                 int lp=(s*4+999)/1000;
                 // int lp=9500/(n*cells_setting[i].size());
-                if(lp%2==0) lp++;
-                while(lp*n*cells_setting[i].size()>10000) lp-=2;
-                int tmp=multi_query(i, dm[j], lp);
-                if(tmp==-1) exit(0);
-                // outputFile<< "tmp: " << tmp <<endl;
-                int idx=round(1.0*tmp/(8*s));
+                while(lp*n*cells_setting[i].size()>10000) lp--;
+                int idx;
+                if(lp>1) idx=multi_query(i, dm[j], lp);
+                else idx=single_query(i, dm[j]);
                 setting+=base*idx;
                 base*=acsz;
             }
@@ -241,22 +239,32 @@ struct Space{
         }
     }
     int multi_query(int i, Pos pos, int lp){
-        map<int, int> mp;
+        // 0か1000の場合
+        int vote[]={0, 0};
         rep(j, lp){
             int tmp=query(i, pos);
-            tmp=round(1.0*tmp/(8*s));
-            mp[tmp]++;
+            if(tmp==0) vote[0]+=5000000;
+            if(tmp==1000) vote[1]+=5000000;
+            vote[0]+=(1000-tmp)*(1000-tmp);
+            vote[1]+=tmp*tmp;
         }
-        int ma=0;
-        int mai;
-        for(auto m : mp){
-            if(ma<m.second){
-                mai=m.first;
-                ma=m.second;
+        if(vote[0]<vote[1]) return 1;
+        else return 0;
+    }
+    int single_query(int i, Pos pos){
+        map<int, int> mp;
+        int tmp=query(i, pos);
+        int best=imax;
+        int besti;
+        rep(k, allowable_cell.size()){
+            int delta=abs(allowable_cell[k]-tmp);
+            if(delta<best){
+                best=delta;
+                besti=k;
             }
         }
 
-        return allowable_cell[mai];
+        return besti;
     }
     int query(int i, Pos pos){
         cout<< i SP << pos.y SP << pos.x <<endl;
