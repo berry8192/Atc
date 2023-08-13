@@ -173,12 +173,19 @@ struct Space{
                     set_val=idx;
                 }else{
                     // 値が入っている場合はその値を反映させる
-                    if(p_val==1000){
-                        cells_setting[j].push_back(1);
-                        set_val=1;
-                    }else{
-                        cells_setting[j].push_back(p_val/(8*s));
-                        set_val=p_val/(8*s);
+                    // if(p_val==1000){
+                    //     cells_setting[j].push_back(1);
+                    //     set_val=1;
+                    // }else{
+                    //     cells_setting[j].push_back(p_val/(8*s));
+                    //     set_val=p_val/(8*s);
+                    // }
+                    rep(k, allowable_cell.size()){
+                        if(p_val==allowable_cell[k]){
+                            cells_setting[j].push_back(k);
+                            set_val=k;
+                            break;
+                        }
                     }
                 }
                 current_cells_setting[j]+=base*set_val;
