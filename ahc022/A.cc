@@ -56,6 +56,17 @@ struct Space;
 
 int l, n, s;
 
+double normal_distribution_p(int delta){
+    // sはグローバルから
+    return exp(-1.0*delta*delta/(2*s*s))/(s*2.506628274631);
+}
+
+void normalize(double &a, double &b) {
+    double magnitude = (a+b);
+    a /= magnitude;
+    b /= magnitude;
+}
+
 // 構造体
 struct Pos{
     int y;
@@ -274,6 +285,25 @@ struct Space{
             e[i]=round(compare[i].val/10.0);
             e[i]=max(0, min(n-1, e[i]));
         }
+    }
+    int binary_query(int i, Pos pos){
+        // outputFile<< "i: " << i <<endl;
+        // allowable_cellとsも使う
+        double bias=0.0; // l側にどれだけ寄っているかをbiasで持つ
+        while(abs(bias)<0.9999){
+            // lである確率からrである確率を引いてbiasに足していく
+            int tmp=query(i, pos);
+            double l_prob=normal_distribution_p(allowable_cell[0]-tmp);
+            double r_prob=normal_distribution_p(allowable_cell[1]-tmp);
+            normalize(l_prob, r_prob);
+            // outputFile<< "nor: " << l_prob <<endl;
+            // outputFile<< "nor: " << r_prob <<endl;
+            bias+=l_prob-r_prob;
+
+            // outputFile<< "bias: " << bias <<endl;
+        }
+        if(bias<0) return 0;
+        else return 1;
     }
     int multi_query(int i, Pos pos, int lp){
         // 0か1000の場合
