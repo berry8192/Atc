@@ -115,7 +115,7 @@ struct Compare{
 
 struct Space{
     Pos e_cells[110]; // 入力をコピーしてくる
-    int p[110][110]; // システムに渡す配置
+    vector<vector<int>> p; // システムに渡す配置
     vector<Compare> compare; // 計測結果保存用かつ並べ替え用
     int e[110]; // 出力するE
     vector<int> allowable_cell; // セルに設定できる値のリスト
@@ -128,6 +128,7 @@ struct Space{
         compare.resize(n);
         if(s==1) setting_allowable_zero();
         else setting_allowable();
+        p.resize(l, vector<int>(l));
     }
 
     void sample_placement(){
@@ -143,23 +144,30 @@ struct Space{
         print_placement();
     }
     void random_placement(){
-        vector<vector<int>> shortest_cells_setting;
+        vector<vector<int>> shortest_cells_setting, shortest_p;
+        map<ll, int> shortest_setting_e_cells_map;
         int min_cs_length=26;
         rep(lp, 100){
             int cs_length=placement();
             if(cs_length<min_cs_length){
                 shortest_cells_setting=cells_setting;
+                shortest_p=p;
+                shortest_setting_e_cells_map=setting_e_cells_map;
                 min_cs_length=cs_length;
             }
         }
         cells_setting=shortest_cells_setting;
+        p=shortest_p;
+        setting_e_cells_map=shortest_setting_e_cells_map;
         // PVV(cells_setting);
+        // PM(setting_e_cells_map);
         normalize_placement();
         print_placement();
     }
     int placement(){
         cells_setting.clear();
         cells_setting.resize(n);
+        setting_e_cells_map.clear();
         rep(i, l){
             rep(j, l){
                 p[i][j]=-1;
@@ -243,7 +251,10 @@ struct Space{
                 }else if(s<333){
                     idx=over_query(i, dm[j]);
                 }else{
-                    idx=binary_query(i, dm[j]);
+                    // idx=binary_query(i, dm[j]); // TODO
+                    int lp=(s*8+999)/1000;
+                    while(lp*n*cells_setting[i].size()>10000) lp--;
+                    idx=multi_query(i, dm[j], lp);
                 }
                 setting+=base*idx;
                 base*=acsz;
