@@ -242,6 +242,20 @@ struct Space{
             }
         }
     }
+
+    void fill_ans(){
+        set<int> remain;
+        rep(i, n) remain.insert(i);
+        rep(i, n){
+            if(e[i]!=-1) remain.erase(e[i]);
+        }
+        rep(i, n){
+            if(e[i]==-1){
+                e[i]=*remain.begin();
+                remain.erase(remain.begin());
+            }
+        }
+    }
     void setting_allowable_zero(){
         allowable_cell={493, 500, 507};
         acsz=allowable_cell.size();
@@ -402,6 +416,7 @@ int main(){
     space.init();
     space.placement();
     space.measurement();
+    space.fill_ans();
 
     space.print_ans();
 
