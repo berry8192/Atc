@@ -219,12 +219,17 @@ struct Space{
             ll base=1;
             ll setting=0;
             rep(j, cells_setting[i].size()){
-                int lp=(s*8+999)/1000;
-                // int lp=9500/(n*cells_setting[i].size());
-                while(lp*n*cells_setting[i].size()>10000) lp--;
+                // int lp=(s*8+999)/1000;
+                // // int lp=9500/(n*cells_setting[i].size());
+                // while(lp*n*cells_setting[i].size()>10000) lp--;
                 int idx;
-                if(lp>1) idx=multi_query(i, dm[j], lp);
-                else idx=single_query(i, dm[j]);
+                if(s<125){
+                    idx=single_query(i, dm[j]);
+                }else if(s<333){
+                    idx=over_query(i, dm[j]);
+                }else{
+                    idx=binary_query(i, dm[j]);
+                }
                 setting+=base*idx;
                 base*=acsz;
             }
@@ -233,8 +238,7 @@ struct Space{
             if(setting_e_cells_map.find(setting)!=setting_e_cells_map.end()){
                 e[i]=setting_e_cells_map[setting];
             }else{
-                // 算出したsettingが見当たらないときはとりあえず0と答える
-                e[i]=0;
+                e[i]=-1;
             }
         }
     }
@@ -300,6 +304,13 @@ struct Space{
         rep(i, n){
             e[i]=round(compare[i].val/10.0);
             e[i]=max(0, min(n-1, e[i]));
+        }
+    }
+    int over_query(int i, Pos pos){
+        while(1){
+            int tmp=query(i, pos);
+            if(tmp<=allowable_cell[0]) return 0;
+            if(tmp>=allowable_cell[1]) return 1;
         }
     }
     int binary_query(int i, Pos pos){
