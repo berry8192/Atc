@@ -126,12 +126,8 @@ struct Space{
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
         compare.resize(n);
-        for(int i=0;i<=1000;i+=8*s){
-            allowable_cell.push_back(i);
-            if(i>10) break;
-        }
-        if(allowable_cell.size()==1) allowable_cell.push_back(1000);
-        acsz=allowable_cell.size();
+        if(s==1) setting_allowable_zero();
+        else setting_allowable();
         cells_setting.resize(n);
     }
 
@@ -235,7 +231,20 @@ struct Space{
             }
         }
     }
-
+    void setting_allowable_zero(){
+        allowable_cell={493, 500, 507};
+        acsz=allowable_cell.size();
+    }
+    void setting_allowable(){
+        // いったん4σの間隔をとる、これで99.99%確保
+        int sigma_width=4;
+        int l=max(0, 500-sigma_width*s);
+        int r=min(1000, 500+sigma_width*s);
+        allowable_cell={l, r};
+        acsz=allowable_cell.size();
+        // outputFile<< "allowable_cell: " << l SP << r <<endl;
+        // outputFile<< "acsz: " << acsz <<endl;
+    }
     void normalize_placement(){
         vector<Pos> emp;
         rep(i, l){
