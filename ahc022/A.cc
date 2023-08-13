@@ -360,7 +360,6 @@ struct Space{
         else return 0;
     }
     int single_query(int i, Pos pos){
-        map<int, int> mp;
         int tmp=query(i, pos);
         int best=imax;
         int besti;
@@ -371,7 +370,7 @@ struct Space{
                 besti=k;
             }
         }
-
+        // outputFile<< "tmp, besti: " << tmp SP << besti <<endl;
         return besti;
     }
     int query(int i, Pos pos){
