@@ -147,7 +147,6 @@ struct Space{
         int min_cs_length=26;
         rep(lp, 100){
             int cs_length=placement();
-            cout<< cs_length <<endl;
             if(cs_length<min_cs_length){
                 shortest_cells_setting=cells_setting;
                 min_cs_length=cs_length;
