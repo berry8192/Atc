@@ -128,7 +128,6 @@ struct Space{
         compare.resize(n);
         if(s==1) setting_allowable_zero();
         else setting_allowable();
-        cells_setting.resize(n);
     }
 
     void sample_placement(){
@@ -143,7 +142,25 @@ struct Space{
         half_normalize_placement();
         print_placement();
     }
-    void placement(){
+    void random_placement(){
+        vector<vector<int>> shortest_cells_setting;
+        int min_cs_length=26;
+        rep(lp, 100){
+            int cs_length=placement();
+            cout<< cs_length <<endl;
+            if(cs_length<min_cs_length){
+                shortest_cells_setting=cells_setting;
+                min_cs_length=cs_length;
+            }
+        }
+        cells_setting=shortest_cells_setting;
+        // PVV(cells_setting);
+        normalize_placement();
+        print_placement();
+    }
+    int placement(){
+        cells_setting.clear();
+        cells_setting.resize(n);
         rep(i, l){
             rep(j, l){
                 p[i][j]=-1;
@@ -197,8 +214,7 @@ struct Space{
             }
             base*=acsz;
         }
-        normalize_placement();
-        print_placement();
+        return cells_setting[0].size();
     }
     void sample_measurement(){
         int s_try=int(sqrt(s))*2+1;
@@ -413,7 +429,7 @@ int main(){
     inpt();
     Space space;
     space.init();
-    space.placement();
+    space.random_placement();
     space.measurement();
     space.fill_ans();
 
