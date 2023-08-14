@@ -122,6 +122,7 @@ struct Space{
     int acsz; // セルから得られる情報量
     vector<vector<int>> cells_setting; // セルの各地点にどの値を設定しているか、allowable_cellの添え字にすると欲しい値になる
     map<ll, int> setting_e_cells_map;
+    int query_count;
 
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
@@ -131,6 +132,7 @@ struct Space{
         else setting_allowable();
         acsz=allowable_cell.size();
         p.resize(l, vector<int>(l));
+        query_count=0;
     }
 
     void sample_placement(){
@@ -149,7 +151,7 @@ struct Space{
         vector<vector<int>> shortest_cells_setting, shortest_p;
         map<ll, int> shortest_setting_e_cells_map;
         int min_cs_length=26;
-        rep(lp, 10000){
+        rep(lp, 1000){
             int cs_length=placement();
             if(cs_length<min_cs_length){
                 shortest_cells_setting=cells_setting;
@@ -258,6 +260,8 @@ struct Space{
                     idx=single_query(i, dm[j]);
                 }else if(s<333){
                     idx=over_query(i, dm[j]);
+                }else if(s<=900){
+                    idx=loop_query(i, dm[j]);
                 }else{
                     // idx=binary_query(i, dm[j]); // TODO
                     int lp=(s*8+999)/1000;
@@ -364,6 +368,31 @@ struct Space{
             if(tmp>=allowable_cell[1]) return 1;
         }
     }
+    int loop_query(int i, Pos pos){
+        // outputFile<< "i: " << i <<endl;
+        // allowable_cellとsも使う
+        assert(acsz==2);
+        double likely[]={1.0, 1.0};
+        while(1){
+            // lである確率からrである確率を引いてbiasに足していく
+            double eps=0.1;
+            int tmp=query(i, pos);
+            int l_idx=max(0, min(369, int(round(100.0*(tmp-allowable_cell[0])/s))));
+            int r_idx=max(0, min(369, int(round(100.0*(allowable_cell[1]-tmp)/s))));
+            double l_prob=1.0-normsdist[l_idx];
+            double r_prob=1.0-normsdist[r_idx];
+            likely[0]*=l_prob/r_prob;
+            likely[1]*=r_prob/l_prob;
+            // outputFile<< "nor: " << l_prob <<endl;
+            // outputFile<< "nor: " << r_prob <<endl;
+            // outputFile<< "likely: " << likely[0] SP << likely[1] <<endl;
+            rep(i, 2){
+                if(likely[i]<eps) return i;
+            }
+
+            // outputFile<< "bias: " << bias <<endl;
+        }
+    }
     int binary_query(int i, Pos pos){
         // outputFile<< "i: " << i <<endl;
         // allowable_cellとsも使う
@@ -411,9 +440,11 @@ struct Space{
         return besti;
     }
     int query(int i, Pos pos){
+        if(query_count>=10000) return 0;
         cout<< i SP << pos.y SP << pos.x <<endl;
         int tmp;
         cin>> tmp;
+        query_count++;
         return tmp;
     }
 
