@@ -126,8 +126,10 @@ struct Space{
     void init(){
         rep(i, n) e_cells[i]=exit_cells[i];
         compare.resize(n);
-        if(s==1) setting_allowable_zero();
+        if(s==1) setting_allowable_zero(5);
+        else if(s==4) setting_allowable_zero(2);
         else setting_allowable();
+        acsz=allowable_cell.size();
         p.resize(l, vector<int>(l));
     }
 
@@ -147,7 +149,7 @@ struct Space{
         vector<vector<int>> shortest_cells_setting, shortest_p;
         map<ll, int> shortest_setting_e_cells_map;
         int min_cs_length=26;
-        rep(lp, 100){
+        rep(lp, 10000){
             int cs_length=placement();
             if(cs_length<min_cs_length){
                 shortest_cells_setting=cells_setting;
@@ -155,6 +157,8 @@ struct Space{
                 shortest_setting_e_cells_map=setting_e_cells_map;
                 min_cs_length=cs_length;
             }
+            // outputFile<< cs_length <<endl;
+            // PVV(cells_setting);
         }
         cells_setting=shortest_cells_setting;
         p=shortest_p;
@@ -175,10 +179,14 @@ struct Space{
         }
         vector<ll> current_cells_setting(n);
         ll base=1;
+        vector<int> perm(n);
+        rep(i, n) perm[i]=i;
         rep(i, 25){
             // マンハッタン距離3以内のセルは25個ある
             map<ll, int> setting_map;
-            rep(j, n){
+            shuffle(all(perm), mt);
+            rep(lp, n){
+                int j=perm[lp];
                 Pos npos=e_cells[j]+dm[i];
                 npos.bounce();
                 int p_val=p[npos.y][npos.x];
@@ -186,11 +194,11 @@ struct Space{
                 if(p_val==-1){
                     // 値が入っていなければ自由に設定する
                     int idx;
-                    if(n<(1<<i)){
+                    if(n<int(round(pow(acsz, i)))){
                         // なかなか決まらないときはランダムにする
                         idx=mt()%acsz;
                     }else{
-                        idx=j/(1<<i)%acsz;
+                        idx=j/int(round(pow(acsz, i)))%acsz;
                     }
                     p[npos.y][npos.x]=allowable_cell[idx];
                     cells_setting[j].push_back(idx);
@@ -217,11 +225,11 @@ struct Space{
             }
             if(setting_map.size()==n){
                 setting_e_cells_map=setting_map;
-                break;
+                return cells_setting[0].size();
             }
             base*=acsz;
         }
-        return cells_setting[0].size();
+        return 26;
     }
     void sample_measurement(){
         int s_try=int(sqrt(s))*2+1;
@@ -282,9 +290,13 @@ struct Space{
             }
         }
     }
-    void setting_allowable_zero(){
-        allowable_cell={493, 500, 507};
-        acsz=allowable_cell.size();
+    void setting_allowable_zero(int amount){
+        int width=8*s-1;
+        rep(i, amount) allowable_cell.push_back(500+i*width-width*(amount-1)/2);
+        // PV(allowable_cell);
+    }
+    void setting_allowable_interval(){
+        allowable_cell={250, 750};
     }
     void setting_allowable(){
         // いったん4σの間隔をとる、これで99.99%確保
@@ -292,7 +304,6 @@ struct Space{
         int l=max(0, 500-sigma_width*s);
         int r=min(1000, 500+sigma_width*s);
         allowable_cell={l, r};
-        acsz=allowable_cell.size();
         // outputFile<< "allowable_cell: " << l SP << r <<endl;
         // outputFile<< "acsz: " << acsz <<endl;
     }
@@ -409,7 +420,7 @@ struct Space{
     void print_placement(){
         rep(i, l){
             rep(j, l){
-                if(p[i][j]==-1) cout<< 500 SP;
+                if(p[i][j]==-1) cout<< 0 SP;
                 else cout<< p[i][j] SP;
                 // cout<< p[i][j] SP;
             }
