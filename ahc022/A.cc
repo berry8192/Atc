@@ -128,7 +128,7 @@ struct Space{
         rep(i, n) e_cells[i]=exit_cells[i];
         compare.resize(n);
         if(s==1) setting_allowable_zero(5);
-        else if(s==4) setting_allowable_zero(2);
+        else if(s<=16) setting_allowable_zero(2);
         else setting_allowable();
         acsz=allowable_cell.size();
         p.resize(l, vector<int>(l));
@@ -256,9 +256,9 @@ struct Space{
                 // // int lp=9500/(n*cells_setting[i].size());
                 // while(lp*n*cells_setting[i].size()>10000) lp--;
                 int idx;
-                if(s<125){
+                if(s<=16){
                     idx=single_query(i, dm[j]);
-                }else if(s<333){
+                }else if(false && s<333){
                     idx=over_query(i, dm[j]);
                 }else if(s<=900){
                     idx=loop_query(i, dm[j]);
@@ -304,9 +304,9 @@ struct Space{
     }
     void setting_allowable(){
         // いったん4σの間隔をとる、これで99.99%確保
-        int sigma_width=4;
-        int l=max(0, 500-sigma_width*s);
-        int r=min(1000, 500+sigma_width*s);
+        double sigma_width=1;
+        int l=max(0, 500-int(sigma_width*s));
+        int r=min(1000, 500+int(sigma_width*s));
         allowable_cell={l, r};
         // outputFile<< "allowable_cell: " << l SP << r <<endl;
         // outputFile<< "acsz: " << acsz <<endl;
