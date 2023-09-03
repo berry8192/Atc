@@ -11,11 +11,11 @@
 using namespace std;
 // using namespace atcoder;
 
-// std::ofstream outputFile("log.csv");
+std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+// 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
 // template <class T>void PVV(T pvv) {
@@ -70,6 +70,9 @@ struct Pos{
     void print(){
         cout<< "(" << h << ", " << w << ")" <<endl;
     }
+    bool operator<(const Pos &in) const{
+		return h!=in.h ? h<in.h : w<in.w;
+	};
     Pos operator+(const Pos pos){
         Pos rtn;
         rtn.h=h+pos.h;
@@ -89,7 +92,21 @@ Pos itop(int idx){
 }
 
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-Pos crops[8010];
+
+struct itv{
+	int le, ri;
+
+	// 区間スケジュール的な、終わるのが早い順で始まるのが遅い順のソート用
+	bool operator<(const itv &in) const{
+		return ri!=in.ri ? ri<in.ri : le>in.le;
+	};
+
+	// 区間が重なっているかどうか（端点を含ませたい場合は<=を使う）
+	bool cover(itv x, itv y){
+		return max(x.le, y.le)<min(x.ri, y.ri);
+	}
+};
+vector<itv> crops;
 
 struct Space{
     vector<vector<int>> graph;
@@ -104,7 +121,7 @@ struct Space{
         graph.resize(H*W);
         for (int i = 0; i < H - 1; ++i) {
             for (int j = 0; j < W; ++j){
-                cout<< h[i][j] <<endl;
+                // cout<< h[i][j] <<endl;
                 if(h[i][j]==0){
                     // cout<< "h: " << i SP << j <<endl;
                     int from=(Pos{i, j}).index();
@@ -164,10 +181,14 @@ void inpt(){
         for (int j = 0; j < W - 1; ++j) v[i][j] = int(s[j]-'0');
     }
     cin >> K;
+    crops.resize(K);
     for (int i = 0; i < K; ++i){
         cin >> S[i] >> D[i];
+        crops[i]={S[i], D[i]};
     }
 
+    // sort(all(crops));
+    // rep(i, K) outputFile<< crops[i].le SP << crops[i].ri <<endl;
     // cout<< K << endl;
     // int su=0;
     // for (int i = 0; i < K; ++i){
