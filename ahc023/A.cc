@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-std::ofstream outputFile("log.csv");
+// std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -39,6 +39,7 @@ int imax=2147483647;
 long long llimax=9223372036854775807;
 
 //焼きなましの定数
+chrono::system_clock::time_point start, current;
 double TIME_LIMIT=1900.0;
 // double TIME_LIMIT=190.0;
 double start_temp=10000000.0;
@@ -163,8 +164,55 @@ struct Space{
         }
         // PVV(enter_dist);
     }
-    void print_placement(){
-
+    bool reachable_all(vector<vector<int>> &bor){
+        vector<vector<int>> current_graph=graph;
+        vector<vector<int>> enter_dist(H, vector<int>(W, -1));
+        bitset<400> reached;
+        queue<Pos> q;
+        q.push({i0, 0});
+        enter_dist[i0][0]=0;
+        int count=0;
+        while(!q.empty()){
+            Pos pos=q.front();
+            int pindex=pos.index();
+            q.pop();
+            if(bor[pos.h][pos.w]==1) continue;
+            rep(i, graph[pindex].size()){
+                Pos npos=itop(graph[pindex][i]);
+                reached.set(graph[pindex][i]);
+                if(enter_dist[npos.h][npos.w]==-1){
+                    enter_dist[npos.h][npos.w]=enter_dist[pos.h][pos.w]+1;
+                    q.push(npos);
+                }
+            }
+        }
+        // outputFile<< reached.count() <<endl;
+        // PVV(enter_dist);
+        return (reached.count()==H*W);
+    }
+    void find_placement(){
+        vector<vector<int>> board(H, vector<int>(W));
+        vector<int> perm(H*W);
+        rep(i, H*W) perm[i]=i;
+        shuffle(all(perm), mt);
+        rep(i, H*W){
+            Pos pos=itop(perm[i]);
+            board[pos.h][pos.w]=1;
+            if(!reachable_all(board)) board[pos.h][pos.w]=0;
+        }
+        // PVV(board);
+        int count=0;
+        rep(i, H){
+            rep(j, W){
+                if(board[i][j]) count++;
+            }
+        }
+        cout<< count <<endl;
+        rep(i, H){
+            rep(j, W){
+                if(board[i][j]) cout<< i*W+j+1 SP << i SP << j SP << 1 <<endl;
+            }
+        }
     }
     void print_ans(){
     }
@@ -199,16 +247,10 @@ void inpt(){
 }
 
 int main(){
-    //開始時間の計測
-    std::chrono::system_clock::time_point start, current;
-    double delta;
-    start = chrono::system_clock::now();
-
     inpt();
     Space space;
     space.init();
-
-    space.print_ans();
+    space.find_placement();
 
     return 0;
 }
