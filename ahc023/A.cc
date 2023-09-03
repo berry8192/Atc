@@ -50,7 +50,7 @@ int seed=1;
 mt19937 mt(seed);
 
 int T, K, H, W, i0;
-int S[4010], D[4010];
+int S[8010], D[8010];
 int h[21][21], v[21][21];
 
 // 構造体
@@ -64,6 +64,9 @@ struct Pos{
         w=ww;
     }
 
+    int index(){
+        return h*W+w;
+    }
     void print(){
         cout<< "(" << h << ", " << w << ")" <<endl;
     }
@@ -81,10 +84,15 @@ struct Pos{
     }
 };
 
+Pos itop(int idx){
+    return {idx/W, idx%W};
+}
+
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 Pos crops[4010];
 
 struct Space{
+    vector<vector<int>> graph;
 
     void init(){
         
@@ -108,7 +116,17 @@ void inpt(){
         for (int j = 0; j < W - 1; ++j) v[i][j] = s[j];
     }
     cin >> K;
-    for (int i = 0; i < K; ++i) cin >> S[i] >> D[i];
+    for (int i = 0; i < K; ++i){
+        cin >> S[i] >> D[i];
+    }
+
+    // cout<< K << endl;
+    // int su=0;
+    // for (int i = 0; i < K; ++i){
+    //     su+=D[i]-S[i]+1;
+    //     // cout<< S[i] SP << D[i] <<endl;
+    // }
+    // cout<< su <<endl;
 }
 
 int main(){
