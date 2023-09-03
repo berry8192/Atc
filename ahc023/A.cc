@@ -20,10 +20,10 @@ using namespace std;
 // }
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
-// 		rep(j, pvv[i].size()){
-// 			outputFile << pvv[i][j] SP;
+// 		rep(j, pvv[i].size()-1){
+// 			outputFile<< pvv[i][j] << ", ";
 // 		}
-// 		outputFile << endl;
+// 		outputFile<< pvv[i][pvv[i].size()-1] <<endl;
 // 	}
 // }
 // template <class T> void PM(T pm) {
@@ -89,15 +89,63 @@ Pos itop(int idx){
 }
 
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-Pos crops[4010];
+Pos crops[8010];
 
 struct Space{
     vector<vector<int>> graph;
 
     void init(){
-        
+        create_graph();
+        calc_dist_from_enter();
     }
 
+    void create_graph(){
+        graph.clear();
+        graph.resize(H*W);
+        for (int i = 0; i < H - 1; ++i) {
+            for (int j = 0; j < W; ++j){
+                cout<< h[i][j] <<endl;
+                if(h[i][j]==0){
+                    // cout<< "h: " << i SP << j <<endl;
+                    int from=(Pos{i, j}).index();
+                    int to=(Pos{i+1, j}).index();
+                    graph[from].push_back(to);
+                    graph[to].push_back(from);
+                }
+            }
+        }
+        for (int i = 0; i < H; ++i) {
+            for (int j = 0; j < W - 1; ++j){
+                if(v[i][j]==0){
+                    // cout<< "v: " << i SP << j <<endl;
+                    int from=(Pos{i, j}).index();
+                    int to=(Pos{i, j+1}).index();
+                    graph[from].push_back(to);
+                    graph[to].push_back(from);
+                }
+            }
+        }
+        // PVV(graph);
+    }
+    void calc_dist_from_enter(){
+        vector<vector<int>> enter_dist(H, vector<int>(W, -1));
+        queue<Pos> q;
+        q.push({i0, 0});
+        enter_dist[i0][0]=0;
+        while(!q.empty()){
+            Pos pos=q.front();
+            int pindex=pos.index();
+            q.pop();
+            rep(i, graph[pindex].size()){
+                Pos npos=itop(graph[pindex][i]);
+                if(enter_dist[npos.h][npos.w]==-1){
+                    enter_dist[npos.h][npos.w]=enter_dist[pos.h][pos.w]+1;
+                    q.push(npos);
+                }
+            }
+        }
+        // PVV(enter_dist);
+    }
     void print_placement(){
 
     }
@@ -109,11 +157,11 @@ void inpt(){
     cin >> T >> H >> W >> i0;
     for (int i = 0; i < H - 1; ++i) {
         string s; cin >> s;
-        for (int j = 0; j < W; ++j) h[i][j] = s[j];
+        for (int j = 0; j < W; ++j) h[i][j] = int(s[j]-'0');
     }
     for (int i = 0; i < H; ++i) {
         string s; cin >> s;
-        for (int j = 0; j < W - 1; ++j) v[i][j] = s[j];
+        for (int j = 0; j < W - 1; ++j) v[i][j] = int(s[j]-'0');
     }
     cin >> K;
     for (int i = 0; i < K; ++i){
