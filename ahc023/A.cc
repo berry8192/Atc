@@ -109,8 +109,26 @@ struct itv{
 };
 vector<itv> crops;
 
+struct Placement{
+    int k;
+    Pos pos;
+    int s;
+
+    Placement(){};
+    Placement(int ik, Pos ipos, int is){
+        k=ik;
+        pos=ipos;
+        s=is;
+    }
+    
+    void print(){
+        cout<< k SP << pos.h SP << pos.w SP << s <<endl;
+    }
+};
+
 struct Space{
     vector<vector<int>> graph;
+    vector<Placement> placement;
 
     void init(){
         create_graph();
@@ -213,6 +231,9 @@ struct Space{
                 if(board[i][j]) cout<< i*W+j+1 SP << i SP << j SP << 1 <<endl;
             }
         }
+    }
+    void interval_scheduling(int index){
+
     }
     void print_ans(){
     }
