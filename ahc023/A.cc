@@ -128,7 +128,9 @@ struct Placement{
 
 struct Space{
     vector<vector<int>> graph;
+    vector<vector<int>> board; // 常に畑とするマスが1
     vector<Placement> placement;
+    bitset<8010> used_plan; // 使用した農耕プラン
 
     void init(){
         create_graph();
@@ -209,7 +211,7 @@ struct Space{
         return (reached.count()==H*W);
     }
     void find_placement(){
-        vector<vector<int>> board(H, vector<int>(W));
+        board.resize(H, vector<int>(W));
         vector<int> perm(H*W);
         rep(i, H*W) perm[i]=i;
         shuffle(all(perm), mt);
@@ -219,23 +221,49 @@ struct Space{
             if(!reachable_all(board)) board[pos.h][pos.w]=0;
         }
         // PVV(board);
-        int count=0;
-        rep(i, H){
-            rep(j, W){
-                if(board[i][j]) count++;
-            }
-        }
-        cout<< count <<endl;
-        rep(i, H){
-            rep(j, W){
-                if(board[i][j]) cout<< i*W+j+1 SP << i SP << j SP << 1 <<endl;
-            }
-        }
+        // int count=0;
+        // rep(i, H){
+        //     rep(j, W){
+        //         if(board[i][j]) count++;
+        //     }
+        // }
+        // cout<< count <<endl;
+        // rep(i, H){
+        //     rep(j, W){
+        //         if(board[i][j]) cout<< i*W+j+1 SP << i SP << j SP << 1 <<endl;
+        //     }
+        // }
     }
     void interval_scheduling(int index){
-
+        int empty_time=1;
+        bool planned=true;
+        while(planned){
+            planned=false;
+            rep(lp, 20){
+                rep(i, K){
+                    if(empty_time<=S[i] && S[i]-empty_time<=lp){
+                        if(used_plan[i]) continue;
+                        // outputFile<< index SP << S[i] SP << D[i] <<endl;
+                        empty_time=D[i]+1;
+                        placement.push_back({i+1, itop(index), S[i]});
+                        used_plan.set(i);
+                        planned=true;
+                    }
+                    if(empty_time==T) break;
+                }
+            }
+        }
+    }
+    void interval_scheduling_all(){
+        rep(i, H){
+            rep(j, W){
+                if(board[i][j]) interval_scheduling(i*W+j);
+            }
+        }
     }
     void print_ans(){
+        cout<< placement.size() <<endl;
+        rep(lp, placement.size()) placement[lp].print();
     }
 };
 
@@ -272,6 +300,8 @@ int main(){
     Space space;
     space.init();
     space.find_placement();
+    space.interval_scheduling_all();
+    space.print_ans();
 
     return 0;
 }
