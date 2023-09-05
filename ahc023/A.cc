@@ -80,6 +80,9 @@ struct Pos{
     bool operator<(const Pos &in) const{
 		return h!=in.h ? h<in.h : w<in.w;
 	};
+    bool operator==(const Pos &cpos) const{
+        return (h==cpos.h && w==cpos.w);
+    };
     Pos operator+(const Pos pos){
         Pos rtn;
         rtn.h=h+pos.h;
@@ -116,33 +119,56 @@ struct itv{
 vector<itv> crops;
 
 struct Placement{
-    int k;
-    Pos pos;
-    int s;
+    Pos pos={0, 0};
+    int s=0;
 
     Placement(){};
-    Placement(int ik, Pos ipos, int is){
-        k=ik;
+    Placement(Pos ipos, int is){
         pos=ipos;
         s=is;
     }
+
+    bool is_empty(){
+        return (s==0);
+    }
+    void init(){
+        assert(s!=0);
+        pos={0, 0};
+        s=0;
+    }
     
-    void print(){
-        cout<< k SP << pos.h SP << pos.w SP << s <<endl;
+    // 出力の時は1-indexにする
+    void print(int index){
+        cout<< index+1 SP << pos.h SP << pos.w SP << s <<endl;
     }
 };
 
 struct Space{
-    vector<vector<int>> graph;
-    vector<vector<int>> board; // 常に畑とするマスが1
-    vector<Placement> placement;
+    vector<vector<int>> graph; // [400][0~4] [頂点idx][到達可能な頂点idx] 盤面の移動可否を計算するためのグラフ
+    vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1
+    // ここから下の変数は直接触らない
+    vector<Placement> placement; // 出力となる農耕計画
     bitset<8010> used_plan; // 使用した農耕プラン
+    int plant[110][21][21]; // [T][H][W]=val番のplanで利用中、負の時は早く置いているとき、0以外が入っているときは使用中
+    // int harvest[110][21][21];
+    int score; // 現在のスコア、H*W*T=40000点満点
 
     void init(){
+        score=0;
+        rep(i, 110){
+            rep(j, 21){
+                rep(k, 21){
+                    plant[i][j][k]=0;
+                    // harvest[i][j][k]=0;
+                }
+            }
+        }
+        placement.resize(K);
         create_graph();
         calc_dist_from_enter();
     }
 
+    // graphを作成
     void create_graph(){
         graph.clear();
         graph.resize(H*W);
@@ -171,6 +197,7 @@ struct Space{
         }
         // PVV(graph);
     }
+    // graphを使って初期状態での入口からの距離を算出
     void calc_dist_from_enter(){
         vector<vector<int>> enter_dist(H, vector<int>(W, -1));
         queue<Pos> q;
@@ -190,6 +217,7 @@ struct Space{
         }
         // PVV(enter_dist);
     }
+    // boardを渡し、すべてのマスに到達できるかを算出
     bool reachable_all(vector<vector<int>> &bor){
         vector<vector<int>> current_graph=graph;
         vector<vector<int>> enter_dist(H, vector<int>(W, -1));
@@ -216,6 +244,7 @@ struct Space{
         // PVV(enter_dist);
         return (reached.count()==H*W);
     }
+    // ランダムな順番に、各マスを畑にしてもたどり着けないマスがないかを確認し、大丈夫なら畑にする
     void find_placement(){
         board.resize(H, vector<int>(W));
         vector<int> perm(H*W);
@@ -240,6 +269,7 @@ struct Space{
         //     }
         // }
     }
+    // 1つのマスについて、なるべく農耕時間が長くなるように農耕計画を立てる
     void interval_scheduling(int index){
         int empty_time=1;
         bool planned=true;
@@ -251,8 +281,7 @@ struct Space{
                         if(used_plan[i]) continue;
                         // outputFile<< index SP << S[i] SP << D[i] <<endl;
                         empty_time=D[i]+1;
-                        placement.push_back({i+1, itop(index), S[i]});
-                        used_plan.set(i);
+                        add_schedule(i, itop(index), S[i]);
                         planned=true;
                     }
                     if(empty_time==T) break;
@@ -267,9 +296,57 @@ struct Space{
             }
         }
     }
+
+    void add_schedule(int plan_idx, Pos Plan_pos, int plant_t){
+        assert(placement[plan_idx].is_empty());
+        placement[plan_idx]={Plan_pos, plant_t};
+        assert(!used_plan[plan_idx]);
+        used_plan.set(plan_idx);
+        rep3(i, S[plan_idx], plant_t){
+            assert(plant[i][Plan_pos.h][Plan_pos.w]==0);
+            // assert(harvest[i][Plan_pos.h][Plan_pos.w]==0);
+            plant[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+            // harvest[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+        }
+        rep3(i, D[plan_idx]+1, S[plan_idx]){
+            assert(plant[i][Plan_pos.h][Plan_pos.w]==0);
+            // assert(harvest[i][Plan_pos.h][Plan_pos.w]==0);
+            plant[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+            // harvest[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+        }
+        score+=D[plan_idx]-S[plan_idx]+1;
+        assert(0<=score);
+        assert(score<=40000);
+    }
+    // 後で計算量を削減したくなったらplan_posを渡さなくてよくする
+    void delete_schedule(int plan_idx, Pos Plan_pos){
+        assert(placement[plan_idx].pos==Plan_pos); // 消そうとしているものの座標がちゃんと把握できているかを念のため確認
+        placement[plan_idx].init();
+        assert(used_plan[plan_idx]);
+        used_plan.reset(plan_idx);
+        for(int i=S[plan_idx]-1;i>0;i--){
+            if(plant[i][Plan_pos.h][Plan_pos.w]<0) plant[i][Plan_pos.h][Plan_pos.w]=0;
+            else break;
+            // if(harvest[i][Plan_pos.h][Plan_pos.w]<0) harvest[i][Plan_pos.h][Plan_pos.w]=0;
+            // else break;
+        }
+        rep3(i, D[plan_idx]+1, S[plan_idx]){
+            assert(plant[i][Plan_pos.h][Plan_pos.w]!=0);
+            // assert(harvest[i][Plan_pos.h][Plan_pos.w]!=0);
+            plant[i][Plan_pos.h][Plan_pos.w]=0;
+            // harvest[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+        }
+        score-=D[plan_idx]-S[plan_idx]+1;
+        assert(0<=score);
+        assert(score<=40000);
+    }
     void print_ans(){
-        cout<< placement.size() <<endl;
-        rep(lp, placement.size()) placement[lp].print();
+        cout<< used_plan.count() <<endl;
+        rep(lp, K){
+            if(placement[lp].s){
+                placement[lp].print(lp);
+            }
+        }
     }
 };
 
@@ -315,6 +392,7 @@ int main(){
     space.init();
     space.find_placement();
     space.interval_scheduling_all();
+    // cout<< space.score SP << space.score*25 <<endl;
     space.print_ans();
 
     return 0;
