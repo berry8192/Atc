@@ -18,6 +18,12 @@ using namespace std;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
+// template <class T> void PV(T pvv) {
+// 	if(!pvv.size()) return;
+// 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
+// 	cout<< pvv[pvv.size()-1] <<endl;
+// }
+
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
 // 		rep(j, pvv[i].size()-1){
@@ -284,6 +290,7 @@ void inpt(){
         crops[i]={S[i], D[i]};
     }
 
+    // 雑crops
     // sort(all(crops));
     // rep(i, K) outputFile<< crops[i].le SP << crops[i].ri <<endl;
     // cout<< K << endl;
@@ -293,6 +300,13 @@ void inpt(){
     //     // cout<< S[i] SP << D[i] <<endl;
     // }
     // cout<< su <<endl;
+
+    // vector<int> count(110);
+    // for (int i = 0; i < K; ++i){
+    //     count[D[i]-S[i]+1]++;
+    // }
+    // PV(count);
+    // exit(0);
 }
 
 int main(){
