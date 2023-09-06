@@ -103,6 +103,32 @@ Pos itop(int idx){
 
 Pos d4[]={{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
+int around_wall(Pos pos){
+    int rtn=0;
+    if(pos.h==0){
+        rtn++;
+    }else if(h[pos.h-1][pos.w]==1){
+        rtn++;
+    }
+    if(pos.h==H-1){
+        rtn++;
+    }else if(h[pos.h][pos.w]==1){
+        rtn++;
+    }
+
+    if(pos.w==0){
+        rtn++;
+    }else if(v[pos.h][pos.w-1]==1){
+        rtn++;
+    }
+    if(pos.w==W-1){
+        rtn++;
+    }else if(v[pos.h][pos.w]==1){
+        rtn++;
+    }
+    return rtn;
+}
+
 struct itv{
 	int le, ri;
 
@@ -145,7 +171,9 @@ struct Placement{
 
 struct Space{
     vector<vector<int>> graph; // [400][0~4] [頂点idx][到達可能な頂点idx] 盤面の移動可否を計算するためのグラフ
-    vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1
+    vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1、未定が0、通路にするのが-1
+    vector<vector<int>> enter_dist; // 入口からの距離
+    vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
     // ここから下の変数は直接触らない
     vector<Placement> placement; // 出力となる農耕計画
     bitset<8010> used_plan; // 使用した農耕プラン
@@ -164,6 +192,9 @@ struct Space{
             }
         }
         placement.resize(K);
+        board.resize(H, vector<int>(W));
+        board[i0][0]=-1; // 入口は確実に通路にする
+        enter_dist.resize(H, vector<int>(W, -1));
         create_graph();
         calc_dist_from_enter();
     }
@@ -199,7 +230,6 @@ struct Space{
     }
     // graphを使って初期状態での入口からの距離を算出
     void calc_dist_from_enter(){
-        vector<vector<int>> enter_dist(H, vector<int>(W, -1));
         queue<Pos> q;
         q.push({i0, 0});
         enter_dist[i0][0]=0;
@@ -217,26 +247,73 @@ struct Space{
         }
         // PVV(enter_dist);
     }
+    void calc_highest_pos_idx(){
+        rep(i, H){
+            rep(j, W){
+                int cpos_idx=i*W+j;
+                int current_dist=enter_dist[i][j];
+                bool is_highest=true;
+                rep(k, graph[cpos_idx].size()){
+                    Pos npos=itop(graph[cpos_idx][k]);
+                    if(current_dist<enter_dist[npos.h][npos.w]){
+                        is_highest=false;
+                        break;
+                    }
+                }
+                if(is_highest) highest_pos_idx.push_back(cpos_idx);
+            }
+        }
+    }
+    void calc_board_ng_place(){
+        rep(i, highest_pos_idx.size()){
+            int second_high_idx=graph[highest_pos_idx[i]][0]; // 乱数の余地あり
+            Pos pos=itop(second_high_idx);
+            if(pos==Pos{i0, 0}) continue;
+            board[pos.h][pos.w]=-1;
+            calc_ng_load(second_high_idx);
+        }
+        // PVV(board);
+    }
+    // 最短経路の通路を決める
+    void calc_ng_load(int idx){
+        int min_around_wall=555;
+        int min_i;
+        Pos cpos=itop(idx);
+        int current_dist=enter_dist[cpos.h][cpos.w];
+        rep(i, graph[idx].size()){
+            Pos pos=itop(graph[idx][i]);
+            if(enter_dist[pos.h][pos.w]>=current_dist) continue;
+            if(board[pos.h][pos.w]==-1) return; // 既に通路になっているところに隣接したら終わりで良い
+            int tmp=around_wall(itop(graph[idx][i])); // 周りに壁がいくつあるか
+            if(tmp<min_around_wall){
+                min_around_wall=tmp;
+                min_i=i;
+            }
+        }
+        int min_idx=graph[idx][min_i];
+        Pos mpos=itop(min_idx);
+        board[mpos.h][mpos.w]=-1;
+        calc_ng_load(min_idx);
+    }
+
     // boardを渡し、すべてのマスに到達できるかを算出
     bool reachable_all(vector<vector<int>> &bor){
         vector<vector<int>> current_graph=graph;
-        vector<vector<int>> enter_dist(H, vector<int>(W, -1));
         bitset<400> reached;
         queue<Pos> q;
-        q.push({i0, 0});
-        enter_dist[i0][0]=0;
-        int count=0;
+        Pos init_pos={i0, 0};
+        q.push(init_pos);
+        reached.set(init_pos.index());
         while(!q.empty()){
             Pos pos=q.front();
             int pindex=pos.index();
             q.pop();
             if(bor[pos.h][pos.w]==1) continue;
             rep(i, graph[pindex].size()){
-                Pos npos=itop(graph[pindex][i]);
-                reached.set(graph[pindex][i]);
-                if(enter_dist[npos.h][npos.w]==-1){
-                    enter_dist[npos.h][npos.w]=enter_dist[pos.h][pos.w]+1;
-                    q.push(npos);
+                int n_index=graph[pindex][i];
+                if(!reached[n_index]){
+                    reached.set(n_index);
+                    q.push(itop(n_index));
                 }
             }
         }
@@ -245,13 +322,14 @@ struct Space{
         return (reached.count()==H*W);
     }
     // ランダムな順番に、各マスを畑にしてもたどり着けないマスがないかを確認し、大丈夫なら畑にする
-    void find_placement(){
-        board.resize(H, vector<int>(W));
+    void find_placement(bool avoid_load){
         vector<int> perm(H*W);
         rep(i, H*W) perm[i]=i;
         shuffle(all(perm), mt);
+
         rep(i, H*W){
             Pos pos=itop(perm[i]);
+            if(avoid_load && board[pos.h][pos.w]==-1) continue; // 通路にしたいマスはそもそも試さない
             board[pos.h][pos.w]=1;
             if(!reachable_all(board)) board[pos.h][pos.w]=0;
         }
@@ -292,7 +370,7 @@ struct Space{
     void interval_scheduling_all(){
         rep(i, H){
             rep(j, W){
-                if(board[i][j]) interval_scheduling(i*W+j);
+                if(board[i][j]==1) interval_scheduling(i*W+j);
             }
         }
     }
@@ -390,7 +468,11 @@ int main(){
     inpt();
     Space space;
     space.init();
-    space.find_placement();
+    space.calc_highest_pos_idx();
+    space.calc_board_ng_place();
+    space.find_placement(true);
+    space.find_placement(false);
+    // PVV(space.board);
     space.interval_scheduling_all();
     // cout<< space.score SP << space.score*25 <<endl;
     space.print_ans();
