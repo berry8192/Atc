@@ -174,6 +174,7 @@ struct Space{
     vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1、未定が0、通路にするのが-1
     vector<vector<int>> enter_dist; // 入口からの距離
     vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
+    // vector<vector<int>> blocking; // マスidが埋まっていると辿り着けないマスのidたち
     // ここから下の変数は直接触らない
     vector<Placement> placement; // 出力となる農耕計画
     bitset<8010> used_plan; // 使用した農耕プラン
@@ -195,6 +196,7 @@ struct Space{
         board.resize(H, vector<int>(W));
         board[i0][0]=-1; // 入口は確実に通路にする
         enter_dist.resize(H, vector<int>(W, -1));
+        // blocking.resize(H*W);
         create_graph();
         calc_dist_from_enter();
     }
@@ -375,6 +377,22 @@ struct Space{
         }
     }
 
+    // void random_add_delete(){
+    //     int plan_idx;
+    //     if(mt()%2){
+    //         while(1){
+    //             plan_idx=mt()%K;
+    //             if(used_plan[plan_idx]) continue;
+    //         }
+
+    //     }else{
+    //         while(1){
+    //             plan_idx=mt()%K;
+    //             if(!used_plan[plan_idx]) continue;
+    //         }
+    //     }
+    // }
+
     void add_schedule(int plan_idx, Pos Plan_pos, int plant_t){
         assert(placement[plan_idx].is_empty());
         placement[plan_idx]={Plan_pos, plant_t};
@@ -479,3 +497,13 @@ int main(){
 
     return 0;
 }
+
+// 畑確定のマスはなにも制約がない
+// 通路のマスは自分がいるとふさがるマスの制約を守る
+  // ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
+  // ふさがるマスが多いマスはあきらめる
+  // 2通り以上アクセスする方法があるマスはどうしよう
+  // 時刻tのときにアクセスできる必要があるマスの一覧と、盤面の状態がほしい
+  // これがあればひとまず設置可能かどうかの判定はできる
+  // 各マスについてbitset<T>でブロッキング時間とアクセスしたい時間を管理できるとよさそう
+// 通路になっているマスの入口からの距離が極大なマスから最短距離を求める。遡っている途中で進行方向以外の3近傍になったマスは畑・通路すべて自分のふさぐ範囲
