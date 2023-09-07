@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-// std::ofstream outputFile("log.csv");
+std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -153,15 +153,6 @@ struct Placement{
         pos=ipos;
         s=is;
     }
-
-    bool is_empty(){
-        return (s==0);
-    }
-    void init(){
-        assert(s!=0);
-        pos={0, 0};
-        s=0;
-    }
     
     // 出力の時は1-indexにする
     void print(int index){
@@ -176,23 +167,25 @@ struct Space{
     vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
     // vector<vector<int>> blocking; // マスidが埋まっていると辿り着けないマスのidたち
     // ここから下の変数は直接触らない
-    vector<Placement> placement; // 出力となる農耕計画
+    map<int, Placement> placement; // 出力となる農耕計画
     bitset<8010> used_plan; // 使用した農耕プラン
-    int plant[110][21][21]; // [T][H][W]=val番のplanで利用中、負の時は早く置いているとき、0以外が入っているときは使用中
+    // vector<vector<vector<int>>> plant; // [T][H][W]=val番のplanで利用中、負の時は早く置いているとき、0以外が入っているときは使用中
+    vector<vector<bitset<102>>> plant_blocking; // [H][W]の各ターンで植えられないときを1とする
+    vector<vector<bitset<102>>> plant_using; // [H][W]の各ターンで植えたいときを1とする
+    vector<vector<bitset<102>>> harvest_blocking; // [H][W]の各ターンで収穫できないときを1とする
+    vector<vector<bitset<102>>> harvest_using; // [H][W]の各ターンで収穫したいときを1とする
     // int harvest[110][21][21];
     int score; // 現在のスコア、H*W*T=40000点満点
 
     void init(){
         score=0;
-        rep(i, 110){
-            rep(j, 21){
-                rep(k, 21){
-                    plant[i][j][k]=0;
-                    // harvest[i][j][k]=0;
-                }
-            }
-        }
-        placement.resize(K);
+        // plant.resize(T);
+        // rep(i, T) plant[i].resize(H);
+        // rep(i, T) rep(j, H) plant[i][j].resize(W, imax);
+        plant_blocking.resize(H, vector<bitset<102>>(W));
+        plant_using.resize(H, vector<bitset<102>>(W));
+        harvest_blocking.resize(H, vector<bitset<102>>(W));
+        harvest_using.resize(H, vector<bitset<102>>(W));
         board.resize(H, vector<int>(W));
         board[i0][0]=-1; // 入口は確実に通路にする
         enter_dist.resize(H, vector<int>(W, -1));
@@ -323,6 +316,9 @@ struct Space{
         // PVV(enter_dist);
         return (reached.count()==H*W);
     }
+    bool reachable_all_range(int s, int d){
+        // 入口からBFSしながらblockingのorをとっていき、隣接したマスのusingとの積がnoneでなければfalseを返す
+    }
     // ランダムな順番に、各マスを畑にしてもたどり着けないマスがないかを確認し、大丈夫なら畑にする
     void find_placement(bool avoid_load){
         vector<int> perm(H*W);
@@ -377,71 +373,123 @@ struct Space{
         }
     }
 
-    // void random_add_delete(){
-    //     int plan_idx;
-    //     if(mt()%2){
-    //         while(1){
-    //             plan_idx=mt()%K;
-    //             if(used_plan[plan_idx]) continue;
-    //         }
+    void random_add_delete(){
+        int plan_idx;
+        rep(lp, 10000){
+            plan_idx=mt()%K;
+            Pos pos={mt()%H, mt()%W};
+            if(used_plan[plan_idx]) continue;
+            if(schedule_addable(plan_idx, pos, S[plan_idx])){
 
-    //     }else{
-    //         while(1){
-    //             plan_idx=mt()%K;
-    //             if(!used_plan[plan_idx]) continue;
-    //         }
-    //     }
-    // }
+            }
+        }
+    }
 
-    void add_schedule(int plan_idx, Pos Plan_pos, int plant_t){
-        assert(placement[plan_idx].is_empty());
-        placement[plan_idx]={Plan_pos, plant_t};
+    bool schedule_addable(int plan_idx, Pos plan_pos, int plant_t){
+        assert(plant_t<=S[plan_idx]);
+        assert(0<plant_t);
+        assert(placement.find(plan_idx)==placement.end());
+        assert(!used_plan[plan_idx]);
+        bitset<102> bs;
+        rep3(i, D[plan_idx]+2, plant_t) bs.set(i); // plan_posにおいて農耕をしてしまっていないか
+        if((bs&(plant_blocking[plan_pos.h][plan_pos.w])).any()) return false;
+        if(plant_using[plan_pos.h][plan_pos.w].test(plant_t)) return false;
+        if(harvest_using[plan_pos.h][plan_pos.w].test(D[plan_idx])) return false;
+        rep3(i, D[plan_idx]+1, plant_t+1){
+            if(plant_blocking[plan_pos.h][plan_pos.w].test(i)) return false;
+        }
+        rep3(i, D[plan_idx], plant_t){
+            if(harvest_blocking[plan_pos.h][plan_pos.w].test(i)) return false;
+        }
+        int next_score=score+D[plan_idx]-S[plan_idx]+1;
+        assert(0<=next_score);
+        assert(next_score<=40000);
+
+        add_schedule(plan_idx, plan_pos, plant_t);
+        delete_schedule(plan_idx, plan_pos);
+        return true;
+    }
+    void add_schedule(int plan_idx, Pos plan_pos, int plant_t){
+        assert(plant_t<=S[plan_idx]);
+        assert(0<plant_t);
+        assert(placement.find(plan_idx)==placement.end());
+        placement[plan_idx]={plan_pos, plant_t};
         assert(!used_plan[plan_idx]);
         used_plan.set(plan_idx);
-        rep3(i, S[plan_idx], plant_t){
-            assert(plant[i][Plan_pos.h][Plan_pos.w]==0);
-            // assert(harvest[i][Plan_pos.h][Plan_pos.w]==0);
-            plant[i][Plan_pos.h][Plan_pos.w]=plan_idx;
-            // harvest[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+        bitset<102> bs;
+        rep3(i, D[plan_idx]+2, plant_t) bs.set(i); // plan_posにおいて農耕をしてしまっていないか
+        // outputFile<< (bs&(plant_blocking[plan_pos.h][plan_pos.w])) <<endl;
+        assert((bs&(plant_blocking[plan_pos.h][plan_pos.w])).none());
+
+        assert(!plant_using[plan_pos.h][plan_pos.w].test(plant_t));
+        plant_using[plan_pos.h][plan_pos.w].set(plant_t);
+        assert(!harvest_using[plan_pos.h][plan_pos.w].test(D[plan_idx]));
+        harvest_using[plan_pos.h][plan_pos.w].set(D[plan_idx]);
+        rep3(i, D[plan_idx]+1, plant_t+1){
+            assert(!plant_blocking[plan_pos.h][plan_pos.w].test(i));
+            plant_blocking[plan_pos.h][plan_pos.w].set(i);
         }
-        rep3(i, D[plan_idx]+1, S[plan_idx]){
-            assert(plant[i][Plan_pos.h][Plan_pos.w]==0);
-            // assert(harvest[i][Plan_pos.h][Plan_pos.w]==0);
-            plant[i][Plan_pos.h][Plan_pos.w]=plan_idx;
-            // harvest[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+        rep3(i, D[plan_idx], plant_t){
+            assert(!harvest_blocking[plan_pos.h][plan_pos.w].test(i));
+            harvest_blocking[plan_pos.h][plan_pos.w].set(i);
         }
+        // rep3(i, S[plan_idx], plant_t){
+        //     assert(plant[i][plan_pos.h][plan_pos.w]==imax);
+        //     // assert(harvest[i][plan_pos.h][plan_pos.w]==0);
+        //     plant[i][plan_pos.h][plan_pos.w]=plan_idx;
+        //     // harvest[i][plan_pos.h][plan_pos.w]=plan_idx;
+        // }
+        // rep3(i, D[plan_idx]+1, S[plan_idx]){
+        //     assert(plant[i][plan_pos.h][plan_pos.w]==imax);
+        //     // assert(harvest[i][plan_pos.h][plan_pos.w]==0);
+        //     plant[i][plan_pos.h][plan_pos.w]=plan_idx;
+        //     // harvest[i][plan_pos.h][plan_pos.w]=plan_idx;
+        // }
         score+=D[plan_idx]-S[plan_idx]+1;
         assert(0<=score);
         assert(score<=40000);
     }
     // 後で計算量を削減したくなったらplan_posを渡さなくてよくする
-    void delete_schedule(int plan_idx, Pos Plan_pos){
-        assert(placement[plan_idx].pos==Plan_pos); // 消そうとしているものの座標がちゃんと把握できているかを念のため確認
-        placement[plan_idx].init();
+    void delete_schedule(int plan_idx, Pos plan_pos){
+        assert(placement.find(plan_idx)!=placement.end());
+        assert(placement[plan_idx].pos==plan_pos); // 消そうとしているものの座標がちゃんと把握できているかを念のため確認
+        placement.erase(plan_idx);
         assert(used_plan[plan_idx]);
         used_plan.reset(plan_idx);
-        for(int i=S[plan_idx]-1;i>0;i--){
-            if(plant[i][Plan_pos.h][Plan_pos.w]<0) plant[i][Plan_pos.h][Plan_pos.w]=0;
-            else break;
-            // if(harvest[i][Plan_pos.h][Plan_pos.w]<0) harvest[i][Plan_pos.h][Plan_pos.w]=0;
-            // else break;
+        int plant_t=placement[plan_idx].s;
+
+        assert(plant_using[plan_pos.h][plan_pos.w].test(plant_t));
+        plant_using[plan_pos.h][plan_pos.w].reset(plant_t);
+        assert(harvest_using[plan_pos.h][plan_pos.w].test(D[plan_idx]));
+        harvest_using[plan_pos.h][plan_pos.w].reset(D[plan_idx]);
+        rep3(i, D[plan_idx]+1, plant_t+1){
+            assert(plant_blocking[plan_pos.h][plan_pos.w].test(i));
+            plant_blocking[plan_pos.h][plan_pos.w].reset(i);
         }
-        rep3(i, D[plan_idx]+1, S[plan_idx]){
-            assert(plant[i][Plan_pos.h][Plan_pos.w]!=0);
-            // assert(harvest[i][Plan_pos.h][Plan_pos.w]!=0);
-            plant[i][Plan_pos.h][Plan_pos.w]=0;
-            // harvest[i][Plan_pos.h][Plan_pos.w]=plan_idx;
+        rep3(i, D[plan_idx], plant_t){
+            assert(harvest_blocking[plan_pos.h][plan_pos.w].test(i));
+            harvest_blocking[plan_pos.h][plan_pos.w].reset(i);
         }
+        // for(int i=S[plan_idx]-1;i>0;i--){
+        //     if(plant[i][plan_pos.h][plan_pos.w]<0) plant[i][plan_pos.h][plan_pos.w]=imax;
+        //     else break;
+        //     // if(harvest[i][plan_pos.h][plan_pos.w]<0) harvest[i][plan_pos.h][plan_pos.w]=0;
+        //     // else break;
+        // }
+        // rep3(i, D[plan_idx]+1, S[plan_idx]){
+        //     assert(plant[i][plan_pos.h][plan_pos.w]!=imax);
+        //     // assert(harvest[i][plan_pos.h][plan_pos.w]!=0);
+        //     plant[i][plan_pos.h][plan_pos.w]=imax;
+        //     // harvest[i][plan_pos.h][plan_pos.w]=plan_idx;
+        // }
         score-=D[plan_idx]-S[plan_idx]+1;
         assert(0<=score);
         assert(score<=40000);
     }
     void print_ans(){
         cout<< used_plan.count() <<endl;
-        rep(lp, K){
-            if(placement[lp].s){
-                placement[lp].print(lp);
-            }
+        for(auto p : placement){
+            p.second.print(p.first);
         }
     }
 };
@@ -507,3 +555,4 @@ int main(){
   // これがあればひとまず設置可能かどうかの判定はできる
   // 各マスについてbitset<T>でブロッキング時間とアクセスしたい時間を管理できるとよさそう
 // 通路になっているマスの入口からの距離が極大なマスから最短距離を求める。遡っている途中で進行方向以外の3近傍になったマスは畑・通路すべて自分のふさぐ範囲
+// placementはindexをキーにしたmapにするとよさそう
