@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-std::ofstream outputFile("log.csv");
+// std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -144,6 +144,17 @@ struct itv{
 };
 vector<itv> crops;
 
+// struct Tree{
+//     int parent;
+//     vector<int> child;
+
+//     Tree(){};
+//     Tree(int par, vector<int> &chi){
+//         parent=par;
+//         rep(i, chi.size()) child.push_back(chi[i]);
+//     }
+// };
+
 struct Placement{
     Pos pos={0, 0};
     int s=0;
@@ -165,6 +176,7 @@ struct Space{
     vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1、未定が0、通路にするのが-1
     vector<vector<int>> enter_dist; // 入口からの距離
     vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
+    vector<vector<int>> blocking_tree;
     // vector<vector<int>> blocking; // マスidが埋まっていると辿り着けないマスのidたち
     // ここから下の変数は直接触らない
     map<int, Placement> placement; // 出力となる農耕計画
@@ -186,6 +198,7 @@ struct Space{
         plant_using.resize(H, vector<bitset<102>>(W));
         harvest_blocking.resize(H, vector<bitset<102>>(W));
         harvest_using.resize(H, vector<bitset<102>>(W));
+        blocking_tree.resize(H*W);
         board.resize(H, vector<int>(W));
         board[i0][0]=-1; // 入口は確実に通路にする
         enter_dist.resize(H, vector<int>(W, -1));
@@ -293,7 +306,6 @@ struct Space{
 
     // boardを渡し、すべてのマスに到達できるかを算出
     bool reachable_all(vector<vector<int>> &bor){
-        vector<vector<int>> current_graph=graph;
         bitset<400> reached;
         queue<Pos> q;
         Pos init_pos={i0, 0};
@@ -316,9 +328,31 @@ struct Space{
         // PVV(enter_dist);
         return (reached.count()==H*W);
     }
-    bool reachable_all_range(int s, int d){
-        // 入口からBFSしながらblockingのorをとっていき、隣接したマスのusingとの積がnoneでなければfalseを返す
+    void make_tree(){
+        bitset<400> reached;
+        queue<Pos> q;
+        Pos init_pos={i0, 0};
+        q.push(init_pos);
+        reached.set(init_pos.index());
+        while(!q.empty()){
+            Pos pos=q.front();
+            int pindex=pos.index();
+            q.pop();
+            if(board[pos.h][pos.w]==1) continue;
+            rep(i, graph[pindex].size()){
+                int n_index=graph[pindex][i];
+                if(!reached[n_index]){
+                    blocking_tree[pindex].push_back(n_index);
+                    reached.set(n_index);
+                    q.push(itop(n_index));
+                }
+            }
+        }
     }
+    // bool reachable_all_range(int s, int d){
+    //     // 入口からBFSしながらblockingのorをとっていき、隣接したマスのusingとの積がnoneでなければfalseを返す
+
+    // }
     // ランダムな順番に、各マスを畑にしてもたどり着けないマスがないかを確認し、大丈夫なら畑にする
     void find_placement(bool avoid_load){
         vector<int> perm(H*W);
@@ -377,7 +411,7 @@ struct Space{
         int plan_idx;
         rep(lp, 10000){
             plan_idx=mt()%K;
-            Pos pos={mt()%H, mt()%W};
+            Pos pos={int(mt()%H), int(mt()%W)};
             if(used_plan[plan_idx]) continue;
             if(schedule_addable(plan_idx, pos, S[plan_idx])){
 
@@ -538,6 +572,7 @@ int main(){
     space.calc_board_ng_place();
     space.find_placement(true);
     space.find_placement(false);
+    space.make_tree();
     // PVV(space.board);
     space.interval_scheduling_all();
     // cout<< space.score SP << space.score*25 <<endl;
