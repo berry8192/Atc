@@ -130,20 +130,20 @@ int around_wall(Pos pos){
     return rtn;
 }
 
-struct itv{
-	int le, ri;
+// struct itv{
+// 	int le, ri;
 
-	// 区間スケジュール的な、終わるのが早い順で始まるのが遅い順のソート用
-	bool operator<(const itv &in) const{
-		return ri!=in.ri ? ri<in.ri : le>in.le;
-	};
+// 	// 区間スケジュール的な、終わるのが早い順で始まるのが遅い順のソート用
+// 	bool operator<(const itv &in) const{
+// 		return ri!=in.ri ? ri<in.ri : le>in.le;
+// 	};
 
-	// 区間が重なっているかどうか（端点を含ませたい場合は<=を使う）
-	bool cover(itv x, itv y){
-		return max(x.le, y.le)<min(x.ri, y.ri);
-	}
-};
-vector<itv> crops;
+// 	// 区間が重なっているかどうか（端点を含ませたい場合は<=を使う）
+// 	bool cover(itv x, itv y){
+// 		return max(x.le, y.le)<min(x.ri, y.ri);
+// 	}
+// };
+// vector<itv> crops;
 
 // struct Tree{
 //     int parent;
@@ -579,10 +579,10 @@ void inpt(){
         for (int j = 0; j < W - 1; ++j) v[i][j] = int(s[j]-'0');
     }
     cin >> K;
-    crops.resize(K);
+    // crops.resize(K);
     for (int i = 0; i < K; ++i){
         cin >> S[i] >> D[i];
-        crops[i]={S[i], D[i]};
+        // crops[i]={S[i], D[i]};
     }
 
     // 雑crops
@@ -629,9 +629,6 @@ int main(){
   // ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
   // ふさがるマスが多いマスはあきらめる
   // 2通り以上アクセスする方法があるマスはどうしよう
-  // 時刻tのときにアクセスできる必要があるマスの一覧と、盤面の状態がほしい
-  // これがあればひとまず設置可能かどうかの判定はできる
-  // 各マスについてbitset<T>でブロッキング時間とアクセスしたい時間を管理できるとよさそう
 // 通路になっているマスの入口からの距離が極大なマスから最短距離を求める。遡っている途中で進行方向以外の3近傍になったマスは畑・通路すべて自分のふさぐ範囲
 // placementはindexをキーにしたmapにするとよさそう
 
