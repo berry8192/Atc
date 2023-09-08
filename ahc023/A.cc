@@ -26,10 +26,11 @@ using namespace std;
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
+        // // outputFile<< "i: " << i <<endl;
 // 		rep(j, pvv[i].size()-1){
 // 			outputFile<< pvv[i][j] << ", ";
 // 		}
-// 		outputFile<< pvv[i][pvv[i].size()-1] <<endl;
+// 		if(pvv[i].size()) outputFile<< pvv[i][pvv[i].size()-1] <<endl;
 // 	}
 // }
 // template <class T> void PM(T pm) {
@@ -157,17 +158,17 @@ vector<itv> crops;
 
 struct Placement{
     Pos pos={0, 0};
-    int s=0;
+    int plant_s=0;
 
     Placement(){};
     Placement(Pos ipos, int is){
         pos=ipos;
-        s=is;
+        plant_s=is;
     }
     
     // 出力の時は1-indexにする
     void print(int index){
-        cout<< index+1 SP << pos.h SP << pos.w SP << s <<endl;
+        cout<< index+1 SP << pos.h SP << pos.w SP << plant_s <<endl;
     }
 };
 
@@ -336,6 +337,7 @@ struct Space{
         reached.set(init_pos.index());
         while(!q.empty()){
             Pos pos=q.front();
+            // pos.print();
             int pindex=pos.index();
             q.pop();
             if(board[pos.h][pos.w]==1) continue;
@@ -349,10 +351,42 @@ struct Space{
             }
         }
     }
-    // bool reachable_all_range(int s, int d){
-    //     // 入口からBFSしながらblockingのorをとっていき、隣接したマスのusingとの積がnoneでなければfalseを返す
+    bool reachable_all_all(){
+        // 入口からBFSしながらblockingのorをとっていき、隣接したマスのusingとの積がnoneでなければfalseを返す
+        bitset<400> reached;
+        queue<int> q;
+        queue<bitset<102>> plant_q, harvest_q;
+        Pos init_pos={i0, 0};
+        q.push(init_pos.index());
+        bitset<102> emp;
+        plant_q.push(emp);
+        harvest_q.push(emp);
+        reached.set(init_pos.index());
+        while(!q.empty()){
+            int pindex=q.front();
+            Pos pos=itop(pindex);
+            q.pop();
+            bitset<102> pla=((plant_q.front())|(plant_blocking[pos.h][pos.w]));
+            plant_q.pop();
+            bitset<102> har=((harvest_q.front())|(harvest_blocking[pos.h][pos.w]));
+            harvest_q.pop();
 
-    // }
+            if(board[pos.h][pos.w]==1) continue;
+            rep(i, blocking_tree[pindex].size()){
+                int n_index=blocking_tree[pindex][i];
+                if(!reached[n_index]){
+                    reached.set(n_index);
+                    Pos npos=itop(n_index);
+                    if((pla&(plant_using[npos.h][npos.w])).any()) return false;
+                    if((har&(harvest_using[npos.h][npos.w])).any()) return false;
+                    plant_q.push(pla);
+                    harvest_q.push(har);
+                    q.push(n_index);
+                }
+            }
+        }
+        return true;
+    }
     // ランダムな順番に、各マスを畑にしてもたどり着けないマスがないかを確認し、大丈夫なら畑にする
     void find_placement(bool avoid_load){
         vector<int> perm(H*W);
@@ -409,17 +443,17 @@ struct Space{
 
     void random_add_delete(){
         int plan_idx;
-        rep(lp, 10000){
+        while(1){
+            current = chrono::system_clock::now();
+            if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
             plan_idx=mt()%K;
             Pos pos={int(mt()%H), int(mt()%W)};
             if(used_plan[plan_idx]) continue;
-            if(schedule_addable(plan_idx, pos, S[plan_idx])){
-
-            }
+            try_add_schedule(plan_idx, pos, S[plan_idx]);
         }
     }
 
-    bool schedule_addable(int plan_idx, Pos plan_pos, int plant_t){
+    bool try_add_schedule(int plan_idx, Pos plan_pos, int plant_t){
         assert(plant_t<=S[plan_idx]);
         assert(0<plant_t);
         assert(placement.find(plan_idx)==placement.end());
@@ -440,8 +474,14 @@ struct Space{
         assert(next_score<=40000);
 
         add_schedule(plan_idx, plan_pos, plant_t);
-        delete_schedule(plan_idx, plan_pos);
-        return true;
+        if(reachable_all_all()){
+            // outputFile<< "added: " << plan_idx <<endl;
+            return true;
+        }else{
+            // outputFile<< "not added: " << plan_idx <<endl;
+            delete_schedule(plan_idx, plan_pos);
+            return false;
+        }
     }
     void add_schedule(int plan_idx, Pos plan_pos, int plant_t){
         assert(plant_t<=S[plan_idx]);
@@ -485,12 +525,12 @@ struct Space{
     }
     // 後で計算量を削減したくなったらplan_posを渡さなくてよくする
     void delete_schedule(int plan_idx, Pos plan_pos){
+        int plant_t=placement[plan_idx].plant_s;
         assert(placement.find(plan_idx)!=placement.end());
         assert(placement[plan_idx].pos==plan_pos); // 消そうとしているものの座標がちゃんと把握できているかを念のため確認
         placement.erase(plan_idx);
         assert(used_plan[plan_idx]);
         used_plan.reset(plan_idx);
-        int plant_t=placement[plan_idx].s;
 
         assert(plant_using[plan_pos.h][plan_pos.w].test(plant_t));
         plant_using[plan_pos.h][plan_pos.w].reset(plant_t);
@@ -565,6 +605,7 @@ void inpt(){
 }
 
 int main(){
+    start = chrono::system_clock::now();
     inpt();
     Space space;
     space.init();
@@ -573,8 +614,10 @@ int main(){
     space.find_placement(true);
     space.find_placement(false);
     space.make_tree();
+    // PVV(space.blocking_tree);
     // PVV(space.board);
     space.interval_scheduling_all();
+    space.random_add_delete();
     // cout<< space.score SP << space.score*25 <<endl;
     space.print_ans();
 
