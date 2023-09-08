@@ -178,6 +178,7 @@ struct Space{
     vector<vector<int>> enter_dist; // 入口からの距離
     vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
     vector<vector<int>> blocking_tree;
+    vector<vector<int>> hatake_priority;
     // vector<vector<int>> blocking; // マスidが埋まっていると辿り着けないマスのidたち
     // ここから下の変数は直接触らない
     map<int, Placement> placement; // 出力となる農耕計画
@@ -200,6 +201,7 @@ struct Space{
         harvest_blocking.resize(H, vector<bitset<102>>(W));
         harvest_using.resize(H, vector<bitset<102>>(W));
         blocking_tree.resize(H*W);
+        hatake_priority.resize(H*W);
         board.resize(H, vector<int>(W));
         board[i0][0]=-1; // 入口は確実に通路にする
         enter_dist.resize(H, vector<int>(W, -1));
@@ -278,16 +280,16 @@ struct Space{
             int second_high_idx=graph[highest_pos_idx[i]][0]; // 乱数の余地あり
             Pos pos=itop(second_high_idx);
             if(pos==Pos{i0, 0}) continue;
-            board[pos.h][pos.w]=-1;
-            calc_ng_load(second_high_idx);
+            calc_ng_load(second_high_idx, 0);
         }
         // PVV(board);
     }
     // 最短経路の通路を決める
-    void calc_ng_load(int idx){
+    void calc_ng_load(int idx, int depth){
+        Pos cpos=itop(idx);
+        board[cpos.h][cpos.w]=-1;
         int min_around_wall=555;
         int min_i;
-        Pos cpos=itop(idx);
         int current_dist=enter_dist[cpos.h][cpos.w];
         rep(i, graph[idx].size()){
             Pos pos=itop(graph[idx][i]);
@@ -302,7 +304,7 @@ struct Space{
         int min_idx=graph[idx][min_i];
         Pos mpos=itop(min_idx);
         board[mpos.h][mpos.w]=-1;
-        calc_ng_load(min_idx);
+        calc_ng_load(min_idx, depth+1);
     }
 
     // boardを渡し、すべてのマスに到達できるかを算出
@@ -443,13 +445,20 @@ struct Space{
 
     void random_add_delete(){
         int plan_idx;
-        while(1){
-            current = chrono::system_clock::now();
-            if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
+        int lp=0;
+        while(lp<1000){
+            // current = chrono::system_clock::now();
+            // if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
             plan_idx=mt()%K;
-            Pos pos={int(mt()%H), int(mt()%W)};
-            if(used_plan[plan_idx]) continue;
-            try_add_schedule(plan_idx, pos, S[plan_idx]);
+            if(lp%10000==0){
+                if(!used_plan[plan_idx]) continue;
+                delete_schedule(plan_idx);
+            }else{
+                if(used_plan[plan_idx]) continue;
+                Pos pos={int(mt()%H), int(mt()%W)};
+                try_add_schedule(plan_idx, pos, max(1, int(S[plan_idx])));
+            }
+            lp++;
         }
     }
 
@@ -479,7 +488,7 @@ struct Space{
             return true;
         }else{
             // outputFile<< "not added: " << plan_idx <<endl;
-            delete_schedule(plan_idx, plan_pos);
+            delete_schedule(plan_idx);
             return false;
         }
     }
@@ -524,10 +533,11 @@ struct Space{
         assert(score<=40000);
     }
     // 後で計算量を削減したくなったらplan_posを渡さなくてよくする
-    void delete_schedule(int plan_idx, Pos plan_pos){
+    void delete_schedule(int plan_idx){
+        Pos plan_pos=placement[plan_idx].pos;
         int plant_t=placement[plan_idx].plant_s;
         assert(placement.find(plan_idx)!=placement.end());
-        assert(placement[plan_idx].pos==plan_pos); // 消そうとしているものの座標がちゃんと把握できているかを念のため確認
+        // assert(placement[plan_idx].pos==plan_pos); // 消そうとしているものの座標がちゃんと把握できているかを念のため確認
         placement.erase(plan_idx);
         assert(used_plan[plan_idx]);
         used_plan.reset(plan_idx);
@@ -584,6 +594,13 @@ void inpt(){
         cin >> S[i] >> D[i];
         // crops[i]={S[i], D[i]};
     }
+    
+    // vector<int> vv(100);
+    // for (int i = 0; i < K; ++i){
+    //     rep3(j, D[i], S[i]-1) vv[j]++;
+    // }
+    // PV(vv);
+    // exit(0);
 
     // 雑crops
     // sort(all(crops));
@@ -607,7 +624,7 @@ void inpt(){
 int main(){
     start = chrono::system_clock::now();
     inpt();
-    Space space;
+    Space space, best;
     space.init();
     space.calc_highest_pos_idx();
     space.calc_board_ng_place();
@@ -617,20 +634,38 @@ int main(){
     // PVV(space.blocking_tree);
     // PVV(space.board);
     space.interval_scheduling_all();
-    space.random_add_delete();
+    int loop=0;
+    while(1){
+        loop++;
+        space.random_add_delete();
+        if(space.score<best.score){
+            space=best;
+        }
+        if(loop%1000==999){
+            cout<< "standard loop: " << loop <<endl;
+            cout<< "score: " << space.score SP << space.score*25 <<endl;
+            
+            // space.print_ans();
+        }
+        if(best.score<space.score){
+            best=space;
+            cout<< "loop: " << loop <<endl;
+            best.print_ans();
+            cout<< "score: " << space.score SP << space.score*25 <<endl;
+        }
+    }
     // cout<< space.score SP << space.score*25 <<endl;
     space.print_ans();
 
     return 0;
 }
 
-// 畑確定のマスはなにも制約がない
-// 通路のマスは自分がいるとふさがるマスの制約を守る
-  // ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
-  // ふさがるマスが多いマスはあきらめる
-  // 2通り以上アクセスする方法があるマスはどうしよう
-// 通路になっているマスの入口からの距離が極大なマスから最短距離を求める。遡っている途中で進行方向以外の3近傍になったマスは畑・通路すべて自分のふさぐ範囲
-// placementはindexをキーにしたmapにするとよさそう
+// ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
+// ふさがるマスが多いマスはあきらめる
+// 2通り以上アクセスする方法があるマスはどうしよう
+
+// 行き止まりに近いマスは長い区間の計画を使う
+// 迷路の形を何回か試す
 
 // ###
 // AB#
