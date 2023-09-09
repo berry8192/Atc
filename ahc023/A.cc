@@ -21,12 +21,13 @@ using namespace std;
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
 // 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
+// 	// rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
 // 	cout<< pvv[pvv.size()-1] <<endl;
 // }
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
-        // // outputFile<< "i: " << i <<endl;
+//         // outputFile<< "i: " << i <<endl;
 // 		rep(j, pvv[i].size()-1){
 // 			outputFile<< pvv[i][j] << ", ";
 // 		}
@@ -172,13 +173,50 @@ struct Placement{
     }
 };
 
+struct Far{
+    int index;
+    int dist;
+    bool is_hatake;
+
+    Far(){};
+    Far(int iidx, int idist, bool iis_hatake){
+        index=iidx;
+        dist=idist;
+        is_hatake=iis_hatake;
+    }
+    
+    bool operator<(const Far &in) const{
+		return dist>in.dist; // 遠い方を優先
+	};
+};
+
+struct PlanDulation{
+    int plan_index;
+    int dulation;
+
+    PlanDulation(){};
+    PlanDulation(int iidx, int idula){
+        plan_index=iidx;
+        dulation=idula;
+    }
+    
+    bool operator<(const PlanDulation &in) const{
+		return dulation>in.dulation; // 長い方を優先
+	};
+
+    void print(){
+        cout<< "idx: " << plan_index SP << "dulation: " << dulation <<endl;
+    }
+};
+vector<PlanDulation> dulations;
+
 struct Space{
     vector<vector<int>> graph; // [400][0~4] [頂点idx][到達可能な頂点idx] 盤面の移動可否を計算するためのグラフ
     vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1、未定が0、通路にするのが-1
     vector<vector<int>> enter_dist; // 入口からの距離
     vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
     vector<Dependent> blocking_tree;
-    vector<vector<int>> hatake_priority;
+    vector<Far> hatake_priority;
     // vector<vector<int>> blocking; // マスidが埋まっていると辿り着けないマスのidたち
     // ここから下の変数は直接触らない
     map<int, Placement> placement; // 出力となる農耕計画
@@ -202,7 +240,6 @@ struct Space{
         harvest_using.resize(H, vector<bitset<102>>(W));
         blocking_tree.resize(H*W);
         rep(i, H*W) blocking_tree[i].parent=-1;
-        hatake_priority.resize(H*W);
         board.resize(H, vector<int>(W));
         board[i0][0]=-1; // 入口は確実に通路にする
         enter_dist.resize(H, vector<int>(W, -1));
@@ -355,9 +392,38 @@ struct Space{
                     blocking_tree[pindex].child.push_back(n_index);
                     reached.set(n_index);
                     q.push(itop(n_index));
+                    parent_q.push(pindex);
                 }
             }
         }
+    }
+    void calc_dependent_depth(){
+        bitset<400> reached;
+        queue<Pos> q;
+        queue<int> dist_q;
+        Pos init_pos={i0, 0};
+        q.push(init_pos);
+        dist_q.push(0);
+        reached.set(init_pos.index());
+        while(!q.empty()){
+            Pos pos=q.front();
+            int pindex=pos.index();
+            q.pop();
+            int dist=dist_q.front();
+            dist_q.pop();
+            if(board[pos.h][pos.w]==1) continue;
+            rep(i, graph[pindex].size()){
+                int n_index=graph[pindex][i];
+                Pos npos=itop(n_index);
+                if(!reached[n_index]){
+                    hatake_priority.push_back({n_index, dist+1, board[npos.h][npos.w]==1});
+                    reached.set(n_index);
+                    q.push(itop(n_index));
+                    dist_q.push(dist+1);
+                }
+            }
+        }
+        sort(all(hatake_priority));
     }
     bool reachable_all_all(){
         // 入口からBFSしながらblockingのorをとっていき、隣接したマスのusingとの積がnoneでなければfalseを返す
@@ -420,6 +486,20 @@ struct Space{
         //         if(board[i][j]) cout<< i*W+j+1 SP << i SP << j SP << 1 <<endl;
         //     }
         // }
+    }
+    void hatake_scheduling(bool shcedule_load){
+        // cout<< hatake_priority.size() <<endl;
+        rep(i, K){
+            // cout<< "dulation " << i << ": " << dulations[i].dulation <<endl;
+            if(dulations[i].dulation<5) break;
+            rep(j, hatake_priority.size()){
+                if(used_plan[i]) continue;
+                // cout<< "hatake_priority " << j << ": " << hatake_priority[j].dist <<endl;
+                if(shcedule_load || hatake_priority[j].is_hatake){
+                    if(try_add_schedule(i, itop(hatake_priority[j].index), S[i])) break;
+                }
+            }
+        }
     }
     // 1つのマスについて、なるべく農耕時間が長くなるように農耕計画を立てる
     void interval_scheduling(int index){
@@ -599,7 +679,10 @@ void inpt(){
     for (int i = 0; i < K; ++i){
         cin >> S[i] >> D[i];
         // crops[i]={S[i], D[i]};
+        dulations.push_back({i, D[i]-S[i]+1});
     }
+    sort(all(dulations));
+    // rep(i, H*W) dulations[i].print();
     
     // vector<int> vv(100);
     // for (int i = 0; i < K; ++i){
@@ -634,12 +717,30 @@ int main(){
     space.init();
     space.calc_highest_pos_idx();
     space.calc_board_ng_place();
+    // PVV(space.board);
     space.find_placement(true);
     space.find_placement(false);
     space.make_tree();
+    // rep(i, H*W){
+    //     cout<< endl;
+    //     itop(i).print();
+    //     cout<< "parent: " << space.blocking_tree[i].parent <<endl;
+    //     cout<< "child: ";
+    //     PV(space.blocking_tree[i].child);
+    // }
+    // PVV(space.board);
+    space.calc_dependent_depth();
+    // rep(i, H*W){
+    //     itop(space.hatake_priority[i].index).print();
+    //     cout<< space.hatake_priority[i].dist <<endl;
+    // }
+    // space.interval_scheduling_all();
+    space.hatake_scheduling(false);
+    space.hatake_scheduling(true);
+    space.print_ans();
     // PVV(space.blocking_tree);
     // PVV(space.board);
-    space.interval_scheduling_all();
+    return 0;
     int loop=0;
     while(1){
         loop++;
@@ -661,7 +762,7 @@ int main(){
         }
     }
     // cout<< space.score SP << space.score*25 <<endl;
-    space.print_ans();
+    best.print_ans();
 
     return 0;
 }
