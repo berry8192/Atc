@@ -145,16 +145,16 @@ int around_wall(Pos pos){
 // };
 // vector<itv> crops;
 
-// struct Tree{
-//     int parent;
-//     vector<int> child;
+struct Dependent{
+    int parent;
+    vector<int> child;
 
-//     Tree(){};
-//     Tree(int par, vector<int> &chi){
-//         parent=par;
-//         rep(i, chi.size()) child.push_back(chi[i]);
-//     }
-// };
+    Dependent(){};
+    Dependent(int par, vector<int> &chi){
+        parent=par;
+        rep(i, chi.size()) child.push_back(chi[i]);
+    }
+};
 
 struct Placement{
     Pos pos={0, 0};
@@ -177,7 +177,7 @@ struct Space{
     vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1、未定が0、通路にするのが-1
     vector<vector<int>> enter_dist; // 入口からの距離
     vector<int> highest_pos_idx; // 周りの4近傍のどのマスよりも入口から遠いマス
-    vector<vector<int>> blocking_tree;
+    vector<Dependent> blocking_tree;
     vector<vector<int>> hatake_priority;
     // vector<vector<int>> blocking; // マスidが埋まっていると辿り着けないマスのidたち
     // ここから下の変数は直接触らない
@@ -201,6 +201,7 @@ struct Space{
         harvest_blocking.resize(H, vector<bitset<102>>(W));
         harvest_using.resize(H, vector<bitset<102>>(W));
         blocking_tree.resize(H*W);
+        rep(i, H*W) blocking_tree[i].parent=-1;
         hatake_priority.resize(H*W);
         board.resize(H, vector<int>(W));
         board[i0][0]=-1; // 入口は確実に通路にする
@@ -334,19 +335,24 @@ struct Space{
     void make_tree(){
         bitset<400> reached;
         queue<Pos> q;
+        queue<int> parent_q;
         Pos init_pos={i0, 0};
         q.push(init_pos);
+        parent_q.push(-1);
         reached.set(init_pos.index());
         while(!q.empty()){
             Pos pos=q.front();
             // pos.print();
             int pindex=pos.index();
+            int parent=parent_q.front();
             q.pop();
+            parent_q.pop();
+            blocking_tree[pindex].parent=parent;
             if(board[pos.h][pos.w]==1) continue;
             rep(i, graph[pindex].size()){
                 int n_index=graph[pindex][i];
                 if(!reached[n_index]){
-                    blocking_tree[pindex].push_back(n_index);
+                    blocking_tree[pindex].child.push_back(n_index);
                     reached.set(n_index);
                     q.push(itop(n_index));
                 }
@@ -374,8 +380,8 @@ struct Space{
             harvest_q.pop();
 
             if(board[pos.h][pos.w]==1) continue;
-            rep(i, blocking_tree[pindex].size()){
-                int n_index=blocking_tree[pindex][i];
+            rep(i, blocking_tree[pindex].child.size()){
+                int n_index=blocking_tree[pindex].child[i];
                 if(!reached[n_index]){
                     reached.set(n_index);
                     Pos npos=itop(n_index);
