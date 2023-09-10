@@ -210,6 +210,8 @@ struct PlanDulation{
 };
 vector<PlanDulation> dulations;
 
+vector<vector<vector<int>>> plans;
+
 struct Space{
     vector<vector<int>> graph; // [400][0~4] [頂点idx][到達可能な頂点idx] 盤面の移動可否を計算するためのグラフ
     vector<vector<int>> board; // [20][20] [h][w] 常に畑とするマスが1、未定が0、通路にするのが-1
@@ -491,12 +493,69 @@ struct Space{
         // cout<< hatake_priority.size() <<endl;
         rep(i, K){
             // cout<< "dulation " << i << ": " << dulations[i].dulation <<endl;
-            if(dulations[i].dulation<5) break;
+            if(dulations[i].dulation<12 && !shcedule_load) break;
             rep(j, hatake_priority.size()){
                 if(used_plan[i]) continue;
                 // cout<< "hatake_priority " << j << ": " << hatake_priority[j].dist <<endl;
                 if(shcedule_load || hatake_priority[j].is_hatake){
                     if(try_add_schedule(i, itop(hatake_priority[j].index), S[i])) break;
+                }
+            }
+        }
+    }
+    void scheduling(){
+        rep(i, hatake_priority.size()){
+            if(hatake_priority[i].is_hatake) continue;
+            // cout<< "hatake: " << hatake_priority[i].index <<endl;
+            rep(lp, 10){
+                int end_t=mt()%96+5;
+                int start_t=max(0, int(end_t-mt()%12));
+                int allow_eps=mt()%5;
+                // cout<< "end_t start_t allow_eps: " << end_t SP << start_t SP << allow_eps <<endl;
+                vector<vector<int>> usable_plans(allow_eps);
+                vector<Pos> plan_pos;
+                int flg=1;
+                int set_time;
+                rep(j, allow_eps){
+                    set_time=start_t-j;
+                    if(set_time<=0){
+                        flg=0;
+                        break;
+                    }
+                    repr(k, plans[set_time][end_t].size()){
+                        // cout<< "plans: " SP << k <<endl;
+                        // cout<< plans[set_time][end_t][k] <<endl;
+                        usable_plans[j].push_back(plans[set_time][end_t][k]);
+                    }
+                    if(usable_plans.size()>=blocking_tree[hatake_priority[i].index].child.size()+1) break;
+                }
+                if(usable_plans.size()<blocking_tree[hatake_priority[i].index].child.size()+1) continue;
+                if(flg){
+                    // cout<< "try execute" <<endl;
+                    bool exec=true;
+                    int loop=0;
+                    plan_pos.push_back(itop(hatake_priority[i].index));
+                    rep(j, usable_plans.size()-1) plan_pos.push_back(itop(blocking_tree[hatake_priority[i].index].child[j]));
+                    rep(j, allow_eps){
+                        rep(k, usable_plans[j].size()){
+                            if(!try_add_schedule(usable_plans[j][k], plan_pos[loop], set_time, false)){
+                                exec=false;
+                                break;
+                            }
+                        }
+                        if(!exec) break;
+                    }
+                    // cout<< "execute" <<endl;
+                    loop=0;
+                    if(exec){
+                        rep(j, allow_eps){
+                            rep(k, usable_plans[j].size()){
+                                try_add_schedule(usable_plans[j][k], plan_pos[loop], set_time);
+                                plans[start_t-j][end_t].pop_back();
+                            }
+                        }
+                    }
+                    break;
                 }
             }
         }
@@ -529,30 +588,50 @@ struct Space{
         }
     }
 
+    void delete_dfs(int x, set<int> &st){
+        rep(i, blocking_tree[x].child.size()){
+            st.insert(blocking_tree[x].child[i]);
+            delete_dfs(blocking_tree[x].child[i], st);
+        }
+    }
     void random_add_delete(){
-        int plan_idx;
+        int hatake_idx;
         int lp=0;
-        while(lp<1000){
+        set<int> delete_list;
+        while(1){
             // current = chrono::system_clock::now();
             // if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) break;
-            plan_idx=mt()%K;
-            if(lp%10000==0){
-                if(!used_plan[plan_idx]) continue;
-                delete_schedule(plan_idx);
-            }else{
-                if(used_plan[plan_idx]) continue;
-                Pos pos={int(mt()%H), int(mt()%W)};
-                try_add_schedule(plan_idx, pos, max(1, int(S[plan_idx])));
-            }
-            lp++;
+            // cout<< "rand" <<endl;
+            hatake_idx=mt()%(mt()%(H*W)+1);
+            // cout<< "rand2" <<endl;
+            if(!hatake_priority[hatake_idx].is_hatake) continue;
+            delete_list.insert(hatake_idx);
+            delete_dfs(hatake_idx, delete_list);
+            break;
+        }
+            // cout<< "rand3" <<endl;
+        rep(i, K){
+            if(used_plan[i] && placement[i].plant_s!=0 && delete_list.find(i)!=delete_list.end()){
+                delete_schedule(i);
+            } 
+        }
+            cout<< "delete: " << delete_list.size() <<endl;
+        rep(lp, 1000*delete_list.size()){
+            int plan_idx=mt()%K;
+            int idx=mt()%(H*W);
+            if(delete_list.find(idx)==delete_list.end()) continue;
+            Pos pos=itop(idx);
+            try_add_schedule(plan_idx, pos, max(1, int(S[plan_idx])));
         }
     }
 
-    bool try_add_schedule(int plan_idx, Pos plan_pos, int plant_t){
+    bool try_add_schedule(int plan_idx, Pos plan_pos, int plant_t, bool execute=true){
         assert(plant_t<=S[plan_idx]);
         assert(0<plant_t);
-        assert(placement.find(plan_idx)==placement.end());
-        assert(!used_plan[plan_idx]);
+        // assert(!used_plan[plan_idx]);
+        // assert(placement.find(plan_idx)==placement.end());
+        if(used_plan[plan_idx]) return false;
+        if(placement.find(plan_idx)!=placement.end()) return false;
         bitset<102> bs;
         rep3(i, D[plan_idx]+2, plant_t) bs.set(i); // plan_posにおいて農耕をしてしまっていないか
         if((bs&(plant_blocking[plan_pos.h][plan_pos.w])).any()) return false;
@@ -564,6 +643,7 @@ struct Space{
         rep3(i, D[plan_idx], plant_t){
             if(harvest_blocking[plan_pos.h][plan_pos.w].test(i)) return false;
         }
+        if(!execute) return true;
         int next_score=score+D[plan_idx]-S[plan_idx]+1;
         assert(0<=next_score);
         assert(next_score<=40000);
@@ -680,6 +760,7 @@ void inpt(){
         cin >> S[i] >> D[i];
         // crops[i]={S[i], D[i]};
         dulations.push_back({i, D[i]-S[i]+1});
+        plans[S[i]][D[i]].push_back(i);
     }
     sort(all(dulations));
     // rep(i, H*W) dulations[i].print();
@@ -712,6 +793,8 @@ void inpt(){
 
 int main(){
     start = chrono::system_clock::now();
+    plans.resize(101);
+    rep(i, 101) plans[i].resize(101);
     inpt();
     Space space, best;
     space.init();
@@ -736,29 +819,36 @@ int main(){
     // }
     // space.interval_scheduling_all();
     space.hatake_scheduling(false);
-    space.hatake_scheduling(true);
-    space.print_ans();
+    // rep(i, 100) space.scheduling();
+    // space.hatake_scheduling(true);
+    // space.print_ans();
     // PVV(space.blocking_tree);
     // PVV(space.board);
-    return 0;
+    // return 0;
     int loop=0;
     while(1){
-        loop++;
-        space.random_add_delete();
-        if(space.score<best.score){
-            space=best;
+        current = chrono::system_clock::now();
+        if (chrono::duration_cast<chrono::milliseconds>(current - start).count() > TIME_LIMIT) {
+            // break;
         }
-        if(loop%1000==999){
+        
+        space.random_add_delete();
+        loop++;
+        // rep(i, 1000) space.scheduling();
+        // if(space.score<best.score){
+        //     space=best;
+        // }
+        // if(loop%1000==999){
             cout<< "standard loop: " << loop <<endl;
             cout<< "score: " << space.score SP << space.score*25 <<endl;
             
-            // space.print_ans();
-        }
+        //     // space.print_ans();
+        // }
         if(best.score<space.score){
             best=space;
-            cout<< "loop: " << loop <<endl;
-            best.print_ans();
-            cout<< "score: " << space.score SP << space.score*25 <<endl;
+            // cout<< "loop: " << loop <<endl;
+            // best.print_ans();
+            // cout<< "score: " << space.score SP << space.score*25 <<endl;
         }
     }
     // cout<< space.score SP << space.score*25 <<endl;
