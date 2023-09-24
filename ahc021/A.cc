@@ -50,7 +50,7 @@ struct Pos{
 		// assert(h<n);
 		// assert(0<=w);
 		// assert(w<=h);
-		return !(0<=h && h<n && 0<=w && w<=h);
+		return !(0<=h && h<n && 0<=w && w<n);
 	}
 	void print(){
 		cout<< "(" << h << ", " << w << ")" <<endl;
