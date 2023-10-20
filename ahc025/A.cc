@@ -19,24 +19,26 @@ long long int llimax=9223372036854775807;
 int seed=1;
 mt19937 mt(seed);
 
+std::ofstream outputFile("log.txt");
 //int型vectorを出力
 template <class T> void PV(T pvv) {
 	if(!pvv.size()) return;
-	rep(i, pvv.size()-1) cout << pvv[i] SP;
-	cout<< pvv[pvv.size()-1] <<endl;
+	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+	outputFile<< pvv[pvv.size()-1] <<endl;
 }
 
 //LLi型vectorを出力
 template <class T>void PVV(T pvv) {
 	rep(i, pvv.size()){
 		rep(j, pvv[i].size()){
-			cout << pvv[i][j] SP;
+			outputFile << pvv[i][j] SP;
 		}
-		cout << endl;
+		outputFile << endl;
 	}
 }
 
 int n, d, q;
+vector<int> answer_weight;
 
 // struct Interval{
 //     int l;
@@ -72,16 +74,28 @@ int n, d, q;
 //     }
 // };
 
-struct Item{
-    int order;
-    vector<int> index;
+// struct Item{
+//     int order;
+//     vector<int> index;
 
-    Item(){};
-    Item(int iorder, vector<int> iindex){
-        order=iorder;
-        index=iindex;
-    };
-};
+//     Item(){};
+//     Item(int iorder, vector<int> iindex){
+//         order=iorder;
+//         index=iindex;
+//     };
+// };
+
+void show_weight_answer(vector<vector<int>> items){
+    // outputFile<< "#show_weight_answer" <<endl;
+    rep(i, items.size()){
+        int tmp=0;
+        rep(j, items[i].size()) tmp+=answer_weight[items[i][j]];
+
+        outputFile<< tmp SP;
+        rep(j, items[i].size()) outputFile<< answer_weight[items[i][j]] SP;
+        outputFile<< endl;
+    }
+}
 
 bool query(vector<int> l, vector<int> r){
     cout<< l.size() SP << r.size() SP;
@@ -89,14 +103,22 @@ bool query(vector<int> l, vector<int> r){
     rep(i, r.size()) cout<< r[i] SP;
     cout<< endl;
 
-    char tmp;
-    cin>> tmp;
-    return (tmp=='<');
+    if(1){
+        int le=0;
+        int ri=0;
+        rep(i, l.size()) le+=answer_weight[l[i]];
+        rep(i, r.size()) ri+=answer_weight[r[i]];
+        return le<ri;
+    }else{
+        char tmp;
+        cin>> tmp;
+        return (tmp=='<');
+    }
 }
 
 struct Goods{
     int remain_query; // 残りクエリ可能回数
-    vector<Item> items; // 挿入ソート済みアイテム
+    vector<vector<int>> items; // 挿入ソート済みアイテム
     vector<vector<int>> item_list; // 未ソートアイテム
 
     void init(){
@@ -124,9 +146,34 @@ struct Goods{
         item_list.resize(item_count);
         rep(i, n) item_list[i%item_count].push_back(i);
     }
+    bool is_less_than_item(int target_id, int self_id){
+        // outputFile<< "#is_less_than_item" <<endl;
+        vector<int> right=items[target_id];
+        vector<int> left=item_list[self_id];
+        assert(remain_query);
+        remain_query--;
+        return query(left, right);
+    }
     void insert_sort(){
+        // outputFile<< "#insert_sort" <<endl;
         rep(i, item_list.size()){
-            
+            int le=0;
+            int ri=items.size();
+            // outputFile<< "i: " << i <<endl;
+            while(le!=ri){
+                // outputFile<< le SP << ri <<endl;
+                int mid=(le+ri)/2;
+                if(is_less_than_item(mid, i)){
+                    ri=mid;
+                    // outputFile<< "small" <<endl;
+                }else{
+                    le=mid+1;
+                    // outputFile<< "large" <<endl;
+                }
+            }
+            // outputFile<< "index: " << le <<endl;
+            items.insert(items.begin()+le, item_list[i]);
+            show_weight_answer(items);
         }
     }
 
@@ -136,17 +183,27 @@ struct Goods{
 
 void inpt(){
     cin>> n >> d >> q;
+    // outputFile<< n SP << d SP << q <<endl;
     // rep(i, q) query({0}, {1});
     // rep(i, n) cout<< 0 SP;
     // cout<< endl;
+    answer_weight.resize(n);
+    rep(i, n){
+        // outputFile<< "i: " << i <<endl;
+        cin>> answer_weight[i];
+        // outputFile<< answer_weight[i] <<endl;
+    }
 }
 
 int main(){
+    // outputFile<< "#main" <<endl;
     inpt();
     Goods goods;
 
     goods.init();
-    PVV(goods.item_list);
+    goods.insert_sort();
+    // PVV(goods.items);
+    // show_weight_answer(goods.items);
     goods.print_ans();
 
     return 0;
