@@ -21,11 +21,49 @@ mt19937 mt(seed);
 
 int n, d, q;
 
-char query(vector<int> l, vector<int> r){
+struct Interval{
+    int l;
+    int r;
+
+    Interval(){};
+    Interval(int il, int ir){
+        l=il;
+        r=ir;
+    };
+
+    void is_valid(){
+        assert(l<=r);
+    }
+    int get_middle(){
+        assert(l==r);
+        return l;
+    }
+};
+
+struct Item{
+    Interval order;
+    int index;
+
+    Item(){};
+    Item(Interval iorder, int iindex){
+        order=iorder;
+        index=iindex;
+    };
+
+    int get_order(){
+        return order.get_middle();
+    }
+};
+
+bool query(vector<int> l, vector<int> r){
     cout<< l.size() SP << r.size() SP;
     rep(i, l.size()) cout<< l[i] SP;
     rep(i, r.size()) cout<< r[i] SP;
     cout<< endl;
+
+    char tmp;
+    cin>> tmp;
+    return (tmp=='<');
 }
 
 struct Goods{
