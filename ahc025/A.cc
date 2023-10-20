@@ -38,38 +38,49 @@ template <class T>void PVV(T pvv) {
 
 int n, d, q;
 
-struct Interval{
-    int l;
-    int r;
+// struct Interval{
+//     int l;
+//     int r;
 
-    Interval(){};
-    Interval(int il, int ir){
-        l=il;
-        r=ir;
-    };
+//     Interval(){};
+//     Interval(int il, int ir){
+//         l=il;
+//         r=ir;
+//     };
 
-    void is_valid(){
-        assert(l<=r);
-    }
-    int get_middle(){
-        assert(l==r);
-        return l;
-    }
-};
+//     void is_valid(){
+//         assert(l<=r);
+//     }
+//     int get_middle(){
+//         assert(l==r);
+//         return l;
+//     }
+// };
+
+// struct Item{
+//     Interval order;
+//     vector<int> index;
+
+//     Item(){};
+//     Item(Interval iorder, vector<int> iindex){
+//         order=iorder;
+//         index=iindex;
+//     };
+
+//     int get_order(){
+//         return order.get_middle();
+//     }
+// };
 
 struct Item{
-    Interval order;
+    int order;
     vector<int> index;
 
     Item(){};
-    Item(Interval iorder, vector<int> iindex){
+    Item(int iorder, vector<int> iindex){
         order=iorder;
         index=iindex;
     };
-
-    int get_order(){
-        return order.get_middle();
-    }
 };
 
 bool query(vector<int> l, vector<int> r){
@@ -114,8 +125,8 @@ struct Goods{
         rep(i, n) item_list[i%item_count].push_back(i);
     }
     void insert_sort(){
-        rep(i, n){
-
+        rep(i, item_list.size()){
+            
         }
     }
 
