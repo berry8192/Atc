@@ -19,6 +19,23 @@ long long int llimax=9223372036854775807;
 int seed=1;
 mt19937 mt(seed);
 
+//int型vectorを出力
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) cout << pvv[i] SP;
+	cout<< pvv[pvv.size()-1] <<endl;
+}
+
+//LLi型vectorを出力
+template <class T>void PVV(T pvv) {
+	rep(i, pvv.size()){
+		rep(j, pvv[i].size()){
+			cout << pvv[i][j] SP;
+		}
+		cout << endl;
+	}
+}
+
 int n, d, q;
 
 struct Interval{
@@ -67,13 +84,15 @@ bool query(vector<int> l, vector<int> r){
 }
 
 struct Goods{
-    int remain_query;
-    vector<Item> items;
+    int remain_query; // 残りクエリ可能回数
+    vector<Item> items; // 挿入ソート済みアイテム
+    vector<vector<int>> item_list; // 未ソートアイテム
 
     void init(){
         remain_query=q;
+        make_item(calc_allow_sort_count());
     }
-    // Qの数からソート可能なNの上限を求める
+    // Qの数からソート可能なNの上限を求める、制約から解Xは(N/2<=X<=N)、N=30で21, N=100で51
     int calc_allow_sort_count(){
         int rtn=n;
         int tmp=0;
@@ -91,7 +110,8 @@ struct Goods{
         return rtn;
     }
     void make_item(int item_count){
-        
+        item_list.resize(item_count);
+        rep(i, n) item_list[i%item_count].push_back(i);
     }
     void insert_sort(){
         rep(i, n){
@@ -115,7 +135,7 @@ int main(){
     Goods goods;
 
     goods.init();
-    cout<< goods.calc_allow_sort_count() <<endl;
+    PVV(goods.item_list);
     goods.print_ans();
 
     return 0;
