@@ -123,7 +123,8 @@ struct Goods{
 
     void init(){
         remain_query=q;
-        make_item(calc_allow_sort_count());
+        int tmp=calc_allow_sort_count();
+        make_item(tmp);
     }
     // Qの数からソート可能なNの上限を求める、制約から解Xは(N/2<=X<=N)、N=30で21, N=100で51
     int calc_allow_sort_count(){
@@ -132,7 +133,7 @@ struct Goods{
         rep3(i, n+1, 2){
             int divi=i;
             while(divi>=2){
-                divi/=2;
+                divi=(divi+1)/2;
                 tmp++;
             }
             if(q<tmp){
@@ -159,7 +160,7 @@ struct Goods{
         rep(i, item_list.size()){
             int le=0;
             int ri=items.size();
-            // outputFile<< "i: " << i <<endl;
+            // outputFile<< "i: " << i SP << remain_query <<endl;
             while(le!=ri){
                 // outputFile<< le SP << ri <<endl;
                 int mid=(le+ri)/2;
@@ -173,7 +174,7 @@ struct Goods{
             }
             // outputFile<< "index: " << le <<endl;
             items.insert(items.begin()+le, item_list[i]);
-            show_weight_answer(items);
+            // show_weight_answer(items);
         }
     }
 
@@ -204,6 +205,7 @@ int main(){
     goods.insert_sort();
     // PVV(goods.items);
     // show_weight_answer(goods.items);
+    // cout<< goods.remain_query <<endl;
     goods.print_ans();
 
     return 0;
