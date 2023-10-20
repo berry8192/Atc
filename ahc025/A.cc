@@ -67,21 +67,31 @@ bool query(vector<int> l, vector<int> r){
 }
 
 struct Goods{
-    int query_count;
+    int remain_query;
     vector<Item> items;
 
     void init(){
-        query_count=0;
+        remain_query=q;
     }
-    int calc_sort_count(){
+    // Qの数からソート可能なNの上限を求める
+    int calc_allow_sort_count(){
+        int rtn=n;
         int tmp=0;
-        rep3(i, n, 2){
-            while(i>=2){
-                i/=2;
+        rep3(i, n+1, 2){
+            int divi=i;
+            while(divi>=2){
+                divi/=2;
                 tmp++;
             }
+            if(q<tmp){
+                rtn=i-1;
+                break;
+            }
         }
-        return tmp;
+        return rtn;
+    }
+    void make_item(int item_count){
+        
     }
     void insert_sort(){
         rep(i, n){
@@ -95,12 +105,17 @@ struct Goods{
 
 void inpt(){
     cin>> n >> d >> q;
+    // rep(i, q) query({0}, {1});
+    // rep(i, n) cout<< 0 SP;
+    // cout<< endl;
 }
 
 int main(){
     inpt();
     Goods goods;
 
+    goods.init();
+    cout<< goods.calc_allow_sort_count() <<endl;
     goods.print_ans();
 
     return 0;
