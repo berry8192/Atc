@@ -42,10 +42,10 @@ struct Interval{
 
 struct Item{
     Interval order;
-    int index;
+    vector<int> index;
 
     Item(){};
-    Item(Interval iorder, int iindex){
+    Item(Interval iorder, vector<int> iindex){
         order=iorder;
         index=iindex;
     };
@@ -67,8 +67,26 @@ bool query(vector<int> l, vector<int> r){
 }
 
 struct Goods{
+    int query_count;
+    vector<Item> items;
 
     void init(){
+        query_count=0;
+    }
+    int calc_sort_count(){
+        int tmp=0;
+        rep3(i, n, 2){
+            while(i>=2){
+                i/=2;
+                tmp++;
+            }
+        }
+        return tmp;
+    }
+    void insert_sort(){
+        rep(i, n){
+
+        }
     }
 
     void print_ans(){
