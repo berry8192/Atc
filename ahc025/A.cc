@@ -218,9 +218,40 @@ struct Goods{
             if(flg) break;
         }
     }
+    void random_swap(){
+        int swap1=mt()%d;
+        int swap2=(swap1+(mt()%(d-1)+1))%d;
+        assert(swap1!=swap2);
+        vector<int> v1, v2;
+        rep(i, n){
+            if(ans[i]==swap1) v1.push_back(i);
+            if(ans[i]==swap2) v2.push_back(i);
+        }
+        // outputFile<< "remain: " << remain_query <<endl;
+        // PV(v1);
+        // PV(v2);
+        if(query(v1, v2)){
+            if(v2.size()>1){
+                int move_id=mt()%v2.size();
+                ans[v2[move_id]]=swap1;
+            }
+        }else{
+            if(v1.size()>1){
+                int move_id=mt()%v1.size();
+                ans[v1[move_id]]=swap2;
+            }
+        }
+        remain_query--;
+    }
     void use_remain_query(){
         // outputFile<< "use_remain_query" <<endl;
         rep(i, remain_query) query({0}, {1});
+    }
+    void remain_random_swap(){
+        while(remain_query){
+            random_swap();
+            // PV(ans);
+        }
     }
 
     void print_ans(){
@@ -254,7 +285,7 @@ int main(){
     // PVV(goods.items);
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
-    goods.use_remain_query();
+    goods.remain_random_swap();
     goods.print_ans();
 
     return 0;
