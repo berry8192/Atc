@@ -98,6 +98,11 @@ int n, d, q;
 // }
 
 bool query(vector<int> l, vector<int> r){
+    // rep(i, l.size()){
+    //     rep(j, r.size()){
+    //         assert(l[i]!=r[j]);
+    //     }
+    // }
     cout<< l.size() SP << r.size() SP;
     rep(i, l.size()) cout<< l[i] SP;
     rep(i, r.size()) cout<< r[i] SP;
@@ -165,6 +170,7 @@ struct Goods{
             int ri=items.size();
             // outputFile<< "i: " << i SP << remain_query <<endl;
             while(le!=ri){
+                assert(le<=ri);
                 // outputFile<< le SP << ri <<endl;
                 int mid=(le+ri)/2;
                 if(is_less_than_item(mid, i)){
@@ -182,6 +188,7 @@ struct Goods{
         reverse(all(items));
     }
     void make_snake_ans(){
+        // outputFile<< "make_snake_ans" <<endl;
         int flg=0;
         int lp=0;
         rep(dir, 1000){
@@ -212,7 +219,8 @@ struct Goods{
         }
     }
     void use_remain_query(){
-        while(remain_query) is_less_than_item(0, 1);
+        // outputFile<< "use_remain_query" <<endl;
+        rep(i, remain_query) query({0}, {1});
     }
 
     void print_ans(){
