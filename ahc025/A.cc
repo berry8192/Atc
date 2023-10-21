@@ -22,13 +22,13 @@ double TIME_LIMIT=1900.0;
 int seed=1;
 mt19937 mt(seed);
 
-std::ofstream outputFile("log.txt");
-//int型vectorを出力
-template <class T> void PV(T pvv) {
-	if(!pvv.size()) return;
-	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
-	outputFile<< pvv[pvv.size()-1] <<endl;
-}
+// std::ofstream outputFile("log.txt");
+// //int型vectorを出力
+// template <class T> void PV(T pvv) {
+// 	if(!pvv.size()) return;
+// 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+// 	outputFile<< pvv[pvv.size()-1] <<endl;
+// }
 
 // //LLi型vectorを出力
 // template <class T>void PVV(T pvv) {
