@@ -14,12 +14,15 @@ using namespace std;
 int imax=2147483647;
 long long int llimax=9223372036854775807;
 
+chrono::system_clock::time_point start, current;
+double TIME_LIMIT=1900.0;
+
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
 int seed=1;
 mt19937 mt(seed);
 
-// std::ofstream outputFile("log.txt");
+std::ofstream outputFile("log.txt");
 // //int型vectorを出力
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -127,6 +130,7 @@ struct Goods{
     vector<vector<int>> item_list; // 未ソートアイテム
     vector<int> ans; // 回答
     vector<int> weight_sum; // items=nのときのみ、0~xまでの重さの和がidxの重さをギリギリ超えない
+    vector<int> weight; // 相対的な重さ
 
     void init(){
         remain_query=q;
@@ -135,6 +139,7 @@ struct Goods{
         make_item(tmp);
         ans.resize(n);
         weight_sum.resize(n);
+        weight.resize(n);
     }
     // Qの数からソート可能なNの上限を求める、制約から解Xは(N/2<=X<=N)、N=30で21, N=100で51
     int calc_allow_sort_count(){
@@ -293,6 +298,18 @@ struct Goods{
         }
         return true;
     }
+    void liner_predict(){
+        rep(i, n){
+            if(weight_sum[i]) weight[i]=weight_sum[i]*(weight_sum[i]+1)/2;
+            else weight[i]=n-i;
+        }
+        // repr(i, n) outputFile<< weight[i] <<endl;
+    }
+    // 焼きなまし
+    void annealing(){
+        vector<ll> value(d);
+        
+    }
 
     void print_ans(){
         rep(i, n) cout<< ans[i] SP;
@@ -315,6 +332,7 @@ void inpt(){
 }
 
 int main(){
+    start = chrono::system_clock::now();
     // outputFile<< "#main" <<endl;
     inpt();
     Goods goods;
@@ -326,7 +344,10 @@ int main(){
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
     if(goods.items.size()==n){
-        goods.measure_weight();
+        if(goods.measure_weight()){
+            goods.liner_predict();
+            goods.annealing();
+        }
         goods.use_remain_query();
     }else{
         goods.use_remain_query();
