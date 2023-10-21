@@ -12,7 +12,7 @@ using namespace std;
 // using namespace atcoder;
 
 int imax=2147483647;
-long long int llimax=9223372036854775807;
+ll lmax=9223372036854775807;
 
 chrono::system_clock::time_point start, current;
 double TIME_LIMIT=1900.0;
@@ -23,12 +23,12 @@ int seed=1;
 mt19937 mt(seed);
 
 std::ofstream outputFile("log.txt");
-// //int型vectorを出力
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
-// 	outputFile<< pvv[pvv.size()-1] <<endl;
-// }
+//int型vectorを出力
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+	outputFile<< pvv[pvv.size()-1] <<endl;
+}
 
 // //LLi型vectorを出力
 // template <class T>void PVV(T pvv) {
@@ -251,8 +251,9 @@ struct Goods{
         remain_query--;
     }
     void use_remain_query(){
-        // outputFile<< "use_remain_query" <<endl;
+        // outputFile<< "use_remain_query: " << remain_query <<endl;
         rep(i, remain_query) query({0}, {1});
+        // outputFile<< "use_remain_query end" <<endl;
     }
     void remain_random_swap(){
         while(remain_query){
@@ -288,9 +289,10 @@ struct Goods{
                 vector<int> tmp;
                 rep(j, pos) tmp.push_back(items[n-1-j][0]);
                 // outputFile<< "q" <<endl;
-                if(!query(items[i], tmp)) break;
+                bool reached=!query(items[i], tmp);
                 remain_query--;
                 if(remain_query==0) return false;
+                if(reached) break;
                 pos--;
             }
             weight_sum[i]=pos;
@@ -305,10 +307,103 @@ struct Goods{
         }
         // repr(i, n) outputFile<< weight[i] <<endl;
     }
+    void get_mima(ll &mii, ll &mai, vector<vector<ll>> &clusters){
+        vector<ll> value(d);
+        ll mi=lmax;
+        ll ma=-1;
+        rep(i, d){
+            rep(j, clusters[i].size()){
+                value[i]+=clusters[i][j];
+            }
+            if(value[i]<mi){
+                mi=value[i];
+                mii=i;
+            }
+            if(value[i]>ma){
+                ma=value[i];
+                mai=i;
+            }
+        }
+    }
+    ll calc_S(vector<vector<ll>> &clusters){
+        vector<ll> value(d);
+        double rtn=0.0;
+        double ave=0.0;
+        rep(i, d){
+            rep(j, clusters[i].size()){
+                value[i]+=clusters[i][j];
+                ave+=clusters[i][j];
+            }
+        }
+        ave/=d;
+        rep(i, d) rtn+=(value[i]-ave)*(value[i]-ave);
+        return rtn;
+    }
+    void save_ans(vector<vector<ll>> &clusters){
+        rep(i, d){
+            rep(j, clusters[i].size()){
+                ans[clusters[i][j]]=i;
+            }
+        }
+        // PV(ans);
+    }
     // 焼きなまし
     void annealing(){
-        vector<ll> value(d);
-        
+        // outputFile<< "#annealing!" <<endl;
+        vector<vector<ll>> clusters(d);
+        rep(i, n) clusters[mt()%d].push_back(i);
+
+        ll mini_score=lmax;
+
+        int lp=0;
+        while(1){
+            lp++;
+            current = chrono::system_clock::now(); // 現在時刻
+            double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+            if(delta > TIME_LIMIT) break;
+
+            int type=mt()%100;
+            int fromd, fromidx, tod;
+            ll mii, mai;
+            get_mima(mii, mai, clusters);
+            // 一番大きいクラスタから適当に移動する
+            if(type<20){
+                fromd=mai;
+                tod=(fromd+mt()%(d-1)+1)%d;
+                fromidx=mt()%clusters[fromd].size();
+                if(clusters[fromd].size()==0) continue;
+                clusters[tod].push_back(clusters[fromd][fromidx]);
+                clusters[fromd].erase(clusters[fromd].begin()+fromidx);
+            // 一番小さいクラスタから適当に移動する
+            }else if(type<40){
+                tod=mii;
+                fromd=(tod+mt()%(d-1)+1)%d;
+                fromidx=mt()%clusters[fromd].size();
+                if(clusters[fromd].size()==0) continue;
+                clusters[tod].push_back(clusters[fromd][fromidx]);
+                clusters[fromd].erase(clusters[fromd].begin()+fromidx);
+            // 一番大きいクラスタから一番小さいクラスタに移動する
+            }else{
+                fromd=mai;
+                tod=mii;
+                fromidx=mt()%clusters[fromd].size();
+                if(clusters[fromd].size()==0) continue;
+                clusters[tod].push_back(clusters[fromd][fromidx]);
+                clusters[fromd].erase(clusters[fromd].begin()+fromidx);
+            }
+
+            ll score=calc_S(clusters);
+            if(score<=mini_score){
+                // outputFile<< "lp: " << lp <<endl;
+                // outputFile<< score <<endl;
+                save_ans(clusters);
+                mini_score=score;
+            }else{
+                clusters[fromd].push_back(clusters[tod][clusters[tod].size()-1]);
+                clusters[tod].pop_back();
+            }
+        }
+        // outputFile<< "annealing end" <<endl;
     }
 
     void print_ans(){
@@ -339,7 +434,6 @@ int main(){
 
     goods.init();
     goods.insert_sort();
-    goods.make_snake_ans();
     // PVV(goods.items);
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
@@ -350,6 +444,7 @@ int main(){
         }
         goods.use_remain_query();
     }else{
+        goods.make_snake_ans();
         goods.use_remain_query();
     }
     goods.print_ans();
