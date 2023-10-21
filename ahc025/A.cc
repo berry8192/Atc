@@ -179,6 +179,7 @@ struct Goods{
             items.insert(items.begin()+le, item_list[i]);
             // show_weight_answer(items);
         }
+        reverse(all(items));
     }
     void make_snake_ans(){
         int flg=0;
