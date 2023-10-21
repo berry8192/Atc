@@ -126,6 +126,7 @@ struct Goods{
     vector<vector<int>> items; // 挿入ソート済みアイテム
     vector<vector<int>> item_list; // 未ソートアイテム
     vector<int> ans; // 回答
+    vector<int> weight_sum; // items=nのときのみ、0~xまでの重さの和がidxの重さをギリギリ超えない
 
     void init(){
         remain_query=q;
@@ -133,6 +134,7 @@ struct Goods{
         // cout<< "items: " << tmp <<endl;
         make_item(tmp);
         ans.resize(n);
+        weight_sum.resize(n);
     }
     // Qの数からソート可能なNの上限を求める、制約から解Xは(N/2<=X<=N)、N=30で21, N=100で51
     int calc_allow_sort_count(){
@@ -253,6 +255,44 @@ struct Goods{
             // PV(ans);
         }
     }
+    // 0からriの重さの総和が、item_idxの重さをギリギリ超えない
+    bool measure_weight(){
+        // outputFile<< "#measure_weight" <<endl;
+        // まず一番デカいやつを求める
+        int le=0;
+        int ri=n-1;
+        // leだとΣ<item、riだとitem<Σとなってほしい
+        while(ri-le>1){
+            int mid=(le+ri)/2;
+            vector<int> tmp;
+            rep(i, mid) tmp.push_back(items[n-1-i][0]);
+            if(query(items[0], tmp)){
+                ri=mid;
+            }else{
+                le=mid;
+            }
+            remain_query--;
+            if(remain_query==0) return false;
+        }
+        weight_sum[0]=le-1;
+        // outputFile<< 0 SP << "wei: " << weight_sum[0] <<endl;
+        rep3(i, n-1-weight_sum[0], 1){
+            // 手前のやつより区間を一つ短くして、オーバーしたら元の区間が正
+            int pos=weight_sum[i-1];
+            while(1){
+                vector<int> tmp;
+                rep(j, pos) tmp.push_back(items[n-1-j][0]);
+                // outputFile<< "q" <<endl;
+                if(!query(items[i], tmp)) break;
+                remain_query--;
+                if(remain_query==0) return false;
+                pos--;
+            }
+            weight_sum[i]=pos;
+            // outputFile<< i SP << "wei: " << weight_sum[i] <<endl;
+        }
+        return true;
+    }
 
     void print_ans(){
         rep(i, n) cout<< ans[i] SP;
@@ -285,7 +325,12 @@ int main(){
     // PVV(goods.items);
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
-    goods.remain_random_swap();
+    if(goods.items.size()==n){
+        goods.measure_weight();
+        goods.use_remain_query();
+    }else{
+        goods.use_remain_query();
+    }
     goods.print_ans();
 
     return 0;
