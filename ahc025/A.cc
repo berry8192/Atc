@@ -462,6 +462,7 @@ int main(){
     // PVV(goods.items);
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
+    goods.make_snake_ans();
     if(goods.items.size()==n){
         if(goods.measure_weight()){
             goods.liner_predict();
@@ -472,7 +473,6 @@ int main(){
         }
         goods.use_remain_query();
     }else{
-        goods.make_snake_ans();
         goods.use_remain_query();
     }
     goods.print_ans();
