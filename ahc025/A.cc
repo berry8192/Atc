@@ -42,12 +42,6 @@ template <class T>void PVV(T pvv) {
 	}
 }
 
-ll vsum(vector<int> &vec){
-    ll rtn=0;
-    rep(i, vec.size()) rtn+=vec[i];
-    return rtn;
-}
-
 int n, d, q;
 // vector<int> answer_weight;
 
@@ -132,23 +126,6 @@ bool query(vector<int> l, vector<int> r){
     }
 }
 
-vector<int> E_distribution(){
-    std::random_device seed_gen;
-    std::default_random_engine engine(seed_gen());
-
-    vector<int> vec(n);
-    vector<ll> tmp(n);
-    exponential_distribution<> dist(0.00001);
-    rep(lp, 1000){
-        for(int i=0;i<n;i++) vec[i]=max(1, int(round(dist(engine))));
-        sort(all(vec));
-        for(int i=0;i<n;i++) tmp[i]+=vec[i];
-    }
-    vector<int> rtn(n);
-    for(int i=0;i<n;i++) rtn[i]=tmp[i]/1000;
-    return rtn;
-}
-
 struct Goods{
     int remain_query; // 残りクエリ可能回数
     vector<vector<int>> items; // 挿入ソート済みアイテム
@@ -159,7 +136,7 @@ struct Goods{
 
     void init(){
         remain_query=q;
-        int tmp=calc_allow_div_count();
+        int tmp=calc_allow_sort_count();
         // cout<< "items: " << tmp <<endl;
         make_item(tmp);
         ans.resize(n);
@@ -182,21 +159,6 @@ struct Goods{
             }
         }
         return rtn;
-    }
-    // Qの数からソート可能なNの上限を求める、制約から解Xは(N/2<=X<=N)、N=30で21, N=100で51
-    int calc_allow_div_count(){
-        rep3(i, n, 1){
-            // i個で1itemとして、ソートしきれるならその分割数にする
-            int tmp=0;
-            rep3(j, n+1, 2){
-                int divi=j;
-                while(divi>=2){
-                    divi=(divi+1)/2;
-                    tmp++;
-                }
-            }
-            if(tmp<q) return i;
-        }
     }
     void make_item(int item_count){
         item_list.resize(item_count);
@@ -344,7 +306,7 @@ struct Goods{
         rep(i, n){
             if(weight_sum[i]) weight[i]=weight_sum[i]*(weight_sum[i]+1)/2;
             else weight[i]=n-i;
-            // weight[i]*=2250;
+            weight[i]*=2250;
         }
         // repr(i, n) outputFile<< weight[i] <<endl;
     }
