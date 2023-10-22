@@ -24,23 +24,23 @@ double end_temp=10.0;
 int seed=1;
 mt19937 mt(seed);
 
-std::ofstream outputFile("log.txt");
-//int型vectorを出力
-template <class T> void PV(T pvv) {
-	if(!pvv.size()) return;
-	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
-	outputFile<< pvv[pvv.size()-1] <<endl;
-}
+// std::ofstream outputFile("log.txt");
+// //int型vectorを出力
+// template <class T> void PV(T pvv) {
+// 	if(!pvv.size()) return;
+// 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+// 	outputFile<< pvv[pvv.size()-1] <<endl;
+// }
 
-//LLi型vectorを出力
-template <class T>void PVV(T pvv) {
-	rep(i, pvv.size()){
-		rep(j, pvv[i].size()){
-			outputFile << pvv[i][j] SP;
-		}
-		outputFile << endl;
-	}
-}
+// //LLi型vectorを出力
+// template <class T>void PVV(T pvv) {
+// 	rep(i, pvv.size()){
+// 		rep(j, pvv[i].size()){
+// 			outputFile << pvv[i][j] SP;
+// 		}
+// 		outputFile << endl;
+// 	}
+// }
 
 int n, d, q;
 // vector<int> answer_weight;
@@ -136,8 +136,8 @@ struct Goods{
 
     void init(){
         remain_query=q;
-        int tmp=calc_allow_sort_count();
-        // cout<< "items: " << tmp <<endl;
+        int tmp=calc_allow_div_count();
+        // outputFile<< "items: " << tmp <<endl;
         make_item(tmp);
         ans.resize(n);
         weight_sum.resize(n);
@@ -159,6 +159,20 @@ struct Goods{
             }
         }
         return rtn;
+    }
+    int calc_allow_div_count(){
+        rep3(j, n, 1){
+            int tmp=0;
+            rep3(i, (n+1+j-1)/j, 2){
+                int divi=i;
+                while(divi>=2){
+                    divi=(divi+1)/2;
+                    tmp++;
+                }
+            }
+            if(tmp<=q) return (n+j-1)/j;
+        }
+        return 1;
     }
     void make_item(int item_count){
         item_list.resize(item_count);
@@ -196,6 +210,22 @@ struct Goods{
         }
         reverse(all(items));
     }
+    vector<int> E_distribution(){
+        std::random_device seed_gen;
+        std::default_random_engine engine(seed_gen());
+
+        vector<int> vec(n);
+        vector<ll> tmp(n);
+        exponential_distribution<> dist(0.00001);
+        rep(lp, 1000){
+            for(int i=0;i<n;i++) vec[i]=max(1, int(round(dist(engine))));
+            sort(all(vec));
+            for(int i=0;i<n;i++) tmp[i]+=vec[i];
+        }
+        vector<int> rtn(n);
+        for(int i=0;i<n;i++) rtn[i]=tmp[i]/1000;
+        return rtn;
+    }
     void make_snake_ans(){
         // outputFile<< "make_snake_ans" <<endl;
         int flg=0;
@@ -226,6 +256,9 @@ struct Goods{
             }
             if(flg) break;
         }
+    }
+    void make_E_ans(){
+
     }
     void random_swap(){
         int swap1=mt()%d;
@@ -383,7 +416,7 @@ struct Goods{
             get_mima(mii, mai, clusters);
             // PVV(clusters);
             // 一番大きいクラスタから適当に移動する
-            if(type<20){
+            if(type<0){
                 fromd=mai;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -391,7 +424,7 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 一番小さいクラスタから適当に移動する
-            }else if(type<40){
+            }else if(type<0){
                 tod=mii;
                 fromd=(tod+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -399,7 +432,7 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 適当に移動する
-            }else if(type<60){
+            }else if(type<0){
                 fromd=mt()%d;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -419,9 +452,9 @@ struct Goods{
             ll score=calc_S(clusters);
             // 温度関数
             double temp = start_temp + (end_temp - start_temp) * chrono::duration_cast<chrono::milliseconds>(current - start).count() / TIME_LIMIT;
-            // 遷移確率関数(最大化の場合)
-            double prob = exp((score-mini_score)/temp);
-            if (prob > (mt()%imax)/(double)imax){
+            double prob = exp((mini_score-score)/temp);
+            // if (prob > (mt()%imax)/(double)imax){
+            if(score<mini_score){
             // outputFile<< "mii,mai: " << mii SP << mai <<endl;
                 save_ans(clusters);
                 // outputFile<< "lp: " << lp SP << score <<endl;
@@ -468,7 +501,6 @@ int main(){
     // PVV(goods.items);
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
-    goods.make_snake_ans();
     if(goods.items.size()==n){
         if(goods.measure_weight()){
             goods.liner_predict();
@@ -479,6 +511,7 @@ int main(){
         }
         goods.use_remain_query();
     }else{
+        goods.make_snake_ans();
         goods.use_remain_query();
     }
     goods.print_ans();
