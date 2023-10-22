@@ -136,8 +136,8 @@ struct Goods{
 
     void init(){
         remain_query=q;
-        int tmp=calc_allow_div_count();
-        // outputFile<< "items: " << tmp <<endl;
+        int tmp=calc_allow_sort_count();
+        // cout<< "items: " << tmp <<endl;
         make_item(tmp);
         ans.resize(n);
         weight_sum.resize(n);
@@ -534,6 +534,7 @@ int main(){
     // PVV(goods.items);
     // show_weight_answer(goods.items);
     // cout<< goods.remain_query <<endl;
+    goods.make_snake_ans();
     if(goods.items.size()==n){
         if(goods.measure_weight()){
             goods.liner_predict();
@@ -544,18 +545,9 @@ int main(){
         }
         goods.use_remain_query();
     }else{
-        goods.make_E_ans();
         goods.use_remain_query();
     }
     goods.print_ans();
 
     return 0;
 }
-
-// 残ってる問題
-  // 重さの分布が線形ではないこと
-    // 分布から考える必要あり
-  // Qが小さいときに解が弱いこと
-    // 最大値だけでも測定しておきたい
-  // もう少しクエリを使いたい
-    // 1の側から削っていって正確な重みを出す
