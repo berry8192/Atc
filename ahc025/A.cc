@@ -22,23 +22,23 @@ double TIME_LIMIT=1900.0;
 int seed=1;
 mt19937 mt(seed);
 
-// std::ofstream outputFile("log.txt");
-// //int型vectorを出力
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
-// 	outputFile<< pvv[pvv.size()-1] <<endl;
-// }
+std::ofstream outputFile("log.txt");
+//int型vectorを出力
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) outputFile << pvv[i] SP;
+	outputFile<< pvv[pvv.size()-1] <<endl;
+}
 
-// //LLi型vectorを出力
-// template <class T>void PVV(T pvv) {
-// 	rep(i, pvv.size()){
-// 		rep(j, pvv[i].size()){
-// 			outputFile << pvv[i][j] SP;
-// 		}
-// 		outputFile << endl;
-// 	}
-// }
+//LLi型vectorを出力
+template <class T>void PVV(T pvv) {
+	rep(i, pvv.size()){
+		rep(j, pvv[i].size()){
+			outputFile << pvv[i][j] SP;
+		}
+		outputFile << endl;
+	}
+}
 
 int n, d, q;
 // vector<int> answer_weight;
@@ -130,7 +130,7 @@ struct Goods{
     vector<vector<int>> item_list; // 未ソートアイテム
     vector<int> ans; // 回答
     vector<int> weight_sum; // items=nのときのみ、0~xまでの重さの和がidxの重さをギリギリ超えない
-    vector<int> weight; // 相対的な重さ
+    vector<int> weight; // items[i]の相対的な重さ
 
     void init(){
         remain_query=q;
@@ -304,17 +304,21 @@ struct Goods{
         rep(i, n){
             if(weight_sum[i]) weight[i]=weight_sum[i]*(weight_sum[i]+1)/2;
             else weight[i]=n-i;
+            weight[i]*=2250;
         }
         // repr(i, n) outputFile<< weight[i] <<endl;
     }
     void get_mima(ll &mii, ll &mai, vector<vector<ll>> &clusters){
+        // outputFile<< "#get_mima" <<endl;
         vector<ll> value(d);
         ll mi=lmax;
         ll ma=-1;
         rep(i, d){
             rep(j, clusters[i].size()){
-                value[i]+=clusters[i][j];
+                // value[i]+=weight[items[clusters[i][j]][0]];
+                value[i]+=weight[clusters[i][j]];
             }
+            // outputFile<< value[i] <<endl;
             if(value[i]<mi){
                 mi=value[i];
                 mii=i;
@@ -326,23 +330,31 @@ struct Goods{
         }
     }
     ll calc_S(vector<vector<ll>> &clusters){
+        // outputFile<< "#calc_S" <<endl;
         vector<ll> value(d);
         double rtn=0.0;
         double ave=0.0;
         rep(i, d){
             rep(j, clusters[i].size()){
-                value[i]+=clusters[i][j];
-                ave+=clusters[i][j];
+                // value[i]+=weight[items[clusters[i][j]][0]];
+                // ave+=weight[items[clusters[i][j]][0]];
+                value[i]+=weight[clusters[i][j]];
+                ave+=weight[clusters[i][j]];
             }
+            // outputFile<< value[i] <<endl;
         }
         ave/=d;
-        rep(i, d) rtn+=(value[i]-ave)*(value[i]-ave);
-        return rtn;
+        // outputFile<< "ave: " << ave <<endl;
+        rep(i, d){
+            rtn+=(value[i]-ave)*(value[i]-ave);
+            // outputFile<< (value[i]-ave)*(value[i]-ave) <<endl;
+        }
+        return sqrt(rtn/d);
     }
     void save_ans(vector<vector<ll>> &clusters){
         rep(i, d){
             rep(j, clusters[i].size()){
-                ans[clusters[i][j]]=i;
+                ans[items[clusters[i][j]][0]]=i;
             }
         }
         // PV(ans);
@@ -350,14 +362,15 @@ struct Goods{
     // 焼きなまし
     void annealing(){
         // outputFile<< "#annealing!" <<endl;
-        vector<vector<ll>> clusters(d);
-        rep(i, n) clusters[mt()%d].push_back(i);
+        vector<vector<ll>> clusters(d); // それぞれの袋にitems[x]が入る
+        rep(i, n) clusters[i%d].push_back(i);
 
         ll mini_score=lmax;
 
         int lp=0;
         while(1){
             lp++;
+                // if(lp>5) break;
             current = chrono::system_clock::now(); // 現在時刻
             double delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
             if(delta > TIME_LIMIT) break;
@@ -366,8 +379,9 @@ struct Goods{
             int fromd, fromidx, tod;
             ll mii, mai;
             get_mima(mii, mai, clusters);
+            // PVV(clusters);
             // 一番大きいクラスタから適当に移動する
-            if(type<20){
+            if(type<0){
                 fromd=mai;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -375,9 +389,17 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 一番小さいクラスタから適当に移動する
-            }else if(type<40){
+            }else if(type<0){
                 tod=mii;
                 fromd=(tod+mt()%(d-1)+1)%d;
+                fromidx=mt()%clusters[fromd].size();
+                if(clusters[fromd].size()==0) continue;
+                clusters[tod].push_back(clusters[fromd][fromidx]);
+                clusters[fromd].erase(clusters[fromd].begin()+fromidx);
+            // 適当に移動する
+            }else if(type<0){
+                fromd=mt()%d;
+                tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
                 if(clusters[fromd].size()==0) continue;
                 clusters[tod].push_back(clusters[fromd][fromidx]);
@@ -394,13 +416,16 @@ struct Goods{
 
             ll score=calc_S(clusters);
             if(score<=mini_score){
-                // outputFile<< "lp: " << lp <<endl;
-                // outputFile<< score <<endl;
+            // outputFile<< "mii,mai: " << mii SP << mai <<endl;
                 save_ans(clusters);
+                // outputFile<< "lp: " << lp SP << score <<endl;
+                // PV(ans);
                 mini_score=score;
             }else{
                 clusters[fromd].push_back(clusters[tod][clusters[tod].size()-1]);
                 clusters[tod].pop_back();
+                // outputFile<< "revert" <<endl;
+                // PVV(clusters);
             }
         }
         // outputFile<< "annealing end" <<endl;
@@ -440,6 +465,9 @@ int main(){
     if(goods.items.size()==n){
         if(goods.measure_weight()){
             goods.liner_predict();
+            // rep(i, n) outputFile<< goods.items[i][0] SP;
+            // outputFile<< endl;
+            // PV(goods.weight);
             goods.annealing();
         }
         goods.use_remain_query();
