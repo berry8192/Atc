@@ -132,6 +132,23 @@ bool query(vector<int> l, vector<int> r){
     }
 }
 
+vector<int> E_distribution(){
+    std::random_device seed_gen;
+    std::default_random_engine engine(seed_gen());
+
+    vector<int> vec(n);
+    vector<ll> tmp(n);
+    exponential_distribution<> dist(0.00001);
+    rep(lp, 1000){
+        for(int i=0;i<n;i++) vec[i]=max(1, int(round(dist(engine))));
+        sort(all(vec));
+        for(int i=0;i<n;i++) tmp[i]+=vec[i];
+    }
+    vector<int> rtn(n);
+    for(int i=0;i<n;i++) rtn[i]=tmp[i]/1000;
+    return rtn;
+}
+
 struct Goods{
     int remain_query; // 残りクエリ可能回数
     vector<vector<int>> items; // 挿入ソート済みアイテム
@@ -509,5 +526,8 @@ int main(){
 
 // 残ってる問題
   // 重さの分布が線形ではないこと
+    // 分布から考える必要あり
   // Qが小さいときに解が弱いこと
-  //
+    // 最大値だけでも測定しておきたい
+  // もう少しクエリを使いたい
+    // 1の側から削っていって正確な重みを出す
