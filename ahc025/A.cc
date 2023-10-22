@@ -16,6 +16,8 @@ ll lmax=9223372036854775807;
 
 chrono::system_clock::time_point start, current;
 double TIME_LIMIT=1900.0;
+double start_temp=2000.0;
+double end_temp=10.0;
 
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
@@ -38,6 +40,12 @@ template <class T>void PVV(T pvv) {
 		}
 		outputFile << endl;
 	}
+}
+
+ll vsum(vector<int> &vec){
+    ll rtn=0;
+    rep(i, vec.size()) rtn+=vec[i];
+    return rtn;
 }
 
 int n, d, q;
@@ -134,7 +142,7 @@ struct Goods{
 
     void init(){
         remain_query=q;
-        int tmp=calc_allow_sort_count();
+        int tmp=calc_allow_div_count();
         // cout<< "items: " << tmp <<endl;
         make_item(tmp);
         ans.resize(n);
@@ -157,6 +165,21 @@ struct Goods{
             }
         }
         return rtn;
+    }
+    // Qの数からソート可能なNの上限を求める、制約から解Xは(N/2<=X<=N)、N=30で21, N=100で51
+    int calc_allow_div_count(){
+        rep3(i, n, 1){
+            // i個で1itemとして、ソートしきれるならその分割数にする
+            int tmp=0;
+            rep3(j, n+1, 2){
+                int divi=j;
+                while(divi>=2){
+                    divi=(divi+1)/2;
+                    tmp++;
+                }
+            }
+            if(tmp<q) return i;
+        }
     }
     void make_item(int item_count){
         item_list.resize(item_count);
@@ -304,7 +327,7 @@ struct Goods{
         rep(i, n){
             if(weight_sum[i]) weight[i]=weight_sum[i]*(weight_sum[i]+1)/2;
             else weight[i]=n-i;
-            weight[i]*=2250;
+            // weight[i]*=2250;
         }
         // repr(i, n) outputFile<< weight[i] <<endl;
     }
@@ -381,7 +404,7 @@ struct Goods{
             get_mima(mii, mai, clusters);
             // PVV(clusters);
             // 一番大きいクラスタから適当に移動する
-            if(type<0){
+            if(type<20){
                 fromd=mai;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -389,7 +412,7 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 一番小さいクラスタから適当に移動する
-            }else if(type<0){
+            }else if(type<40){
                 tod=mii;
                 fromd=(tod+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -397,7 +420,7 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 適当に移動する
-            }else if(type<0){
+            }else if(type<60){
                 fromd=mt()%d;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -415,7 +438,11 @@ struct Goods{
             }
 
             ll score=calc_S(clusters);
-            if(score<=mini_score){
+            // 温度関数
+            double temp = start_temp + (end_temp - start_temp) * chrono::duration_cast<chrono::milliseconds>(current - start).count() / TIME_LIMIT;
+            // 遷移確率関数(最大化の場合)
+            double prob = exp((score-mini_score)/temp);
+            if (prob > (mt()%imax)/(double)imax){
             // outputFile<< "mii,mai: " << mii SP << mai <<endl;
                 save_ans(clusters);
                 // outputFile<< "lp: " << lp SP << score <<endl;
@@ -479,3 +506,8 @@ int main(){
 
     return 0;
 }
+
+// 残ってる問題
+  // 重さの分布が線形ではないこと
+  // Qが小さいときに解が弱いこと
+  //
