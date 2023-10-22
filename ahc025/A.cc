@@ -258,7 +258,40 @@ struct Goods{
         }
     }
     void make_E_ans(){
-
+        // outputFile<< "make_snake_ans" <<endl;
+        int flg=0;
+        int lp=0;
+        vector<int> rev(n);
+        rep(i, n){
+            if(i%2) rev[i]=1;
+        }
+        rev.insert(rev.begin()+1, 1);
+        rep(dir, 1000){
+            if(rev[dir]){
+                rep(i, d){
+                    rep(j, items[lp].size()){
+                        ans[items[lp][j]]=i;
+                    }
+                    lp++;
+                    if(lp==items.size()){
+                        flg=1;
+                        break;
+                    }
+                }
+            }else{
+                repr(i, d){
+                    rep(j, items[lp].size()){
+                        ans[items[lp][j]]=i;
+                    }
+                    lp++;
+                    if(lp==items.size()){
+                        flg=1;
+                        break;
+                    }
+                }
+            }
+            if(flg) break;
+        }
     }
     void random_swap(){
         int swap1=mt()%d;
@@ -511,7 +544,7 @@ int main(){
         }
         goods.use_remain_query();
     }else{
-        goods.make_snake_ans();
+        goods.make_E_ans();
         goods.use_remain_query();
     }
     goods.print_ans();
