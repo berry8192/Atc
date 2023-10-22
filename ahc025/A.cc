@@ -449,7 +449,7 @@ struct Goods{
             get_mima(mii, mai, clusters);
             // PVV(clusters);
             // 一番大きいクラスタから適当に移動する
-            if(type<0){
+            if(type<2){
                 fromd=mai;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -457,7 +457,7 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 一番小さいクラスタから適当に移動する
-            }else if(type<0){
+            }else if(type<4){
                 tod=mii;
                 fromd=(tod+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
@@ -465,7 +465,7 @@ struct Goods{
                 clusters[tod].push_back(clusters[fromd][fromidx]);
                 clusters[fromd].erase(clusters[fromd].begin()+fromidx);
             // 適当に移動する
-            }else if(type<0){
+            }else if(type<5){
                 fromd=mt()%d;
                 tod=(fromd+mt()%(d-1)+1)%d;
                 fromidx=mt()%clusters[fromd].size();
