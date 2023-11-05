@@ -79,7 +79,29 @@ struct Soko{
         rep3(i, yama[from_yama].size(), pos+1) tmp.push_back(yama[from_yama][i]);
         rep(i, move_size) yama[from_yama].pop_back();
         rep(i, move_size) yama[to_yama].push_back(tmp[i]);
+        ans.push_back({yama[from_yama][pos+1], to_yama});
         score-=move_size+1;
+    }
+    void double_move_boxes(int from_yama, int pos, int to_yama){
+        // 移動したい塊の中にある小さい数字を上に持ってくる
+        // ある数字xを上に持ってくるとして、今取り出そうとしている数字とxの差よりもxの上に積まれている数字の個数が多ければ持ってくる対象にする
+        int max_effect=1;
+        int max_pos;
+        rep3(i, yama[from_yama].size(), pos+1){
+            int dist=yama[from_yama][i]-yama[from_yama][pos];
+            int on_box=yama[from_yama].size()-i+1;
+            int effect=on_box-dist;
+            if(max_effect<effect){
+                // cout<< "#effect: " << yama[from_yama][i] SP << yama[from_yama][pos] <<endl;
+                max_effect=effect;
+                max_pos=i;
+            }
+        }
+        if(max_effect>=2){
+            simple_move_boxes(from_yama, max_pos, to_yama);
+            to_yama=simple_find_non_use_yama(from_yama);
+        }
+        simple_move_boxes(from_yama, pos, to_yama);
     }
     void simple_ans(){
         rep(i, n){
@@ -93,11 +115,10 @@ struct Soko{
                 // 最上段にないので上のやつをどかす
                 int dokasu=yama[v][pos+1];
                 int to_yama=simple_find_non_use_yama(v);
-                ans.push_back({dokasu, to_yama});
                 // cout<< "move" <<endl;
                 // PVV(yama);
                 // cout<< "moved " << v SP << to_yama <<endl;
-                simple_move_boxes(v, pos, to_yama);
+                double_move_boxes(v, pos, to_yama);
                 // PVV(yama);
                 ans.push_back({i, -1});
                 yama[v].pop_back();
