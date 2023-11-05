@@ -97,9 +97,9 @@ struct Soko{
         // ある数字xを上に持ってくるとして、今取り出そうとしている数字とxの差よりもxの上に積まれている数字の個数が多ければ持ってくる対象にする
         int max_effect=1;
         int max_pos;
-        int div=mt()%5+1;
         rep3(i, yama[from_yama].size()-1, pos+1){
             int dist=yama[from_yama][i]-yama[from_yama][pos];
+            int div=mt()%5+1;
             dist/=div;
             int on_box=yama[from_yama].size()-i+1;
             int effect=on_box-dist;
