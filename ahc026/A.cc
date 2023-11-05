@@ -29,6 +29,7 @@ std::ofstream outputFile("score.txt", ios::app);
 
 int imax=2147483647;
 long long int llimax=9223372036854775807;
+ll mod=998244353;
 
 //焼きなましの定数
 double TIME_LIMIT=1950.0;
@@ -48,6 +49,7 @@ struct Soko{
     vector<vector<int>> yama;
     vector<pair<int, int>> ans;
     int score;
+    ll hash;
 
     void init(){
         yama=b;
@@ -116,6 +118,27 @@ struct Soko{
         }
         simple_move_boxes(from_yama, pos, to_yama);
     }
+    void multiple_move_boxes(int from_yama, int pos, int to_yama){
+        // 移動したい塊の中にある小さい数字を上に持ってくる
+        // ある数字xを上に持ってくるとして、今取り出そうとしている数字とxの差よりもxの上に積まれている数字の個数が多ければ持ってくる対象にする
+        vector<int> poses;
+        rep3(i, yama[from_yama].size()-1, pos+1){
+            int dist=yama[from_yama][i]-yama[from_yama][pos];
+            int div=mt()%7+1;
+            // div=1;
+            dist/=div;
+            int on_box=yama[from_yama].size()-i+1;
+            int effect=on_box-dist;
+            if(2<effect) poses.push_back(i);
+        }
+        // 添え字が大きい順になるようにreverseする
+        reverse(all(poses));
+        rep(i, poses.size()){
+            simple_move_boxes(from_yama, poses[i], to_yama);
+            to_yama=simple_find_non_use_yama(from_yama);
+        }
+        simple_move_boxes(from_yama, pos, to_yama);
+    }
     void simple_ans(){
         rep(i, n){
             int v, pos;
@@ -131,7 +154,7 @@ struct Soko{
                 // cout<< "move" <<endl;
                 // PVV(yama);
                 // cout<< "moved " << v SP << to_yama <<endl;
-                double_move_boxes(v, pos, to_yama);
+                multiple_move_boxes(v, pos, to_yama);
                 // PVV(yama);
                 ans.push_back({i, -1});
                 yama[v].pop_back();
@@ -163,27 +186,37 @@ int main(){
     start = chrono::system_clock::now();
 
     inpt();
-    Soko best;
-    best.init();
-    best.simple_ans();
 
-    int lp=0;
-    while (true){
-        lp++;
-        current = chrono::system_clock::now(); // 現在時刻
-        delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
-        if(delta > TIME_LIMIT) break;
+    // ビーム
+    int BIIM_WIDTH=100;
+    vector<Soko> biim(BIIM_WIDTH);
+    rep(i, BIIM_WIDTH) biim[i].init();
 
-        Soko soko;
-        soko.init();
-        soko.simple_ans();
+    // ビーム
 
-        if(best.score<soko.score) best=soko;
-    }
+    // // 乱択
+    // Soko best;
+    // best.init();
+    // best.simple_ans();
+
+    // int lp=0;
+    // while (true){
+    //     lp++;
+    //     current = chrono::system_clock::now(); // 現在時刻
+    //     delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+    //     if(delta > TIME_LIMIT) break;
+
+    //     Soko soko;
+    //     soko.init();
+    //     soko.simple_ans();
+
+    //     if(best.score<soko.score) best=soko;
+    // }
 
     // cout<< "lp: " << lp SP << "score: " << best.score <<endl;
-    best.print_ans();
-    outputFile<< best.score <<endl;
+    // best.print_ans();
+    // outputFile<< best.score <<endl;
+    // 乱択
 
     return 0;
 }
