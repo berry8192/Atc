@@ -99,7 +99,7 @@ struct Soko{
         int max_pos;
         rep3(i, yama[from_yama].size()-1, pos+1){
             int dist=yama[from_yama][i]-yama[from_yama][pos];
-            int div=mt()%3+1;
+            int div=mt()%5+1;
             div=2;
             dist/=div;
             int on_box=yama[from_yama].size()-i+1;
