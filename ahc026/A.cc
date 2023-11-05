@@ -94,7 +94,7 @@ struct Soko{
         // cout<< "idx: " << pos+1 <<endl;
         // cout<< "s_move: " << yama[from_yama][pos+1] <<endl;
         ans.push_back({yama[from_yama][pos+1], to_yama});
-        hash+=((yama[from_yama][pos+1]+1)*243+(to_yama+1))*65555;
+        hash+=(243LL*(yama[from_yama][pos+1]+1)+(to_yama+1))*65555;
         hash%=mod;
         score-=move_size+1;
     }
@@ -126,10 +126,10 @@ struct Soko{
         // 移動したい塊の中にある小さい数字を上に持ってくる
         // ある数字xを上に持ってくるとして、今取り出そうとしている数字とxの差よりもxの上に積まれている数字の個数が多ければ持ってくる対象にする
         vector<int> poses;
+        int div=mt()%5+1;
         rep3(i, yama[from_yama].size()-1, pos+1){
             int dist=yama[from_yama][i]-yama[from_yama][pos];
             // div=1;
-            int div=mt()%5+1;
             dist/=div;
             int on_box=yama[from_yama].size()-i+1;
             int effect=on_box-dist;
@@ -163,9 +163,15 @@ struct Soko{
             yama[v].pop_back();
         }
     }
-    // void calc_biim_score(){
-
-    // }
+    void calc_biim_score(){
+        ll tmp=0;
+        rep(i, m){
+            rep(j, yama[i].size()){
+                tmp+=(yama[i].size()-j)*(n-yama[i][j]);
+            }
+        }
+        biim_score=tmp-score*200;
+    }
     void print_ans(){
         rep(i, ans.size()){
             cout<< ans[i].first+1 SP << ans[i].second+1 <<endl;
@@ -173,8 +179,8 @@ struct Soko{
     }
 
     bool operator<(const Soko &in) const{
-		// return biim_score>in.biim_score;
-		return score>in.score;
+		return biim_score<in.biim_score;
+		// return score>in.score;
 	};
 };
 
@@ -198,8 +204,8 @@ int main(){
     inpt();
 
     // ビーム
-    int BIIM_WIDTH=100;
-    int KOUHO_WIDTH=20;
+    int BIIM_WIDTH=1000;
+    int KOUHO_WIDTH=10;
     vector<Soko> biim(1), kouho;
     biim[0].init();
     rep(turn, n){
@@ -212,6 +218,7 @@ int main(){
                 soko.simple_ans(turn);
                 // 同じ状態は持たないことにする
                 if(hash_set.find(soko.hash)==hash_set.end()){
+                    soko.calc_biim_score();
                     kouho.push_back(soko);
                     hash_set.insert(soko.hash);
                 }
@@ -222,11 +229,13 @@ int main(){
         biim.clear();
         rep(i, min(int(kouho.size()), BIIM_WIDTH)) biim.push_back(kouho[i]);
         // cout<< "turn: " << turn SP << kouho.size() <<endl;
+        // rep(i, 10) cout<< kouho[i].biim_score SP << kouho[i].hash <<endl;
     }
     biim[0].print_ans();
+    outputFile<< biim[0].score <<endl;
     return 0;
     // ビーム
-    // hashで状態を絞る
+    // hashで状態を絞るときにスコアがいいものを採用する
 
     // // 乱択
     // Soko best;
