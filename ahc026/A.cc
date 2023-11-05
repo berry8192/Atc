@@ -11,6 +11,11 @@
 using namespace std;
 // using namespace atcoder;
 
+template <class T> void PV(T pvv) {
+	if(!pvv.size()) return;
+	rep(i, pvv.size()-1) cout << pvv[i] SP;
+	cout<< pvv[pvv.size()-1] <<endl;
+}
 template <class T>void PVV(T pvv) {
 	rep(i, pvv.size()){
 		rep(j, pvv[i].size()){
@@ -20,11 +25,13 @@ template <class T>void PVV(T pvv) {
 	}
 }
 
+std::ofstream outputFile("score.txt", ios::app);
+
 int imax=2147483647;
 long long int llimax=9223372036854775807;
 
 //焼きなましの定数
-double TIME_LIMIT=6950.0;
+double TIME_LIMIT=1950.0;
 // double TIME_LIMIT=190.0;
 double start_temp=10000000.0;
 double end_temp=10000.0;
@@ -79,6 +86,9 @@ struct Soko{
         rep3(i, yama[from_yama].size(), pos+1) tmp.push_back(yama[from_yama][i]);
         rep(i, move_size) yama[from_yama].pop_back();
         rep(i, move_size) yama[to_yama].push_back(tmp[i]);
+        // PV(yama[from_yama]);
+        // cout<< "idx: " << pos+1 <<endl;
+        // cout<< "s_move: " << yama[from_yama][pos+1] <<endl;
         ans.push_back({yama[from_yama][pos+1], to_yama});
         score-=move_size+1;
     }
@@ -87,8 +97,10 @@ struct Soko{
         // ある数字xを上に持ってくるとして、今取り出そうとしている数字とxの差よりもxの上に積まれている数字の個数が多ければ持ってくる対象にする
         int max_effect=1;
         int max_pos;
-        rep3(i, yama[from_yama].size(), pos+1){
+        rep3(i, yama[from_yama].size()-1, pos+1){
             int dist=yama[from_yama][i]-yama[from_yama][pos];
+            int div=mt()%5+1;
+            dist/=div;
             int on_box=yama[from_yama].size()-i+1;
             int effect=on_box-dist;
             if(max_effect<effect){
@@ -125,10 +137,6 @@ struct Soko{
             }
         }
     }
-
-    ll calc_score(){
-        return score;
-    }
     void print_ans(){
         rep(i, ans.size()){
             cout<< ans[i].first+1 SP << ans[i].second+1 <<endl;
@@ -157,34 +165,24 @@ int main(){
     Soko best;
     best.init();
     best.simple_ans();
-    // ll best_score=best.calc_score();
 
     int lp=0;
-    // while (true){
-    //     lp++;
-    //     current = chrono::system_clock::now(); // 現在時刻
-    //     delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
-    //     if(delta > TIME_LIMIT) break;
+    while (true){
+        lp++;
+        current = chrono::system_clock::now(); // 現在時刻
+        delta=chrono::duration_cast<chrono::milliseconds>(current - start).count();
+        if(delta > TIME_LIMIT) break;
 
-    //     Soko soko;
-    //     soko.init();
-    //     ll score=soko.calc_score();
+        Soko soko;
+        soko.init();
+        soko.simple_ans();
 
-    //     // 温度関数
-    //     double temp = start_temp + (end_temp - start_temp) * chrono::duration_cast<chrono::milliseconds>(current - start).count() / TIME_LIMIT;
-    //     // double prob = exp((best_score-score)/temp); // 最小化
-    //     double prob = exp((score-best_score)/temp); // 最大化
-
-    //     if(prob>(mt()%imax)/(double)imax){
-    //         cout<< "lp: " << lp <<endl;
-    //         cout<< score <<endl;
-    //         best=town;
-    //         best_score=score;
-    //     }
-    // }
+        if(best.score<soko.score) best=soko;
+    }
 
     // cout<< "lp: " << lp SP << "score: " << best.score <<endl;
     best.print_ans();
+    outputFile<< best.score <<endl;
 
     return 0;
 }
