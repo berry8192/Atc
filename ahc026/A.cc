@@ -139,26 +139,24 @@ struct Soko{
         }
         simple_move_boxes(from_yama, pos, to_yama);
     }
-    void simple_ans(){
-        rep(i, n){
-            int v, pos;
-            simple_find_box(v, pos, i);
-            if(yama[v].size()==pos+1){
-                // 最上段にあるのでそのまま運び出せる
-                ans.push_back({i, -1});
-                yama[v].pop_back();
-            }else{
-                // 最上段にないので上のやつをどかす
-                int dokasu=yama[v][pos+1];
-                int to_yama=simple_find_non_use_yama(v);
-                // cout<< "move" <<endl;
-                // PVV(yama);
-                // cout<< "moved " << v SP << to_yama <<endl;
-                multiple_move_boxes(v, pos, to_yama);
-                // PVV(yama);
-                ans.push_back({i, -1});
-                yama[v].pop_back();
-            }
+    void simple_ans(int x){
+        int v, pos;
+        simple_find_box(v, pos, x);
+        if(yama[v].size()==pos+1){
+            // 最上段にあるのでそのまま運び出せる
+            ans.push_back({x, -1});
+            yama[v].pop_back();
+        }else{
+            // 最上段にないので上のやつをどかす
+            int dokasu=yama[v][pos+1];
+            int to_yama=simple_find_non_use_yama(v);
+            // cout<< "move" <<endl;
+            // PVV(yama);
+            // cout<< "moved " << v SP << to_yama <<endl;
+            multiple_move_boxes(v, pos, to_yama);
+            // PVV(yama);
+            ans.push_back({x, -1});
+            yama[v].pop_back();
         }
     }
     void print_ans(){
@@ -189,15 +187,20 @@ int main(){
 
     // ビーム
     int BIIM_WIDTH=100;
-    vector<Soko> biim(BIIM_WIDTH);
+    vector<Soko> biim(BIIM_WIDTH), current;
     rep(i, BIIM_WIDTH) biim[i].init();
+    rep(i, n){
+        // iの箱を運び出す
+
+    }
 
     // ビーム
+    // hashで状態を絞る
 
     // // 乱択
     // Soko best;
     // best.init();
-    // best.simple_ans();
+    // rep(i, n) best.simple_ans(i);
 
     // int lp=0;
     // while (true){
@@ -208,7 +211,7 @@ int main(){
 
     //     Soko soko;
     //     soko.init();
-    //     soko.simple_ans();
+    //     rep(i, n) soko.simple_ans(i);
 
     //     if(best.score<soko.score) best=soko;
     // }
