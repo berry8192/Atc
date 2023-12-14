@@ -8,3 +8,5 @@ Cargo.toml
 target
 external*
 test.txt
+
+stb_image_write.h
