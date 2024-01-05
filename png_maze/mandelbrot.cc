@@ -11,26 +11,27 @@
 #include <string>
 #include <vector>
 
-std::vector<std::vector<int>> iter_mat;
+using namespace std;
 
-std::string getCurrentDateTimeString() {
+vector<vector<int>> iter_mat;
+
+string getCurrentDateTimeString() {
     // 現在の時刻を取得
-    auto now =
-        std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    auto now = chrono::system_clock::to_time_t(chrono::system_clock::now());
 
     // tm 構造体に変換
-    std::tm tmStruct = *std::localtime(&now);
+    tm tmStruct = *localtime(&now);
 
     // 文字列に変換
-    std::stringstream ss;
-    ss << std::put_time(&tmStruct, "%Y%m%d%H%M%S");
+    stringstream ss;
+    ss << put_time(&tmStruct, "%Y%m%d%H%M%S");
 
     return ss.str();
 }
 
 void hsvToRgb(double h, double s, double v, double &r, double &g, double &b) {
     double c = v * s;
-    double x = c * (1 - std::abs(std::fmod(h / 60.0, 2) - 1));
+    double x = c * (1 - abs(fmod(h / 60.0, 2) - 1));
     double m = v - c;
 
     if (h >= 0 && h < 60) {
@@ -82,7 +83,7 @@ void createMandelbrotImage(const char *filename, int width, int height,
     // Generate Mandelbrot set
     for (int y = 0; y < height; ++y) {
         if (y % (height / 100) == 0)
-            std::cout << "progress: " << 100 * y / height << "%" << std::endl;
+            cout << "progress: " << 100 * y / height << "%" << endl;
         // printf("progress: %.1lf%\n", 100.0 * y / height);
         for (int x = 0; x < width; ++x) {
             // Calculate the index for the current pixel
@@ -138,37 +139,36 @@ void createMandelbrotImage(const char *filename, int width, int height,
 }
 
 int main() {
-    std::chrono::system_clock::time_point start, current;
-    start = std::chrono::system_clock::now();
+    chrono::system_clock::time_point start, current;
+    start = chrono::system_clock::now();
     int width = 3840;
     int height = 2160;
-    iter_mat.resize(height, std::vector<int>(width));
+    iter_mat.resize(height, vector<int>(width));
 
     // Define strings for minX, maxX, minY, maxY
     // edge
-    std::string strMinX = "-0.528563918781725888324873";
-    std::string strMaxX = "-0.528523918781725888324873";
-    std::string strMinY = "-0.669069156250000000000000";
-    std::string strMaxY = "-0.669046656250000000000000";
+    string strMinX = "-0.528563918781725888324873";
+    string strMaxX = "-0.528523918781725888324873";
+    string strMinY = "-0.669069156250000000000000";
+    string strMaxY = "-0.669046656250000000000000";
     // center
-    // std::string strCenterX = "-0.53";
-    // std::string strCenterY = "-0.68";
-    // std::string strWidth = "-0.006";
-    // std::string strHeight = "-0.006";
+    // string strCenterX = "-0.53";
+    // string strCenterY = "-0.68";
+    // string strWidth = "-0.006";
+    // string strHeight = "-0.006";
 
     // Create mpf_class variables using the defined strings
     mpf_class minX(strMinX);
     mpf_class maxX(strMaxX);
     mpf_class minY(strMinY);
     mpf_class maxY(strMaxY);
-    std::string filename = "mandelbrot_" + strMinX + "_" + strMaxX + "_" +
-                           strMinY + "_" + strMaxY + "_" +
-                           getCurrentDateTimeString() + ".png";
+    string filename = "mandelbrot_" + strMinX + "_" + strMaxX + "_" + strMinY +
+                      "_" + strMaxY + "_" + getCurrentDateTimeString() + ".png";
 
-    std::ofstream outputFile("mandelbrot_" + strMinX + "_" + strMaxX + "_" +
-                                 strMinY + "_" + strMaxY + "_" +
-                                 getCurrentDateTimeString() + ".txt",
-                             std::ios::app);
+    ofstream outputFile("mandelbrot_" + strMinX + "_" + strMaxX + "_" +
+                            strMinY + "_" + strMaxY + "_" +
+                            getCurrentDateTimeString() + ".txt",
+                        ios::app);
 
     int maxIterations = 1000;
 
@@ -176,24 +176,23 @@ int main() {
                           maxX.get_d(), minY.get_d(), maxY.get_d(),
                           maxIterations);
 
-    outputFile << height << " " << width << std::endl;
+    outputFile << height << " " << width << endl;
     outputFile << strMinX << " " << strMaxX << " " << strMinY << " " << strMaxY
-               << std::endl;
-    outputFile << maxIterations << std::endl;
+               << endl;
+    outputFile << maxIterations << endl;
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             outputFile << iter_mat[i][j] << " ";
         }
-        outputFile << std::endl;
+        outputFile << endl;
     }
 
-    current = std::chrono::system_clock::now();
-    std::cout << "time: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(current -
-                                                                       start)
-                         .count() /
-                     1000.0
-              << std::endl;
+    current = chrono::system_clock::now();
+    cout << "time: "
+         << chrono::duration_cast<chrono::milliseconds>(current - start)
+                    .count() /
+                1000.0
+         << endl;
 
     return 0;
 }
