@@ -4,10 +4,14 @@
 #include <cmath>
 #include <cstdlib>
 #include <ctime>
+#include <fstream>
 #include <gmpxx.h> // GMP C++ bindings
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <vector>
+
+std::vector<std::vector<int>> iter_mat;
 
 std::string getCurrentDateTimeString() {
     // 現在の時刻を取得
@@ -79,6 +83,7 @@ void createMandelbrotImage(const char *filename, int width, int height,
     for (int y = 0; y < height; ++y) {
         if (y % (height / 100) == 0)
             std::cout << "progress: " << 100 * y / height << "%" << std::endl;
+        // printf("progress: %.1lf%\n", 100.0 * y / height);
         for (int x = 0; x < width; ++x) {
             // Calculate the index for the current pixel
             int index = (y * width + x) * 3;
@@ -108,6 +113,7 @@ void createMandelbrotImage(const char *filename, int width, int height,
 
                 ++iteration;
             }
+            iter_mat[y][x] = iteration;
 
             // Assign color based on the number of iterations
             double t = static_cast<double>(iteration) / maxIterations;
@@ -134,6 +140,7 @@ void createMandelbrotImage(const char *filename, int width, int height,
 int main() {
     int width = 3840;
     int height = 2160;
+    iter_mat.resize(height, std::vector<int>(width));
 
     // Define strings for minX, maxX, minY, maxY
     // edge
@@ -156,11 +163,27 @@ int main() {
                            strMinY + "_" + strMaxY + "_" +
                            getCurrentDateTimeString() + ".png";
 
-    int maxIterations = 2000;
+    std::ofstream outputFile("mandelbrot_" + strMinX + "_" + strMaxX + "_" +
+                                 strMinY + "_" + strMaxY + "_" +
+                                 getCurrentDateTimeString() + ".txt",
+                             std::ios::app);
+
+    int maxIterations = 1000;
 
     createMandelbrotImage(filename.c_str(), width, height, minX.get_d(),
                           maxX.get_d(), minY.get_d(), maxY.get_d(),
                           maxIterations);
+
+    outputFile << height << " " << width << std::endl;
+    outputFile << strMinX << " " << strMaxX << " " << strMinY << " " << strMaxY
+               << std::endl;
+    outputFile << maxIterations << std::endl;
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            outputFile << iter_mat[i][j] << " ";
+        }
+        outputFile << std::endl;
+    }
 
     return 0;
 }
