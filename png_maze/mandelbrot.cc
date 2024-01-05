@@ -138,16 +138,18 @@ void createMandelbrotImage(const char *filename, int width, int height,
 }
 
 int main() {
+    std::chrono::system_clock::time_point start, current;
+    start = std::chrono::system_clock::now();
     int width = 3840;
     int height = 2160;
     iter_mat.resize(height, std::vector<int>(width));
 
     // Define strings for minX, maxX, minY, maxY
     // edge
-    std::string strMinX = "-0.528696954314720812182741";
-    std::string strMaxX = "-0.528296954314720812182741";
-    std::string strMinY = "-0.669249062500000000000000";
-    std::string strMaxY = "-0.669024062500000000000000";
+    std::string strMinX = "-0.528563918781725888324873";
+    std::string strMaxX = "-0.528523918781725888324873";
+    std::string strMinY = "-0.669069156250000000000000";
+    std::string strMaxY = "-0.669046656250000000000000";
     // center
     // std::string strCenterX = "-0.53";
     // std::string strCenterY = "-0.68";
@@ -184,6 +186,14 @@ int main() {
         }
         outputFile << std::endl;
     }
+
+    current = std::chrono::system_clock::now();
+    std::cout << "time: "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(current -
+                                                                       start)
+                         .count() /
+                     1000.0
+              << std::endl;
 
     return 0;
 }
