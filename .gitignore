@@ -10,3 +10,5 @@ external*
 test.txt
 
 stb_image_write.h
+txtToPng
+calcXY
