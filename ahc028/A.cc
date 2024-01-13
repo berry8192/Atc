@@ -28,12 +28,13 @@ template <class T> void PVV(T pvv) {
 }
 
 int find_common_string(const string &s1, const string &s2) {
-    for (int k = T_LENGTH - 1; k >= 2; k--) {
+    for (int k = T_LENGTH - 1; k >= 1; k--) {
         // s1の後ろk文字とs2の先頭k文字が一致するかどうか
         if (s1.substr(T_LENGTH - k) == s2.substr(0, k)) {
             return k;
         }
     }
+    return 0;
 }
 
 struct Pos;
@@ -108,7 +109,13 @@ struct Board {
         rep(i, m) {
             // 次の文字列
             obj_string = t[t_permutation[i]];
-            rep(j, T_LENGTH) {
+            // 前の文字列と共通部分があればそこは作らない
+            int skip_index = 0;
+            if (i != 0) {
+                skip_index =
+                    find_common_string(t[t_permutation[i - 1]], obj_string);
+            }
+            rep3(j, T_LENGTH, skip_index) {
                 // 次の文字
                 next_char = obj_string[j];
                 next_char_index = int(next_char - 'A');
