@@ -71,8 +71,12 @@ vector<vector<Pos>> alphabet_pos(26);
 struct Board {
     vector<int> t_permutation;
     vector<Pos> ans;
+    int score;
 
-    void init() { t_permutation.resize(m); }
+    void init() {
+        t_permutation.resize(m);
+        score = -1;
+    }
 
     void set_random_t_permutation() {
         rep(i, m) { t_permutation[i] = i; }
@@ -87,6 +91,7 @@ struct Board {
         int min_dist;
         int dist;
         Pos next_pos;
+        int cost = 0;
 
         rep(i, m) {
             // 次の文字列
@@ -109,11 +114,12 @@ struct Board {
                 // 文字が決まったらansに格納
                 current_pos = next_pos;
                 ans.push_back(current_pos);
+                cost += min_dist + 1;
             }
         }
+        score = max(1001, 10000 - cost);
     }
 
-    int calc_score() {}
     void print_t_permutation() {
         rep(i, m) { cout << t_permutation[i] SP; }
         cout << endl;
@@ -162,8 +168,9 @@ int main() {
     best.set_random_t_permutation();
     // best.print_t_permutation();
     best.t_permutation_to_output();
-    best.print_ans();
+    cout << best.score << endl;
     return 0;
+    // best.print_ans();
 
     int lp = 0;
     while (true) {
@@ -174,8 +181,8 @@ int main() {
         if (delta > TIME_LIMIT)
             break;
 
-        Board board;
-        board.init();
+        Board board = best;
+        // board.random_swap_permutation();
     }
     // cout<< "lp: " << lp <<endl;
     best.print_ans();
