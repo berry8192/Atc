@@ -29,7 +29,6 @@ template <class T> void PVV(T pvv) {
 struct Pos;
 
 int n, m;
-Pos s;
 vector<string> a;
 vector<string> t;
 
@@ -60,6 +59,9 @@ struct Pos {
 };
 Pos dir4[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}}; // 下右上左
 
+Pos s;
+vector<vector<Pos>> alphabet_pos(26);
+
 struct Board {
 
     void init() {
@@ -72,11 +74,27 @@ struct Board {
 
 void inpt() {
     cin >> n >> m;
-    cin >> s.h >> s.w;
+    int sh, sw;
+    cin >> sh >> sw;
+    s = {sh, sw};
     a.resize(n);
     t.resize(m);
     rep(i, n) cin >> a[i];
     rep(i, m) cin >> t[i];
+}
+
+// A-Zのアルファベットの場所をalphabet_posに格納する
+void make_alphabet_pos() {
+    rep(i, n) {
+        rep(j, n) {
+            int tmp = int(a[i][j] - 'A');
+            Pos pos = {i, j};
+            alphabet_pos[tmp].push_back(pos);
+        }
+    }
+    rep(i, 26) {
+        rep(j, alphabet_pos[i].size()) { alphabet_pos[i][j].print(); }
+    }
 }
 
 int main() {
@@ -86,6 +104,8 @@ int main() {
     start = chrono::system_clock::now();
 
     inpt();
+    make_alphabet_pos();
+    return 0;
 
     Board best;
 
