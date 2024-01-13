@@ -6,6 +6,7 @@
 #define all(v) v.begin(), v.end()
 #define SP << " "
 #define ll long long
+#define T_LENGTH 5
 
 using namespace std;
 
@@ -48,7 +49,12 @@ struct Pos {
         // assert(w<=h);
         return !(0 <= h && h < n && 0 <= w && w < n);
     }
+    int manhattan(Pos a) {
+        // cout<< "manhattan" <<endl;
+        return (abs(a.h - h) + abs(a.w - w));
+    }
     void print() { cout << "(" << h << ", " << w << ")" << endl; }
+    void ans_print() { cout << h << " " << w << endl; }
 
     Pos operator+(const Pos pos) {
         Pos rtn;
@@ -63,23 +69,58 @@ Pos s;
 vector<vector<Pos>> alphabet_pos(26);
 
 struct Board {
-    vector<int> k_permutation;
+    vector<int> t_permutation;
+    vector<Pos> ans;
 
-    void init() { k_permutation.resize(m); }
+    void init() { t_permutation.resize(m); }
 
-    void set_random_k_permutation() {
-        rep(i, m) { k_permutation[i] = i; }
-        shuffle(all(k_permutation), mt);
+    void set_random_t_permutation() {
+        rep(i, m) { t_permutation[i] = i; }
+        shuffle(all(t_permutation), mt);
     }
 
-    void ans_to_output() {}
+    void t_permutation_to_output() {
+        Pos current_pos = s;
+        string obj_string;
+        char next_char;
+        int next_char_index;
+        int min_dist;
+        int dist;
+        Pos next_pos;
+
+        rep(i, m) {
+            // 次の文字列
+            obj_string = t[t_permutation[i]];
+            rep(j, T_LENGTH) {
+                // 次の文字
+                next_char = obj_string[j];
+                next_char_index = int(next_char - 'A');
+                // 最も近い次の文字の座標を探す
+                min_dist = 100000;
+                rep(k, alphabet_pos[next_char_index].size()) {
+                    // マンハッタン距離で判定
+                    dist =
+                        current_pos.manhattan(alphabet_pos[next_char_index][k]);
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        next_pos = alphabet_pos[next_char_index][k];
+                    }
+                }
+                // 文字が決まったらansに格納
+                current_pos = next_pos;
+                ans.push_back(current_pos);
+            }
+        }
+    }
 
     int calc_score() {}
-    void print_k_permutation() {
-        rep(i, m) { cout << k_permutation[i] SP; }
+    void print_t_permutation() {
+        rep(i, m) { cout << t_permutation[i] SP; }
         cout << endl;
     }
-    void print_ans() {}
+    void print_ans() {
+        rep(i, ans.size()) { ans[i].ans_print(); }
+    }
 };
 
 void inpt() {
@@ -118,8 +159,10 @@ int main() {
 
     Board best;
     best.init();
-    best.set_random_k_permutation();
-    // best.print_k_permutation();
+    best.set_random_t_permutation();
+    // best.print_t_permutation();
+    best.t_permutation_to_output();
+    best.print_ans();
     return 0;
 
     int lp = 0;
