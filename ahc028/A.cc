@@ -27,6 +27,15 @@ template <class T> void PVV(T pvv) {
     }
 }
 
+int find_common_string(const string &s1, const string &s2) {
+    for (int k = T_LENGTH - 1; k >= 2; k--) {
+        // s1の後ろk文字とs2の先頭k文字が一致するかどうか
+        if (s1.substr(T_LENGTH - k) == s2.substr(0, k)) {
+            return k;
+        }
+    }
+}
+
 struct Pos;
 
 int n, m;
