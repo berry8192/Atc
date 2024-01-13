@@ -63,12 +63,22 @@ Pos s;
 vector<vector<Pos>> alphabet_pos(26);
 
 struct Board {
+    vector<int> k_permutation;
 
-    void init() {
-        // cout<< "init" <<endl;
+    void init() { k_permutation.resize(m); }
+
+    void set_random_k_permutation() {
+        rep(i, m) { k_permutation[i] = i; }
+        shuffle(all(k_permutation), mt);
     }
 
+    void ans_to_output() {}
+
     int calc_score() {}
+    void print_k_permutation() {
+        rep(i, m) { cout << k_permutation[i] SP; }
+        cout << endl;
+    }
     void print_ans() {}
 };
 
@@ -92,9 +102,9 @@ void make_alphabet_pos() {
             alphabet_pos[tmp].push_back(pos);
         }
     }
-    rep(i, 26) {
-        rep(j, alphabet_pos[i].size()) { alphabet_pos[i][j].print(); }
-    }
+    // rep(i, 26) {
+    //     rep(j, alphabet_pos[i].size()) { alphabet_pos[i][j].print(); }
+    // }
 }
 
 int main() {
@@ -105,9 +115,12 @@ int main() {
 
     inpt();
     make_alphabet_pos();
-    return 0;
 
     Board best;
+    best.init();
+    best.set_random_k_permutation();
+    // best.print_k_permutation();
+    return 0;
 
     int lp = 0;
     while (true) {
