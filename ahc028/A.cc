@@ -148,6 +148,22 @@ void inpt() {
     rep(i, m) cin >> t[i];
 }
 
+// 2文字以上の今日共通部分を持つものがあるのか
+void find_common() {
+    rep(i, m) {
+        rep(j, m) {
+            if (i == j)
+                continue;
+            for (int k = T_LENGTH - 1; k >= 2; k--) {
+                // t[i]の後ろk文字とt[j]の先頭k文字が一致するかどうか
+                if (t[i].substr(T_LENGTH - k) == t[j].substr(0, k)) {
+                    cout << k SP << t[i] SP << t[j] << endl;
+                }
+            }
+        }
+    }
+}
+
 // A-Zのアルファベットの場所をalphabet_posに格納する
 void make_alphabet_pos() {
     rep(i, n) {
@@ -169,6 +185,7 @@ int main() {
     start = chrono::system_clock::now();
 
     inpt();
+    // find_common();
     make_alphabet_pos();
 
     Board best;
