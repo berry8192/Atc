@@ -63,7 +63,7 @@ struct Pos {
         // cout<< "manhattan" <<endl;
         return (abs(a.h - h) + abs(a.w - w));
     }
-    void print() { cout << "(" << h << ", " << w << ")" << endl; }
+    void print() { cout << "(" << h << ", " << w << ") "; }
     void ans_print() { cout << h << " " << w << endl; }
 
     Pos operator+(const Pos pos) {
@@ -76,7 +76,76 @@ struct Pos {
 Pos dir4[4] = {{1, 0}, {0, 1}, {-1, 0}, {0, -1}}; // 下右上左
 
 Pos s;
-vector<vector<Pos>> alphabet_pos(26);
+vector<vector<Pos>> alphabet_pos(26); // [A-Z][a中のA-Zの個数]
+
+struct Path {
+    int dist;
+    Pos start_pos;
+    Pos end_pos;
+
+    void print() {
+        start_pos.print();
+        cout << dist SP;
+        end_pos.print();
+        cout << endl;
+    }
+
+    bool operator<(const Path &in) const { return dist < in.dist; };
+};
+vector<vector<Path>> path; // [m][size(1文字目)]
+
+void calc_path(int t_index) {
+    string obj_string = t[t_index];
+    int first_alphabet_int = int(obj_string[0] - 'A');
+    // tの1文字目各地からtを作ったときにかかるコスト一覧
+    vector<int> dist(alphabet_pos[first_alphabet_int].size());
+
+    rep(i, dist.size()) {
+        Pos current_pos = alphabet_pos[first_alphabet_int][i];
+        Pos first_pos = current_pos;
+        int next_alphabet_int;
+        Pos next_alphabet_pos;
+        int min_dist;
+        int dist;
+        Pos next_pos;
+        int cost = 0;
+
+        rep3(j, T_LENGTH, 1) {
+            // 次の文字
+            min_dist = 100000;
+            next_alphabet_int = int(obj_string[j] - 'A');
+            rep(k, alphabet_pos[next_alphabet_int].size()) {
+                next_alphabet_pos = alphabet_pos[next_alphabet_int][k];
+                dist = current_pos.manhattan(next_alphabet_pos);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    next_pos = next_alphabet_pos;
+                }
+            }
+            current_pos = next_pos;
+            cost += min_dist;
+        }
+        path[t_index].push_back({cost, first_pos, current_pos});
+    }
+    sort(all(path[t_index]));
+}
+
+void calc_all_path() {
+    path.resize(m);
+    rep(i, m) { calc_path(i); }
+}
+
+// struct Near {
+//     int dist;
+//     Pos pos;
+//     Near() {}
+//     Near(int d, Pos p) {
+//         dist = d;
+//         pos = p;
+//     }
+// };
+
+// vector<vector<vector<Near>>> pos_to_alphabet_dist;
 
 struct Board {
     vector<int> t_permutation;
@@ -174,6 +243,8 @@ void inpt() {
     t.resize(m);
     rep(i, n) cin >> a[i];
     rep(i, m) cin >> t[i];
+    // pos_to_alphabet_dist.resize(n, vector<vector<Near>>(n));
+    path.resize(m);
 }
 
 // 2文字以上の今日共通部分を持つものがあるのか
@@ -215,6 +286,8 @@ int main() {
     inpt();
     // find_common();
     make_alphabet_pos();
+    calc_all_path();
+    // rep(i, path[0].size()) { path[0][i].print(); }
 
     Board best;
     best.init();
