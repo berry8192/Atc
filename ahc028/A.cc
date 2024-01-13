@@ -207,6 +207,47 @@ struct Board {
         }
         score = max(1001, 10000 - cost);
     }
+    void make_greedy_ans(int step) {
+        // ansを初期化する
+        ans.clear();
+        // 残っているtの一覧を作る
+        set<int> remain_t_indexs;
+        rep(i, m) { remain_t_indexs.insert(i); }
+        // 初期位置をセット
+        Pos current_pos = s;
+        bool first_t = true;
+        string last_t;
+        int best_t;
+        int min_dist;
+        int dist;
+        int cost = 0;
+
+        while (!remain_t_indexs.empty()) {
+            min_dist = 100000;
+            for (auto remain_t_index : remain_t_indexs) {
+                string obj_string = t[remain_t_index];
+                int skip_index = 0;
+                if (!first_t) {
+                    skip_index = find_common_string(last_t, obj_string);
+                }
+                rep(i, path[remain_t_index].size()) {
+                    dist = current_pos.manhattan(
+                               path[remain_t_index][i].start_pos) +
+                           path[remain_t_index][i].dist;
+                    if (skip_index > 0)
+                        dist = path[remain_t_index][i].dist *
+                               (T_LENGTH - skip_index) / T_LENGTH;
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        best_t = remain_t_index;
+                    }
+                }
+            }
+            first_t = false;
+            last_t = t[best_t];
+            cost += dist + 1;
+        }
+    }
     void random_swap_permutation() {
         int u = mt() % m;
         int v = (u + mt() % (m - 1)) % m;
