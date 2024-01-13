@@ -146,11 +146,14 @@ struct Board {
     void random_move_permutation() {
         int u = mt() % m;
         int v = (u + mt() % (m - 1)) % m;
-        if (v < u)
-            swap(v, u);
-        int tmp = t_permutation[u];
-        t_permutation.erase(t_permutation.begin() + u);
-        t_permutation.insert(t_permutation.begin() + v, tmp);
+        if (v < u) {
+            t_permutation.insert(t_permutation.begin() + v, t_permutation[u]);
+            t_permutation.erase(t_permutation.begin() + u + 1);
+        } else {
+            t_permutation.insert(t_permutation.begin() + v + 1,
+                                 t_permutation[u]);
+            t_permutation.erase(t_permutation.begin() + u);
+        }
     }
 
     void print_t_permutation() {
