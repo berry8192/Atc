@@ -84,6 +84,9 @@ struct Board {
     }
 
     void t_permutation_to_output() {
+        // ansを初期化する
+        ans.clear();
+
         Pos current_pos = s;
         string obj_string;
         char next_char;
@@ -118,6 +121,11 @@ struct Board {
             }
         }
         score = max(1001, 10000 - cost);
+    }
+    void random_swap_permutation() {
+        int u = mt() % m;
+        int v = (u + mt() % (m - 1)) % m;
+        swap(t_permutation[u], t_permutation[v]);
     }
 
     void print_t_permutation() {
@@ -168,8 +176,6 @@ int main() {
     best.set_random_t_permutation();
     // best.print_t_permutation();
     best.t_permutation_to_output();
-    cout << best.score << endl;
-    return 0;
     // best.print_ans();
 
     int lp = 0;
@@ -182,7 +188,12 @@ int main() {
             break;
 
         Board board = best;
-        // board.random_swap_permutation();
+        board.random_swap_permutation();
+        board.t_permutation_to_output();
+        if (best.score < board.score) {
+            // cout << lp SP << board.score << endl;
+            best = board;
+        }
     }
     // cout<< "lp: " << lp <<endl;
     best.print_ans();
