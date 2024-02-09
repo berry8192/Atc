@@ -22,14 +22,28 @@ ll lmax=9223372036854775807;
 template <class T> ll gcdv(vector<T> gv){
 	assert(gv.size()>0);
 	ll tmp=gv[0];
-	for(int i=1;i<(int)gv.size();i++) tmp=gcdi(tmp, gv[i]);
+	for(int i=1;i<(int)gv.size();i++) tmp=gcd(tmp, gv[i]);
 	return tmp;
 }
 
 template <class T> ll lcmv(vector<T> gv){
 	assert(gv.size()>0);
 	ll tmp=gv[0];
-	for(ll i=1;i<(int)gv.size();i++) tmp=lcmi(tmp, gv[i]);
+	for(ll i=1;i<(int)gv.size();i++) tmp=tmp/gcd(tmp, gv[i])*gv[i];
+	return tmp;
+}
+
+template <class T> ll sumv(vector<T> gv){
+	assert(gv.size()>0);
+	ll tmp=gv[0];
+	for(ll i=1;i<(int)gv.size();i++) tmp+=gv[i];
+	return tmp;
+}
+
+template <class T> vector<T> subv(vector<T> gv){
+	assert(gv.size()>0);
+	vector<T> tmp;
+	for(ll i=1;i<(int)gv.size();i++) tmp.push_back(abs(gv[i-1]-gv[i]));
 	return tmp;
 }
 
@@ -88,6 +102,7 @@ struct Graph{
 	int n, m;
 	vector<vector<edge>> g;
 	vector<s_edge> edges;
+	vector<vector<ll>> dist;
 
 	void init(int nn, int mm, bool weight=false, bool directed=false){
 		n=nn;
@@ -150,6 +165,23 @@ struct Graph{
 		}
 		return rtn;
 	}
+	// ダイクストラ法
+	void djikstra(int x){
+
+	}
+	// ワーシャルフロイド法
+	void worshalfroid(){
+
+	}
+	// 閉路検出
+	bool has_cycle(){
+
+	}
+	// 連結成分に分解 
+	void decomp(vector<Graph> vg){
+		
+	}
+
 };
 
 // 長い文字列を数列として解釈してmodで抑えた整数にする
@@ -164,14 +196,6 @@ ll stollmod(string ss, ll MOD){
 		base%=MOD;
 	}
 	return rtn;
-}
-
-// 配列中の総和
-template <class T> ll SM(vector<T> smv) {
-	ll tmp=0;
-	rep(i, (int)smv.size()) tmp+=smv[i];
-
-	return tmp;
 }
 
 //進数変換10->2 桁指定 10進->2進
@@ -241,20 +265,20 @@ template <class T> void addbit(vector<T> vv){
 }
 
 int main(){
-	cout << fixed << setprecision(12);
-	int a;
-	cin>> a;
-	int b;
-	cin>> b;
-	int c;
-	cin>> c;
-	int d;
-	cin>> d;
-	string s;
-	cin>> s;
-	cout<< stollmod(s, 10) <<endl;
-	string t;
-	cin>> t;
+	// cout << fixed << setprecision(12);
+	// int a;
+	// cin>> a;
+	// int b;
+	// cin>> b;
+	// int c;
+	// cin>> c;
+	// int d;
+	// cin>> d;
+	// string s;
+	// cin>> s;
+	// cout<< stollmod(s, 10) <<endl;
+	// string t;
+	// cin>> t;
 	int n, ans=0;
 	vector<int> v;
 
@@ -268,6 +292,10 @@ int main(){
 	rep(i, n) {
 		if (v[i]) ans++;
 	}
+	cout<< gcdv(v) <<endl;
+	cout<< lcmv(v) <<endl;
+	cout<< sumv(v) <<endl;
+	PV(subv(v));
 
 	if(n==0) cout<< "Yes" << endl;
 	else cout<< "No" << endl;
