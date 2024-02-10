@@ -13,7 +13,8 @@ using namespace std;
 // using namespace atcoder;
 
 int imax = 2147483647;
-ll lmax = 9223372036854775807;
+// ll lmax = 9223372036854775807;
+ll lmax = 4000000000000000000;
 // using mint = modint1000000007;
 // using mint = modint998244353;
 //  ll mod=998244353;
@@ -314,43 +315,21 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
-    int n, ans = 0;
-    vector<int> v;
+    int n, a, b, x;
 
     cin >> n;
-    v.resize(n);
 
-    rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
-
-    rep(i, n) {
-        if (v[i])
-            ans++;
+    Graph g(n);
+    rep(i, n - 1) {
+        cin >> a >> b >> x;
+        g.add_edge(i, i + 1, a);
+        g.add_edge(i, x - 1, b);
     }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
+    g.djikstra(0);
 
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
+    // PV(g.dist[0]);
+    // rep(i, g.edges.size()) g.edges[i].print();
+    cout << g.dist[0][n - 1] << endl;
 
     return 0;
 }
