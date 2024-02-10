@@ -84,30 +84,21 @@ template <class T> void PM(T pm) {
     cout << endl;
 }
 
-struct edge {
-    int to;
-    int co;
-
-    bool operator<(const edge &in) const {
-        return co != in.co ? co < in.co : to < in.to;
-    };
-};
-// クラスカル法とかやりたいときに使う
-struct s_edge {
-    int to;
+struct Edge {
     int from;
-    int co;
+    int to;
+    ll cost;
 
-    bool operator<(const s_edge &in) const {
-        return co != in.co  ? co < in.co
-               : to < in.to ? to < in.to
-                            : from < in.from;
+    bool operator<(const Edge &in) const {
+        return cost != in.cost ? cost < in.cost
+               : to < in.to    ? to < in.to
+                               : from < in.from;
     };
 };
 struct Graph {
     int n, m;
-    vector<vector<edge>> g;
-    vector<s_edge> edges;
+    vector<vector<Edge>> g;
+    vector<Edge> edges;
     vector<vector<ll>> dist;
 
     void init(int nn, int mm, bool weight = false, bool directed = false) {
@@ -126,10 +117,10 @@ struct Graph {
             else
                 ww = 1;
 
-            g[uu].push_back({vv, ww});
+            g[uu].push_back({uu, vv, ww});
             edges.push_back({uu, vv, ww}); // edges
             if (!directed) {
-                g[vv].push_back({uu, ww});
+                g[vv].push_back({uu, vv, ww});
                 edges.push_back({vv, uu, ww}); // edges
             }
         }
@@ -141,6 +132,7 @@ struct Graph {
         int wid = bb[0].size();
         g.resize(hei * wid);
 
+        // まだちゃんと書けていない
         for (int i = 0; i < hei - 1; i++) {
             for (int j = 0; j < wid - 1; j++) {
                 if (bb[i][j] == '.' && bb[i + 1][j] == '.') {
@@ -165,8 +157,8 @@ struct Graph {
             que.pop();
             for (int i = 0; i < g[y].size(); i++) {
                 int to_x = g[y][i].to;
-                if (d + g[y][i].co < rtn[to_x]) {
-                    rtn[to_x] = d + g[y][i].co;
+                if (d + g[y][i].cost < rtn[to_x]) {
+                    rtn[to_x] = d + g[y][i].cost;
                     que.push(to_x);
                 }
             }
@@ -174,9 +166,34 @@ struct Graph {
         return rtn;
     }
     // ダイクストラ法
-    void djikstra(int x) {
+    void djikstra(int startIndex) {
         dist.clear();
         dist.resize(n);
+        dist[startIndex][startIndex] = 0;
+        priority_queue<Edge, vector<Edge>, greater<Edge>> q;
+        q.emplace((0), startIndex);
+
+        while (!q.empty()) {
+            const long long distance = q.top().cost;
+            const int from = q.top().from;
+            q.pop();
+
+            // 最短距離でなければ処理しない
+            if (dist[startIndex][from] < distance) {
+                continue;
+            }
+
+            // 現在の頂点からの各辺について
+            for (const auto &edge : g[from]) {
+                // to までの新しい距離
+                const long long d = (dist[startIndex][from] + edge.cost);
+
+                // d が現在の記録より小さければ更新
+                if (d < dist[startIndex][edge.to]) {
+                    q.emplace((dist[startIndex][edge.to] = d), edge.to);
+                }
+            }
+        }
     }
     // ワーシャルフロイド法
     void worshalfroid() {}
@@ -184,6 +201,7 @@ struct Graph {
     bool has_cycle() {}
     // 連結成分に分解
     void decomp(vector<Graph> vg) {}
+    void euler_tour(int x) {}
 };
 
 // 長い文字列を数列として解釈してmodで抑えた整数にする
