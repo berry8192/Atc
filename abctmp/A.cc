@@ -145,6 +145,10 @@ struct Graph {
             }
         }
     }
+    void add_edge(int ifrom, int ito, ll icost) {
+        g[ifrom].push_back({ifrom, ito, icost});
+        edges.push_back({ifrom, ito, icost});
+    }
 
     vector<int> bfs(int x) {
         vector<int> rtn(n, imax);
@@ -202,6 +206,8 @@ struct Graph {
     // 連結成分に分解
     void decomp(vector<Graph> vg) {}
     void euler_tour(int x) {}
+    // 最小全域木のコスト
+    ll prim() {}
 };
 
 // 長い文字列を数列として解釈してmodで抑えた整数にする
