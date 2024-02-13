@@ -116,6 +116,10 @@ struct Pos {
     }
 };
 
+Pos itop(int idx) { return {idx / N, idx % N}; }
+
+vector<Pos> d4 = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+
 int ask(const vector<Pos> &poses) {
     cout << "q" SP << poses.size() SP;
     rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
@@ -181,9 +185,34 @@ struct Grid {
 
         probability[pos.h][pos.w] = {ask({{pos.h, pos.w}}), 1.0};
     }
+    void search_random_connect() {
+        Pos pos;
+        bool connect_poly;
+        int retry_count = 105;
+        do {
+            pos = {int(mt() % N), int(mt() % N)};
+            if (random_search.find(pos) != random_search.end())
+                continue;
+
+            connect_poly = false;
+            vector<Pos> poses = pos.around_pos(d4);
+            rep(i, poses.size()) {
+                if (probability[poses[i].h][poses[i].w].val >= 1 &&
+                    probability[poses[i].h][poses[i].w].prob == 1) {
+                    connect_poly = true;
+                    break;
+                }
+            }
+
+            retry_count--;
+        } while (!connect_poly && retry_count > 0);
+        random_search.insert(pos);
+
+        probability[pos.h][pos.w] = {ask({{pos.h, pos.w}}), 1.0};
+    }
     void random_ans() {
         while (1) {
-            search_random();
+            search_random_connect();
             guess_from_probability();
         }
     }
@@ -227,10 +256,6 @@ struct Grid {
             exit(0);
     }
 };
-
-Pos itop(int idx) { return {idx / N, idx % N}; }
-
-Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
 void inpt() {
     cin >> N >> M >> eps;
