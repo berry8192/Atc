@@ -60,6 +60,16 @@ mt19937 mt(seed);
 
 int N, M, eps;
 
+int ask(const vector<Pos> &poses) {
+    cout << "q" SP << poses.size() SP;
+    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
+    cout << endl;
+
+    int rtn;
+    cin >> rtn;
+    return rtn;
+}
+
 // 構造体
 struct Pos {
     int h;
@@ -113,6 +123,17 @@ struct Pos {
     }
 };
 
+struct Probability {
+    int val;
+    double prob;
+
+    Probability(){};
+    Probability(int ival, double iprob) {
+        val = ival;
+        prob = iprob;
+    }
+};
+
 struct Poly {
     int d;
     vector<Pos> poses;
@@ -120,7 +141,36 @@ struct Poly {
     Poly(){};
 };
 
-struct Grid {};
+struct Grid {
+    vector<Pos> estimates;
+    vector<vector<Probability>> probability;
+
+    void init() {
+        probability.resize(N);
+        rep(i, N) probability[i].resize(N);
+    }
+
+    void itv_serach() {
+        for (int i = 1; i < N - 1; i += 2) {
+            for (int j = 1; j < N - 1; j += 2) {
+                probability[i][j] = {ask({i, j}), 1.0};
+            }
+        }
+    }
+
+    void ans() {
+        cout << "a" SP << estimates.size() SP;
+        rep(i, estimates.size()) {
+            cout << estimates[i].h SP << estimates[i].w SP;
+        }
+        cout << endl;
+
+        int rtn;
+        cin >> rtn;
+        if (rtn == 1)
+            exit(0);
+    }
+};
 
 Pos itop(int idx) { return {idx / N, idx % N}; }
 
@@ -140,31 +190,13 @@ void inpt() {
     }
 }
 
-int ask(const vector<Pos> &poses) {
-    cout << "q" SP << poses.size() SP;
-    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
-    cout << endl;
-
-    int rtn;
-    cin >> rtn;
-    return rtn;
-}
-
-void ans(const vector<Pos> &poses) {
-    cout << "a" SP << poses.size() SP;
-    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
-    cout << endl;
-
-    int rtn;
-    cin >> rtn;
-    if (rtn == 1)
-        exit(0);
-}
-
 int main() {
     start = chrono::system_clock::now();
 
     Grid best;
+    best.init();
+    best.itv_serach();
+    return 0;
 
     int loop = 0;
     while (1) {
@@ -174,37 +206,7 @@ int main() {
             // break;
         }
         loop++;
-
-        Grid grid;
-
-        if (best.score < grid.score) {
-            best = space;
-            // cout<< "loop: " << loop <<endl;
-            // best.print_ans();
-            // cout<< "score: " << space.score SP << space.score*25 <<endl;
-        }
     }
-    // cout<< space.score SP << space.score*25 <<endl;
-    best.print_ans();
 
     return 0;
 }
-
-// ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
-// ふさがるマスが多いマスはあきらめる
-// 2通り以上アクセスする方法があるマスはどうしよう
-
-// 行き止まりに近いマスは長い区間の計画を使う
-// 迷路の形を何回か試す
-
-// ###
-// AB#
-// ###
-// のような形のとき、BがS=5, D=10なら
-// AがS=5, D=10なら最高
-// AがS=7, D=10ならAのplant_tを5以下にしてもよい
-// AがS=3, D=10ならBのplant_tを3以下にする必要がある
-// AがS=5, D=9ならまあ許せる
-// AがS=4, D=9ならBのplant_tを4以下にする必要がある
-// AがS=6, D=9ならAのplant_tを6以下にしてもよい
-// AがD=11なら無理
