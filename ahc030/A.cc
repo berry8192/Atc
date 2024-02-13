@@ -61,6 +61,7 @@ mt19937 mt(seed);
 
 int N, M;
 double eps;
+int oil_sum = 0;
 
 // 構造体
 struct Pos {
@@ -160,19 +161,6 @@ struct Grid {
             }
         }
     }
-    void search_random() {
-        Pos pos;
-        do {
-            pos = {int(mt() % N), int(mt() % N)};
-        } while (random_search.find(pos) != random_search.end());
-        random_search.insert(pos);
-
-        probability[pos.h][pos.w] = {ask({{pos.h, pos.h}}), 1.0};
-    }
-    void random_ans() {
-        search_random();
-        guess_from_probability();
-    }
     int _test_nn_search(int sz, int offset) {
         vector<Pos> tmp;
         rep(i, sz) rep(j, sz) tmp.push_back({i + offset, j + offset});
@@ -184,9 +172,23 @@ struct Grid {
         PV(gets);
         exit(0);
     }
+    void search_random() {
+        Pos pos;
+        do {
+            pos = {int(mt() % N), int(mt() % N)};
+        } while (random_search.find(pos) != random_search.end());
+        random_search.insert(pos);
+
+        probability[pos.h][pos.w] = {ask({{pos.h, pos.h}}), 1.0};
+    }
+    void random_ans() {
+        while (1) {
+            search_random();
+            guess_from_probability();
+        }
+    }
 
     void guess_from_probability() {
-        outputFile << fixed << setprecision(2);
         rep(i, N) {
             rep(j, N) {
                 outputFile << "(" << probability[i][j].val << ":"
@@ -196,6 +198,16 @@ struct Grid {
         }
     }
 
+    void output_probability() {
+        outputFile << fixed << setprecision(2);
+        rep(i, N) {
+            rep(j, N) {
+                outputFile << "(" << probability[i][j].val << ":"
+                           << probability[i][j].prob << ") ";
+            }
+            outputFile << endl;
+        }
+    }
     void ans() {
         cout << "a" SP << estimates.size() SP;
         rep(i, estimates.size()) {
@@ -221,6 +233,7 @@ void inpt() {
         Poly poly;
         cin >> d;
         poly.d = d;
+        oil_sum += d;
         rep(j, d) {
             cin >> ii >> jj;
             poly.poses.push_back({ii, jj});
@@ -235,7 +248,7 @@ int main() {
 
     Grid grid;
     grid.init();
-    rep(i, 10) grid.search_random();
+    rep(i, N * N) grid.search_random();
     grid.guess_from_probability();
 
     return 0;
