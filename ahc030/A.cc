@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-// std::ofstream outputFile("log.csv");
+std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -146,6 +146,7 @@ struct Poly {
 struct Grid {
     vector<Pos> estimates;
     vector<vector<Probability>> probability;
+    set<Pos> random_search;
 
     void init() {
         probability.resize(N);
@@ -159,19 +160,41 @@ struct Grid {
             }
         }
     }
-    void _test_nn() {
-        vector<int> gets(20);
-        rep(i, 100) gets[_test_nn_search(3, 6)]++;
-        PV(gets);
-        exit(0);
+    void search_random() {
+        Pos pos;
+        do {
+            pos = {int(mt() % N), int(mt() % N)};
+        } while (random_search.find(pos) != random_search.end());
+        random_search.insert(pos);
+
+        probability[pos.h][pos.w] = {ask({{pos.h, pos.h}}), 1.0};
+    }
+    void random_ans() {
+        search_random();
+        guess_from_probability();
     }
     int _test_nn_search(int sz, int offset) {
         vector<Pos> tmp;
         rep(i, sz) rep(j, sz) tmp.push_back({i + offset, j + offset});
         return ask(tmp);
     }
+    void _test_nn() {
+        vector<int> gets(20);
+        rep(i, 100) gets[_test_nn_search(3, 6)]++;
+        PV(gets);
+        exit(0);
+    }
 
-    void guess_from_probability() {}
+    void guess_from_probability() {
+        outputFile << fixed << setprecision(2);
+        rep(i, N) {
+            rep(j, N) {
+                outputFile << "(" << probability[i][j].val << ":"
+                           << probability[i][j].prob << ") ";
+            }
+            outputFile << endl;
+        }
+    }
 
     void ans() {
         cout << "a" SP << estimates.size() SP;
@@ -210,9 +233,10 @@ int main() {
 
     inpt();
 
-    Grid best;
-    best.init();
-    // best.itv_serach();
+    Grid grid;
+    grid.init();
+    rep(i, 10) grid.search_random();
+    grid.guess_from_probability();
 
     return 0;
 
