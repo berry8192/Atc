@@ -140,6 +140,27 @@ void inpt() {
     }
 }
 
+int ask(const vector<Pos> &poses) {
+    cout << "q" SP << poses.size() SP;
+    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
+    cout << endl;
+
+    int rtn;
+    cin >> rtn;
+    return rtn;
+}
+
+void ans(const vector<Pos> &poses) {
+    cout << "a" SP << poses.size() SP;
+    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
+    cout << endl;
+
+    int rtn;
+    cin >> rtn;
+    if (rtn == 1)
+        exit(0);
+}
+
 int main() {
     start = chrono::system_clock::now();
 
