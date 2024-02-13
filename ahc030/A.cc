@@ -188,7 +188,7 @@ struct Grid {
     void search_random_connect() {
         Pos pos;
         bool connect_poly;
-        int retry_count = 105;
+        int retry_count = N * N / 2;
         do {
             pos = {int(mt() % N), int(mt() % N)};
             if (random_search.find(pos) != random_search.end())
