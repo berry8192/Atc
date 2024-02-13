@@ -145,7 +145,7 @@ struct Poly {
 };
 
 struct Grid {
-    vector<Pos> estimates;
+    set<Pos> estimates;
     vector<vector<Probability>> probability;
     set<Pos> random_search;
 
@@ -179,7 +179,7 @@ struct Grid {
         } while (random_search.find(pos) != random_search.end());
         random_search.insert(pos);
 
-        probability[pos.h][pos.w] = {ask({{pos.h, pos.h}}), 1.0};
+        probability[pos.h][pos.w] = {ask({{pos.h, pos.w}}), 1.0};
     }
     void random_ans() {
         while (1) {
@@ -189,12 +189,18 @@ struct Grid {
     }
 
     void guess_from_probability() {
+        int find_oil = 0;
         rep(i, N) {
             rep(j, N) {
-                outputFile << "(" << probability[i][j].val << ":"
-                           << probability[i][j].prob << ") ";
+                if (probability[i][j].val >= 1 && probability[i][j].prob == 1) {
+                    find_oil += probability[i][j].val;
+                    estimates.insert({i, j});
+                }
             }
-            outputFile << endl;
+        }
+        // outputFile << find_oil << endl;
+        if (find_oil == oil_sum) {
+            submit_ans();
         }
     }
 
@@ -208,10 +214,10 @@ struct Grid {
             outputFile << endl;
         }
     }
-    void ans() {
+    void submit_ans() {
         cout << "a" SP << estimates.size() SP;
-        rep(i, estimates.size()) {
-            cout << estimates[i].h SP << estimates[i].w SP;
+        for (auto s : estimates) {
+            cout << s.h SP << s.w SP;
         }
         cout << endl;
 
@@ -248,8 +254,7 @@ int main() {
 
     Grid grid;
     grid.init();
-    rep(i, N * N) grid.search_random();
-    grid.guess_from_probability();
+    grid.random_ans();
 
     return 0;
 
