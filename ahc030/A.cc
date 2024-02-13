@@ -18,12 +18,13 @@ using namespace std;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
-// 	// rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
-// 	cout<< pvv[pvv.size()-1] <<endl;
-// }
+template <class T> void PV(T pvv) {
+    if (!pvv.size())
+        return;
+    rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
+    // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
+    cout << pvv[pvv.size() - 1] << endl;
+}
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
@@ -58,17 +59,8 @@ double end_temp = 10000.0;
 int seed = 1;
 mt19937 mt(seed);
 
-int N, M, eps;
-
-int ask(const vector<Pos> &poses) {
-    cout << "q" SP << poses.size() SP;
-    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
-    cout << endl;
-
-    int rtn;
-    cin >> rtn;
-    return rtn;
-}
+int N, M;
+double eps;
 
 // 構造体
 struct Pos {
@@ -123,6 +115,16 @@ struct Pos {
     }
 };
 
+int ask(const vector<Pos> &poses) {
+    cout << "q" SP << poses.size() SP;
+    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
+    cout << endl;
+
+    int rtn;
+    cin >> rtn;
+    return rtn;
+}
+
 struct Probability {
     int val;
     double prob;
@@ -153,10 +155,23 @@ struct Grid {
     void itv_serach() {
         for (int i = 1; i < N - 1; i += 2) {
             for (int j = 1; j < N - 1; j += 2) {
-                probability[i][j] = {ask({i, j}), 1.0};
+                probability[i][j] = {ask({{i, j}}), 1.0};
             }
         }
     }
+    void _test_nn() {
+        vector<int> gets(20);
+        rep(i, 100) gets[_test_nn_search(3, 6)]++;
+        PV(gets);
+        exit(0);
+    }
+    int _test_nn_search(int sz, int offset) {
+        vector<Pos> tmp;
+        rep(i, sz) rep(j, sz) tmp.push_back({i + offset, j + offset});
+        return ask(tmp);
+    }
+
+    void guess_from_probability() {}
 
     void ans() {
         cout << "a" SP << estimates.size() SP;
@@ -193,9 +208,12 @@ void inpt() {
 int main() {
     start = chrono::system_clock::now();
 
+    inpt();
+
     Grid best;
     best.init();
-    best.itv_serach();
+    // best.itv_serach();
+
     return 0;
 
     int loop = 0;
