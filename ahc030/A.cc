@@ -396,13 +396,18 @@ struct Grid {
         rep(i, sz) rep(j, sz) tmp.push_back({i + offset, j + offset});
         int x;
         vector<double> oils(MAX_RETURN_X, 1.0);
-        PV(oils);
-        rep(i, 150) {
+        // PV(oils);
+        int idx;
+        rep(i, N * N) {
             x = ask(tmp);
             dist_prob(tmp.size(), x, oils);
             PV(oils);
+            idx = get_max_index(oils);
+            if (oils[idx] > 0.95) {
+                outputFile << "resolved: " << i << endl;
+                break;
+            }
         }
-        int idx = get_max_index(oils);
         outputFile << idx << ": " << oils[idx] * 100 << "%." << endl;
         exit(0);
     }
@@ -509,7 +514,7 @@ int main() {
 
     Grid grid;
     grid.init();
-    grid._test_crd_search(13, 0);
+    grid._test_crd_search(2, 0);
     grid.random_ans();
 
     return 0;
