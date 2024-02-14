@@ -171,8 +171,8 @@ struct Grid {
         return ask(tmp);
     }
     void _test_nn() {
-        vector<int> gets(20);
-        rep(i, 100) gets[_test_nn_search(3, 6)]++;
+        vector<int> gets(500);
+        rep(i, N * N) gets[_test_nn_search(3, 0)]++;
         PV(gets);
         exit(0);
     }
