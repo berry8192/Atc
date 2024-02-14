@@ -15,18 +15,19 @@ using namespace std;
 
 std::ofstream outputFile("log.csv");
 
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
-// 	outputFile<< pvv[pvv.size()-1] <<endl;
-// }
 template <class T> void PV(T pvv) {
     if (!pvv.size())
         return;
-    rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
-    // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
-    cout << pvv[pvv.size() - 1] << endl;
+    rep(i, pvv.size() - 1) outputFile << pvv[i] << ", ";
+    outputFile << pvv[pvv.size() - 1] << endl;
 }
+// template <class T> void PV(T pvv) {
+//     if (!pvv.size())
+//         return;
+//     rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
+//     // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
+//     cout << pvv[pvv.size() - 1] << endl;
+// }
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
@@ -194,6 +195,22 @@ int N, M;
 double eps;
 int oil_sum = 0;
 
+int get_max_index(const vector<double> &vec, bool match_first = true) {
+    double ma = -imax;
+    int mai;
+    rep(i, vec.size()) {
+        if (match_first && ma < vec[i]) {
+            ma = vec[i];
+            mai = i;
+        }
+        if (match_first && ma <= vec[i]) {
+            ma = vec[i];
+            mai = i;
+        }
+    }
+    return mai;
+}
+
 // 構造体
 struct Pos {
     int h;
@@ -251,6 +268,71 @@ Pos itop(int idx) { return {idx / N, idx % N}; }
 
 vector<Pos> d4 = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
+// 累積正規分布の配列を使って確率を返す。±5σを超える場合は断定する
+double get_normdist(double x) {
+    if (x < -5.0)
+        return 0.0;
+    if (x > 5.0)
+        return 1.0;
+
+    double flo = floor(x * 100.0);
+    double cei = ceil(x * 100.0);
+    double left, right;
+    if (flo < 0.0) {
+        left = 1.0 - cumulative_normal_distribution[abs(flo)];
+    } else {
+        left = cumulative_normal_distribution[flo];
+    }
+    if (flo < 0.0) {
+        right = 1.0 - cumulative_normal_distribution[abs(cei)];
+    } else {
+        right = cumulative_normal_distribution[cei];
+    }
+    // 内分する必要がない場合はここでreturn
+    if (left == right)
+        return left;
+
+    assert(left < right);
+
+    // 内分する
+    double rtn = left * (ceil(x) - x) + right * (x - floor(x));
+    assert(left <= rtn);
+    assert(rtn <= right);
+
+    return rtn;
+}
+
+// 真のv(S)がそれぞれどれくらいの確率かを、参照渡しされたvectorに詰めて返す
+void dist_prob(int k, int x, vector<double> &vec) {
+    assert(MAX_RETURN_X);
+    double mu, sig = sqrt(k * eps * (1 - eps));
+    double left_x = x - 0.5, right_x = x + 0.5; // 四捨五入でxになる実数の範囲
+    double left_sig, right_sig; // μから何σ離れているか
+    double left_p, right_p;
+    // k=1なら正確なので確率を1にする
+    if (k == 1) {
+        rep(i, MAX_RETURN_X) vec[i] = 0.0;
+        vec[x] = 1.0;
+        return;
+    }
+    double sumv = 0.0;
+    rep(i, MAX_RETURN_X) {
+        // 真のv(S)がiだとする
+        mu = i * (1 - 2 * eps) + eps * k;
+        left_sig = (left_x - mu) / sig;
+        right_sig = (right_x - mu) / sig;
+        left_p = get_normdist(left_sig);
+        right_p = get_normdist(right_sig);
+        // outputFile << mu SP << sig SP << left_x SP << right_x SP << left_sig
+        // SP << right_sig SP << left_p SP << right_p << endl;
+        assert(left_p <= right_p);
+        vec[i] *= right_p - left_p;
+        sumv += vec[i];
+    }
+    // 正規化する
+    rep(i, MAX_RETURN_X) vec[i] /= sumv;
+}
+
 int ask(const vector<Pos> &poses) {
     cout << "q" SP << poses.size() SP;
     rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
@@ -305,6 +387,23 @@ struct Grid {
         vector<int> gets(500);
         rep(i, N * N) gets[_test_nn_search(3, 0)]++;
         PV(gets);
+        exit(0);
+    }
+    void _test_crd_search(int sz, int offset) {
+
+        outputFile << fixed << setprecision(2);
+        vector<Pos> tmp;
+        rep(i, sz) rep(j, sz) tmp.push_back({i + offset, j + offset});
+        int x;
+        vector<double> oils(MAX_RETURN_X, 1.0);
+        PV(oils);
+        rep(i, 150) {
+            x = ask(tmp);
+            dist_prob(tmp.size(), x, oils);
+            PV(oils);
+        }
+        int idx = get_max_index(oils);
+        outputFile << idx << ": " << oils[idx] * 100 << "%." << endl;
         exit(0);
     }
     void search_random() {
@@ -410,6 +509,7 @@ int main() {
 
     Grid grid;
     grid.init();
+    grid._test_crd_search(13, 0);
     grid.random_ans();
 
     return 0;
