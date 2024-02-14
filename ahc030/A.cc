@@ -211,6 +211,12 @@ int get_max_index(const vector<double> &vec, bool match_first = true) {
     return mai;
 }
 
+void normalize_vec(vector<double> &vec) {
+    double sumv = 0.0;
+    rep(i, vec.size()) sumv += vec[i];
+    rep(i, vec.size()) vec[i] /= sumv;
+}
+
 // 構造体
 struct Pos {
     int h;
@@ -315,7 +321,6 @@ void dist_prob(int k, int x, vector<double> &vec) {
         vec[x] = 1.0;
         return;
     }
-    double sumv = 0.0;
     rep(i, MAX_RETURN_X) {
         // 真のv(S)がiだとする
         mu = i * (1 - 2 * eps) + eps * k;
@@ -327,10 +332,9 @@ void dist_prob(int k, int x, vector<double> &vec) {
         // SP << right_sig SP << left_p SP << right_p << endl;
         assert(left_p <= right_p);
         vec[i] *= right_p - left_p;
-        sumv += vec[i];
     }
     // 正規化する
-    rep(i, MAX_RETURN_X) vec[i] /= sumv;
+    normalize_vec(vec);
 }
 
 int ask(const vector<Pos> &poses) {
