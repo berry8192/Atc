@@ -310,9 +310,13 @@ double get_normdist(double x) {
 
 // 真のv(S)がそれぞれどれくらいの確率かを、参照渡しされたvectorに詰めて返す
 void dist_prob(int k, int x, vector<double> &vec) {
-    assert(MAX_RETURN_X);
+    assert(vec.size() == MAX_RETURN_X);
     double mu, sig = sqrt(k * eps * (1 - eps));
     double left_x = x - 0.5, right_x = x + 0.5; // 四捨五入でxになる実数の範囲
+    // ask結果が0のときはmax(0, x)前が負の数の可能性もある
+    if (x == 0) {
+        left_x = -imax;
+    }
     double left_sig, right_sig; // μから何σ離れているか
     double left_p, right_p;
     // k=1なら正確なので確率を1にする
@@ -329,7 +333,8 @@ void dist_prob(int k, int x, vector<double> &vec) {
         left_p = get_normdist(left_sig);
         right_p = get_normdist(right_sig);
         // outputFile << mu SP << sig SP << left_x SP << right_x SP << left_sig
-        // SP << right_sig SP << left_p SP << right_p << endl;
+        // SP
+        //            << right_sig SP << left_p SP << right_p << endl;
         assert(left_p <= right_p);
         vec[i] *= right_p - left_p;
     }
@@ -394,10 +399,10 @@ struct Grid {
         exit(0);
     }
     void _test_crd_search(int sz, int offset) {
-
         outputFile << fixed << setprecision(2);
         vector<Pos> tmp;
-        rep(i, sz) rep(j, sz) tmp.push_back({i + offset, j + offset});
+        int cnt = 0;
+        rep3(i, offset + sz, offset) tmp.push_back(itop(i));
         int x;
         vector<double> oils(MAX_RETURN_X, 1.0);
         // PV(oils);
@@ -518,7 +523,7 @@ int main() {
 
     Grid grid;
     grid.init();
-    grid._test_crd_search(2, 0);
+    grid._test_crd_search(35, 0);
     grid.random_ans();
 
     return 0;
