@@ -342,16 +342,6 @@ void dist_prob(int k, int x, vector<double> &vec) {
     normalize_vec(vec);
 }
 
-int ask(const vector<Pos> &poses) {
-    cout << "q" SP << poses.size() SP;
-    rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
-    cout << endl;
-
-    int rtn;
-    cin >> rtn;
-    return rtn;
-}
-
 struct Probability {
     int val;
     double prob;
@@ -374,10 +364,24 @@ struct Grid {
     set<Pos> estimates;
     vector<vector<Probability>> probability;
     set<Pos> random_search;
+    int ask_remain;
 
     void init() {
         probability.resize(N);
         rep(i, N) probability[i].resize(N);
+        ask_remain = 2 * N * N;
+    }
+
+    int ask(const vector<Pos> &poses) {
+        assert(ask_remain > 0);
+        ask_remain--;
+        cout << "q" SP << poses.size() SP;
+        rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
+        cout << endl;
+
+        int rtn;
+        cin >> rtn;
+        return rtn;
     }
 
     void itv_serach() {
@@ -523,8 +527,7 @@ int main() {
 
     Grid grid;
     grid.init();
-    grid._test_crd_search(35, 0);
-    grid.random_ans();
+    grid.rectangle_ans();
 
     return 0;
 
