@@ -9,6 +9,7 @@
 #define ll long long
 
 #define MAX_RETURN_X 500
+#define MIN_VERIFY_PROB 0.98
 
 using namespace std;
 // using namespace atcoder;
@@ -217,6 +218,19 @@ void normalize_vec(vector<double> &vec) {
     rep(i, vec.size()) vec[i] /= sumv;
 }
 
+void pv_bitset(const bitset<400> &bs) {
+    rep(i, N) {
+        cout << "# ";
+        rep(j, N) {
+            if (bs.test(i * N + j))
+                cout << 1;
+            else
+                cout << 0;
+        }
+        cout << endl;
+    }
+}
+
 // 構造体
 struct Pos {
     int h;
@@ -353,17 +367,34 @@ struct Probability {
     }
 };
 
-struct Poly {
+struct Polyomino {
     int d;
-    vector<Pos> poses;
+    int lim_h;
+    int lim_w;
+    bitset<400> poses;
+    int oil_sum;
+    double prob;
+    bitset<400> oks;
 
-    Poly(){};
+    Polyomino(){};
+    Polyomino(int _d, int _lim_h, int _lim_w, bitset<400> _poses, int _oil_sum,
+              double _prob) {
+        d = _d;
+        lim_h = _lim_h;
+        lim_w = _lim_w;
+        poses = _poses;
+        oil_sum = _oil_sum;
+        prob = _prob;
+    }
 };
+
+vector<Polyomino> polyominos;
 
 struct Grid {
     set<Pos> estimates;
     vector<vector<Probability>> probability;
     set<Pos> random_search;
+    vector<Polyomino> ask_response;
     int ask_remain;
 
     void init() {
@@ -377,6 +408,21 @@ struct Grid {
         ask_remain--;
         cout << "q" SP << poses.size() SP;
         rep(i, poses.size()) { cout << poses[i].h SP << poses[i].w SP; }
+        cout << endl;
+
+        int rtn;
+        cin >> rtn;
+        return rtn;
+    }
+    int ask(const bitset<400> &poses) {
+        assert(ask_remain > 0);
+        ask_remain--;
+        cout << "q" SP << poses.count() SP;
+        rep(i, N * N) {
+            if (poses.test(i)) {
+                cout << i / N SP << i % N SP;
+            }
+        }
         cout << endl;
 
         int rtn;
@@ -464,6 +510,108 @@ struct Grid {
             guess_from_probability();
         }
     }
+    void rectangle_random_search() {
+        // int max_s = ceil(sqrt(1.0 / eps));
+        int max_s = 1;
+        int height = mt() % max_s + 1;
+        int max_w = ceil(1.0 * max_s / height);
+        int width = mt() % max_w + 1;
+        int h = mt() % (N - height + 1);
+        int w = mt() % (N - width + 1);
+        // cout << "# h w hei wid: " << h SP << w SP << height SP << width <<
+        // endl;
+        Polyomino poly;
+        for (int i = h; i < h + height; i++) {
+            for (int j = w; j < w + width; j++) {
+                poly.poses.set(i * N + j);
+            }
+        }
+        poly.d = poly.poses.count();
+        poly.lim_h = N - height;
+        poly.lim_w = N - width;
+        // cout << "# d lh lw: " << poly.d SP << poly.lim_h SP << poly.lim_w
+        //      << endl;
+
+        vector<double> oils(MAX_RETURN_X, 1.0);
+        int x, idx;
+        rep(i, 2 * N * N) {
+            x = ask(poly.poses);
+            dist_prob(poly.d, x, oils);
+            idx = get_max_index(oils);
+            if (oils[idx] > MIN_VERIFY_PROB) {
+                // cout << "#resolved: " << i << endl;
+                poly.oil_sum = idx;
+                poly.prob = oils[idx];
+                ask_response.push_back(poly);
+                break;
+            }
+        }
+    }
+    // 最後尾のrectangle_random_searchでもらった回答で、各石油ポリオミノのng場所を確定する
+    void search_ng_area() {
+        int idx = ask_response.size() - 1;
+        // pv_bitset(ask_response[idx].poses);
+        // cout << "# oil:" << ask_response[idx].oil_sum << endl;
+        rep(i, M) {
+            rep(j, polyominos[i].lim_h) {
+                rep(k, polyominos[i].lim_w) {
+                    // cout << "# jk" << j SP << k << endl;
+                    int bit_pos = j * N + k;
+                    // cout << "# bit_pos: " << bit_pos << endl;
+                    // pv_bitset(polyominos[i].poses);
+                    bitset<400> bs = (polyominos[i].poses << bit_pos);
+                    // cout << bs.to_string() << endl;
+                    // pv_bitset(bs);
+                    int share_cnt = (ask_response[idx].poses & bs).count();
+
+                    if (share_cnt > ask_response[idx].oil_sum) {
+                        // cout << "# ijk: " << i SP << j SP << k << endl;
+                        // cout << "# cnt oil: " << share_cnt SP
+                        //      << ask_response[idx].oil_sum << endl;
+                        polyominos[i].oks.reset(bit_pos);
+                    }
+                }
+            }
+            // cout << "# i oks: " << i SP << polyominos[i].oks.count() << endl;
+            // cout << "# id poses: " << i << endl;
+            // pv_bitset(polyominos[i].poses);
+            // cout << "# id oks: " << i << endl;
+            // pv_bitset(polyominos[i].oks);
+        }
+    }
+    void check_oks() {
+        bool flg = 1;
+        rep(i, M) {
+            if (polyominos[i].oks.count() != 1) {
+                flg = 0;
+                return;
+            }
+        }
+        estimates.clear();
+        for (int i = 0; i < M; i++) {
+            int bit_pos;
+            rep(j, N * N) {
+                if (polyominos[i].oks.test(j)) {
+                    bit_pos = j;
+                    break;
+                }
+            }
+            bitset<400> bs = (polyominos[i].poses << bit_pos);
+            rep(j, N * N) {
+                if (bs[j]) {
+                    estimates.insert({j / N, j % N});
+                }
+            }
+        }
+        submit_ans();
+    }
+    void rectangle_ans() {
+        rep(i, 2 * N * N) {
+            rectangle_random_search();
+            search_ng_area();
+            check_oks();
+        }
+    }
 
     void guess_from_probability() {
         int find_oil = 0;
@@ -509,14 +657,23 @@ void inpt() {
     cin >> N >> M >> eps;
     int d, ii, jj;
     rep(i, M) {
-        Poly poly;
         cin >> d;
-        poly.d = d;
         oil_sum += d;
+        Polyomino poly;
+        poly.d = d;
+        int max_h = 0, max_w = 0;
         rep(j, d) {
             cin >> ii >> jj;
-            poly.poses.push_back({ii, jj});
+            max_h = max(max_h, ii);
+            max_w = max(max_w, jj);
+            poly.poses.set(ii * N + jj);
         }
+        poly.lim_h = N - max_h;
+        poly.lim_w = N - max_w;
+        rep(i, poly.lim_h) {
+            rep(j, poly.lim_w) { poly.oks.set(i * N + j); }
+        }
+        polyominos.push_back(poly);
     }
 }
 
@@ -527,7 +684,10 @@ int main() {
 
     Grid grid;
     grid.init();
-    grid.rectangle_ans();
+    if (M <= 2)
+        grid.rectangle_ans();
+    else
+        grid.random_ans();
 
     return 0;
 
