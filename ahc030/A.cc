@@ -511,8 +511,7 @@ struct Grid {
         }
     }
     void rectangle_random_search() {
-        // int max_s = ceil(sqrt(1.0 / eps));
-        int max_s = 1;
+        int max_s = ceil(sqrt(1.0 / eps));
         int height = mt() % max_s + 1;
         int max_w = ceil(1.0 * max_s / height);
         int width = mt() % max_w + 1;
@@ -540,6 +539,40 @@ struct Grid {
             idx = get_max_index(oils);
             if (oils[idx] > MIN_VERIFY_PROB) {
                 // cout << "#resolved: " << i << endl;
+                poly.oil_sum = idx;
+                poly.prob = oils[idx];
+                ask_response.push_back(poly);
+                break;
+            }
+        }
+    }
+    void rectangle_search(int height, int width, int h, int w) {
+        // int max_s = ceil(sqrt(1.0 / eps));
+        // int height = mt() % max_s + 1;
+        // int max_w = ceil(1.0 * max_s / height);
+        // int width = mt() % max_w + 1;
+        // cout << "# h w hei wid: " << h SP << w SP << height SP << width <<
+        // endl;
+        Polyomino poly;
+        for (int i = h; i < h + height; i++) {
+            for (int j = w; j < w + width; j++) {
+                poly.poses.set(i * N + j);
+            }
+        }
+        poly.d = poly.poses.count();
+        poly.lim_h = N - height;
+        poly.lim_w = N - width;
+        // cout << "# d lh lw: " << poly.d SP << poly.lim_h SP << poly.lim_w
+        //      << endl;
+
+        vector<double> oils(MAX_RETURN_X, 1.0);
+        int x, idx;
+        rep(i, 2 * N * N) {
+            x = ask(poly.poses);
+            dist_prob(poly.d, x, oils);
+            idx = get_max_index(oils);
+            if (oils[idx] > MIN_VERIFY_PROB) {
+                cout << "# resolved for: " << i << "times" << endl;
                 poly.oil_sum = idx;
                 poly.prob = oils[idx];
                 ask_response.push_back(poly);
@@ -606,10 +639,19 @@ struct Grid {
         submit_ans();
     }
     void rectangle_ans() {
-        rep(i, 2 * N * N) {
-            rectangle_random_search();
-            search_ng_area();
-            check_oks();
+        for (int i = 0; i < N; i += 2) {
+            for (int j = 0; j < N; j += 2) {
+                rectangle_search(1, 1, i, j);
+                search_ng_area();
+                check_oks();
+            }
+        }
+        for (int i = 1; i < N; i += 2) {
+            for (int j = 1; j < N; j += 2) {
+                rectangle_search(1, 1, i, j);
+                search_ng_area();
+                check_oks();
+            }
         }
     }
 
@@ -684,11 +726,7 @@ int main() {
 
     Grid grid;
     grid.init();
-    if (M <= 2)
-        grid.rectangle_ans();
-    else
-        grid.random_ans();
-
+    grid.rectangle_ans();
     return 0;
 
     int loop = 0;
