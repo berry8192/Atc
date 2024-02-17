@@ -632,6 +632,17 @@ struct Grid {
         }
         submit_ans();
     }
+    // 石油を配置した時の各マスの石油量を持ちながら全探索する。高速化はしていない
+    void search_all_pos(vector<vector<int>> &oils, int poly_idx) {
+        rep(i, polyominos[poly_idx].lim_h) {
+            rep(j, polyominos[poly_idx].lim_w) {
+                int bit_pos = i * N + j;
+                if (!polyominos[poly_idx].oks.test(bit_pos))
+                    continue;
+                // rep(k, polyominos[poly_idx].poses_bit
+            }
+        }
+    }
     void rectangle_ans() {
         for (int i = 0; i < N; i += 2) {
             for (int j = 0; j < N; j += 2) {
@@ -647,6 +658,12 @@ struct Grid {
                 check_oks();
             }
         }
+    }
+    void dfs_ans() {
+        rectangle_random_search();
+        search_ng_area();
+        vector<vector<int>> oils(N, vector<int>(N));
+        search_all_pos(oils, 0);
     }
 
     void guess_from_probability() {
