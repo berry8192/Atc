@@ -53,6 +53,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
+double TIME_LIMIT = 2900.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -231,6 +232,20 @@ void pv_bitset(const bitset<400> &bs) {
 }
 
 // 構造体
+struct Timer {
+    chrono::_V2::system_clock::time_point start;
+
+    Timer() { start = chrono::system_clock::now(); }
+    double progress() {
+        chrono::_V2::system_clock::time_point current =
+            chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+                   .count() /
+               TIME_LIMIT;
+    }
+};
+Timer timer;
+
 struct Pos {
     int h;
     int w;
@@ -740,6 +755,11 @@ int main() {
     // return 0;
 
     int loop = 0;
+    while (1) {
+        if (timer.progress() > 1.0)
+            break;
+        loop++;
+    }
 
     return 0;
 }
