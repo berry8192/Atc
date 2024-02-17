@@ -10,6 +10,7 @@
 
 #define MAX_RETURN_X 500
 #define MIN_VERIFY_PROB 0.98
+#define MAX_CAND 2
 
 using namespace std;
 // using namespace atcoder;
@@ -402,6 +403,7 @@ struct Grid {
     set<Pos> random_search;
     vector<Polyomino> ask_response;
     int ask_remain;
+    set<ll> searched_poses;
 
     void init() {
         probability.resize(N);
@@ -476,6 +478,15 @@ struct Grid {
         outputFile << idx << ": " << oils[idx] * 100 << "%." << endl;
         exit(0);
     }
+    ll get_search_hash(int height, int width, int h, int w) {
+        ll ml = 100;
+        ll tmp = 0;
+        tmp += height;
+        tmp += ml * width;
+        tmp += ml * ml * h;
+        tmp += ml * ml * ml * w;
+        return tmp;
+    }
     void search_random() {
         Pos pos;
         do {
@@ -517,18 +528,26 @@ struct Grid {
         }
     }
     void rectangle_random_search() {
-        int max_s = ceil(sqrt(1.0 / eps));
-        int height = mt() % max_s + 1;
-        int max_w = ceil(1.0 * max_s / height);
-        int width = mt() % max_w + 1;
-        int h = mt() % (N - height + 1);
-        int w = mt() % (N - width + 1);
+        ll search_hash;
+        int max_s, height, max_w, width, h, w;
+        do {
+            // int max_s = ceil(sqrt(1.0 / eps));
+            max_s = 1;
+            height = mt() % max_s + 1;
+            max_w = ceil(1.0 * max_s / height);
+            width = mt() % max_w + 1;
+            h = mt() % (N - height + 1);
+            w = mt() % (N - width + 1);
+            search_hash = get_search_hash(height, width, h, w);
+        } while (searched_poses.find(search_hash) != searched_poses.end());
+        searched_poses.insert(search_hash);
         // cout << "# h w hei wid: " << h SP << w SP << height SP << width <<
         // endl;
         Polyomino poly;
         for (int i = h; i < h + height; i++) {
             for (int j = w; j < w + width; j++) {
                 poly.poses_bit.set(i * N + j);
+                poly.poses.push_back({i, j});
             }
         }
         poly.d = poly.poses_bit.count();
@@ -545,6 +564,11 @@ struct Grid {
             idx = get_max_index(oils);
             if (oils[idx] > MIN_VERIFY_PROB) {
                 // cout << "#resolved: " << i << endl;
+                for (int i = h; i < h + height; i++) {
+                    for (int j = w; j < w + width; j++) {
+                        cout << "#c " << i SP << j << " #ff8888" << endl;
+                    }
+                }
                 poly.oil_sum = idx;
                 poly.prob = oils[idx];
                 ask_response.push_back(poly);
@@ -648,15 +672,58 @@ struct Grid {
         submit_ans();
     }
     // 石油を配置した時の各マスの石油量を持ちながら全探索する。高速化はしていない
-    void search_all_pos(vector<vector<int>> &oils, int poly_idx) {
+    void search_all_pos(vector<vector<int>> &oils, int poly_idx, int &cand) {
+        if (poly_idx == M) {
+            estimates.clear();
+            rep(i, N) {
+                rep(j, N) {
+                    assert(oils[i][j] >= 0);
+                    if (oils[i][j] > 0) {
+                        estimates.insert({i, j});
+                    }
+                }
+            }
+            // submit_ans();
+            cand++;
+            return;
+        }
         rep(i, polyominos[poly_idx].lim_h) {
             rep(j, polyominos[poly_idx].lim_w) {
+                // cout << "# " << i SP << j SP << poly_idx << endl;
                 int bit_pos = i * N + j;
                 if (!polyominos[poly_idx].oks.test(bit_pos))
                     continue;
-                // rep(k, polyominos[poly_idx].poses_bit
+                bool over_oil = false;
+                // ポリオミノを仮置き
+                rep(k, polyominos[poly_idx].poses.size()) {
+                    Pos pos = polyominos[poly_idx].poses[k];
+                    oils[pos.h + i][pos.w + j]++;
+                }
+                // 置いてはいけない配置になっていないか、
+                rep(k, ask_response.size()) {
+                    int ask_oil_sum = 0;
+                    rep(l, ask_response[k].poses.size()) {
+                        Pos pos = ask_response[k].poses[l];
+                        ask_oil_sum += oils[pos.h][pos.w];
+                    }
+                    if (ask_oil_sum > ask_response[k].oil_sum) {
+                        over_oil = true;
+                        break;
+                    }
+                }
+                if (!over_oil) {
+                    search_all_pos(oils, poly_idx + 1, cand);
+                    if (cand >= 2)
+                        return;
+                }
+                // oilsを戻す処理
+                rep(k, polyominos[poly_idx].poses.size()) {
+                    Pos pos = polyominos[poly_idx].poses[k];
+                    oils[pos.h + i][pos.w + j]--;
+                }
             }
         }
+        return;
     }
     void rectangle_ans() {
         for (int i = 0; i < N; i += 2) {
@@ -675,10 +742,16 @@ struct Grid {
         }
     }
     void dfs_ans() {
-        rectangle_random_search();
-        search_ng_area();
-        vector<vector<int>> oils(N, vector<int>(N));
-        search_all_pos(oils, 0);
+        rep(i, 2 * N * N) {
+            rectangle_random_search();
+            search_ng_area();
+            vector<vector<int>> oils(N, vector<int>(N));
+            int cand = 0;
+            search_all_pos(oils, 0, cand);
+            if (cand == 1) {
+                submit_ans();
+            }
+        }
     }
 
     void guess_from_probability() {
@@ -708,6 +781,8 @@ struct Grid {
         }
     }
     void submit_ans() {
+        assert(ask_remain > 0);
+        ask_remain--;
         cout << "a" SP << estimates.size() SP;
         for (auto s : estimates) {
             cout << s.h SP << s.w SP;
@@ -750,9 +825,12 @@ int main() {
     inpt();
 
     Grid grid;
-    // grid.init();
-    // grid.rectangle_ans();
-    // return 0;
+    grid.init();
+    if (M < 10)
+        grid.dfs_ans();
+    else
+        grid.random_ans();
+    return 0;
 
     int loop = 0;
     while (1) {
