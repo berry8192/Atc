@@ -53,7 +53,6 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -372,6 +371,7 @@ struct Polyomino {
     int lim_h;
     int lim_w;
     bitset<400> poses_bit;
+    vector<Pos> poses;
     int oil_sum;
     double prob;
     bitset<400> oks;
@@ -720,6 +720,7 @@ void inpt() {
             max_h = max(max_h, ii);
             max_w = max(max_w, jj);
             poly.poses_bit.set(ii * N + jj);
+            poly.poses.push_back({ii, jj});
         }
         poly.lim_h = N - max_h;
         poly.lim_w = N - max_w;
@@ -731,24 +732,14 @@ void inpt() {
 }
 
 int main() {
-    start = chrono::system_clock::now();
-
     inpt();
 
     Grid grid;
-    grid.init();
-    grid.rectangle_ans();
-    return 0;
+    // grid.init();
+    // grid.rectangle_ans();
+    // return 0;
 
     int loop = 0;
-    while (1) {
-        current = chrono::system_clock::now();
-        if (chrono::duration_cast<chrono::milliseconds>(current - start)
-                .count() > TIME_LIMIT) {
-            // break;
-        }
-        loop++;
-    }
 
     return 0;
 }
