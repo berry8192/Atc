@@ -371,21 +371,12 @@ struct Polyomino {
     int d;
     int lim_h;
     int lim_w;
-    bitset<400> poses;
+    bitset<400> poses_bit;
     int oil_sum;
     double prob;
     bitset<400> oks;
 
     Polyomino(){};
-    Polyomino(int _d, int _lim_h, int _lim_w, bitset<400> _poses, int _oil_sum,
-              double _prob) {
-        d = _d;
-        lim_h = _lim_h;
-        lim_w = _lim_w;
-        poses = _poses;
-        oil_sum = _oil_sum;
-        prob = _prob;
-    }
 };
 
 vector<Polyomino> polyominos;
@@ -414,12 +405,12 @@ struct Grid {
         cin >> rtn;
         return rtn;
     }
-    int ask(const bitset<400> &poses) {
+    int ask(const bitset<400> &poses_bit) {
         assert(ask_remain > 0);
         ask_remain--;
-        cout << "q" SP << poses.count() SP;
+        cout << "q" SP << poses_bit.count() SP;
         rep(i, N * N) {
-            if (poses.test(i)) {
+            if (poses_bit.test(i)) {
                 cout << i / N SP << i % N SP;
             }
         }
@@ -522,10 +513,10 @@ struct Grid {
         Polyomino poly;
         for (int i = h; i < h + height; i++) {
             for (int j = w; j < w + width; j++) {
-                poly.poses.set(i * N + j);
+                poly.poses_bit.set(i * N + j);
             }
         }
-        poly.d = poly.poses.count();
+        poly.d = poly.poses_bit.count();
         poly.lim_h = N - height;
         poly.lim_w = N - width;
         // cout << "# d lh lw: " << poly.d SP << poly.lim_h SP << poly.lim_w
@@ -534,7 +525,7 @@ struct Grid {
         vector<double> oils(MAX_RETURN_X, 1.0);
         int x, idx;
         rep(i, 2 * N * N) {
-            x = ask(poly.poses);
+            x = ask(poly.poses_bit);
             dist_prob(poly.d, x, oils);
             idx = get_max_index(oils);
             if (oils[idx] > MIN_VERIFY_PROB) {
@@ -556,10 +547,10 @@ struct Grid {
         Polyomino poly;
         for (int i = h; i < h + height; i++) {
             for (int j = w; j < w + width; j++) {
-                poly.poses.set(i * N + j);
+                poly.poses_bit.set(i * N + j);
             }
         }
-        poly.d = poly.poses.count();
+        poly.d = poly.poses_bit.count();
         poly.lim_h = N - height;
         poly.lim_w = N - width;
         // cout << "# d lh lw: " << poly.d SP << poly.lim_h SP << poly.lim_w
@@ -568,7 +559,7 @@ struct Grid {
         vector<double> oils(MAX_RETURN_X, 1.0);
         int x, idx;
         rep(i, 2 * N * N) {
-            x = ask(poly.poses);
+            x = ask(poly.poses_bit);
             dist_prob(poly.d, x, oils);
             idx = get_max_index(oils);
             if (oils[idx] > MIN_VERIFY_PROB) {
@@ -583,7 +574,7 @@ struct Grid {
     // 最後尾のrectangle_random_searchでもらった回答で、各石油ポリオミノのng場所を確定する
     void search_ng_area() {
         int idx = ask_response.size() - 1;
-        // pv_bitset(ask_response[idx].poses);
+        // pv_bitset(ask_response[idx].poses_bit);
         // cout << "# oil:" << ask_response[idx].oil_sum << endl;
         rep(i, M) {
             rep(j, polyominos[i].lim_h) {
@@ -591,11 +582,13 @@ struct Grid {
                     // cout << "# jk" << j SP << k << endl;
                     int bit_pos = j * N + k;
                     // cout << "# bit_pos: " << bit_pos << endl;
-                    // pv_bitset(polyominos[i].poses);
-                    bitset<400> bs = (polyominos[i].poses << bit_pos);
+                    // pv_bitset(polyominos[i].poses_bit);
+                    bitset<400> bs =
+                        (polyominos[i].poses_bit
+                         << bit_pos); // 左シフトすると右シフトになる
                     // cout << bs.to_string() << endl;
                     // pv_bitset(bs);
-                    int share_cnt = (ask_response[idx].poses & bs).count();
+                    int share_cnt = (ask_response[idx].poses_bit & bs).count();
 
                     if (share_cnt > ask_response[idx].oil_sum) {
                         // cout << "# ijk: " << i SP << j SP << k << endl;
@@ -606,8 +599,8 @@ struct Grid {
                 }
             }
             // cout << "# i oks: " << i SP << polyominos[i].oks.count() << endl;
-            // cout << "# id poses: " << i << endl;
-            // pv_bitset(polyominos[i].poses);
+            // cout << "# id poses_bit: " << i << endl;
+            // pv_bitset(polyominos[i].poses_bit);
             // cout << "# id oks: " << i << endl;
             // pv_bitset(polyominos[i].oks);
         }
@@ -629,7 +622,8 @@ struct Grid {
                     break;
                 }
             }
-            bitset<400> bs = (polyominos[i].poses << bit_pos);
+            bitset<400> bs = (polyominos[i].poses_bit
+                              << bit_pos); // 左シフトすると右シフトになる
             rep(j, N * N) {
                 if (bs[j]) {
                     estimates.insert({j / N, j % N});
@@ -708,7 +702,7 @@ void inpt() {
             cin >> ii >> jj;
             max_h = max(max_h, ii);
             max_w = max(max_w, jj);
-            poly.poses.set(ii * N + jj);
+            poly.poses_bit.set(ii * N + jj);
         }
         poly.lim_h = N - max_h;
         poly.lim_w = N - max_w;
