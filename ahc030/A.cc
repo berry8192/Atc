@@ -403,7 +403,7 @@ struct Grid {
     set<Pos> random_search;
     vector<Polyomino> ask_response;
     int ask_remain;
-    // set<ll> searched_poses;
+    set<ll> searched_poses;
     set<Pos> searchable_poses;
 
     void init() {
@@ -529,41 +529,50 @@ struct Grid {
             guess_from_probability();
         }
     }
-    bool rectangle_random_search() {
+    bool rectangle_random_search(bool use_rectangle) {
         ll search_hash;
         int max_s, height, max_w, width, h, w;
-        // while (1) {
-        //     // int max_s = ceil(sqrt(1.0 / eps));
-        //     max_s = 1;
-        //     height = mt() % max_s + 1;
-        //     max_w = ceil(1.0 * max_s / height);
-        //     width = mt() % max_w + 1;
-        //     h = mt() % (N - height + 1);
-        //     w = mt() % (N - width + 1);
-        //     search_hash = get_search_hash(height, width, h, w);
-        //     if (searched_poses.find(search_hash) != searched_poses.end())
-        //         continue;
-        //     if (!imial_search({h, w}))
-        //         continue;
-        //     break;
-        // }
-        // searched_poses.insert(search_hash);
-        while (1) {
-            if (searchable_poses.empty())
-                return false;
-            auto itr = searchable_poses.begin();
-            int rnd = mt() % (searchable_poses.size() - 1);
-            rep(i, rnd) itr++;
-            Pos pos = *itr;
-            searchable_poses.erase(itr);
-            h = pos.h;
-            w = pos.w;
-            if (!imial_search({h, w}))
-                continue;
-            break;
+        if (use_rectangle) {
+            while (1) {
+                int max_s = ceil(sqrt(0.8 / eps));
+                // max_s = 1;
+                height = mt() % max_s + 1;
+                max_w = ceil(1.0 * max_s / height);
+                width = mt() % max_w + 1;
+                h = mt() % (N - height + 1);
+                w = mt() % (N - width + 1);
+                search_hash = get_search_hash(height, width, h, w);
+                if (searched_poses.find(search_hash) != searched_poses.end())
+                    continue;
+                vector<Pos> poses;
+                for (int i = h; i < h + height; i++) {
+                    for (int j = w; j < w + width; j++) {
+                        poses.push_back({i, j});
+                    }
+                }
+                if (!imial_search(poses))
+                    continue;
+                break;
+            }
+            searched_poses.insert(search_hash);
+        } else {
+            while (1) {
+                if (searchable_poses.empty())
+                    return false;
+                auto itr = searchable_poses.begin();
+                int rnd = mt() % (searchable_poses.size() - 1);
+                rep(i, rnd) itr++;
+                Pos pos = *itr;
+                searchable_poses.erase(itr);
+                h = pos.h;
+                w = pos.w;
+                if (!imial_search({{h, w}}))
+                    continue;
+                break;
+            }
+            height = 1;
+            width = 1;
         }
-        height = 1;
-        width = 1;
         // cout << "# h w hei wid: " << h SP << w SP << height SP << width <<
         // endl;
         Polyomino poly;
@@ -668,20 +677,22 @@ struct Grid {
             // pv_bitset(polyominos[i].oks);
         }
     }
-    bool imial_search(Pos pos) {
+    bool imial_search(vector<Pos> poses) {
         rep(i, M) {
             rep(j, polyominos[i].lim_h) {
                 rep(k, polyominos[i].lim_w) {
                     int bit_pos = j * N + k;
                     if (!polyominos[i].oks.test(bit_pos))
                         continue; // もう配置が成立する可能性が残っていない場合はなにもしない
-                    int pos_bit = pos.index();
 
                     bitset<400> bs =
                         (polyominos[i].poses_bit
                          << bit_pos); // 左シフトすると右シフトになる
-                    if (bs.test(pos_bit))
-                        return true;
+                    rep(l, poses.size()) {
+                        int pos_bit = poses[l].index();
+                        if (bs.test(pos_bit))
+                            return true;
+                    }
                 }
             }
         }
@@ -715,7 +726,8 @@ struct Grid {
         submit_ans();
     }
     // 石油を配置した時の各マスの石油量を持ちながら全探索する。高速化はしていない
-    void search_all_pos(vector<vector<int>> &oils, int poly_idx, int &cand) {
+    void search_all_pos(vector<vector<int>> &oils, int poly_idx, int &cand,
+                        bool cancelable) {
         if (poly_idx == M) {
             set<Pos> tmp = estimates;
             estimates.clear();
@@ -734,10 +746,10 @@ struct Grid {
         }
         // cout << "# " << timer.progress() SP
         //      << 1.0 * (2 * N * N - ask_remain) / N * N << endl;
-        // if (timer.progress() > 1.0 * (2 * N * N - ask_remain) / (N * N)) {
-        //     cand = 100000;
-        //     return;
-        // }
+        if (cancelable && timer.progress() > 1.0) {
+            cand = 100000;
+            return;
+        }
         rep(i, polyominos[poly_idx].lim_h) {
             rep(j, polyominos[poly_idx].lim_w) {
                 // cout << "# " << i SP << j SP << poly_idx << endl;
@@ -763,7 +775,7 @@ struct Grid {
                     }
                 }
                 if (!over_oil) {
-                    search_all_pos(oils, poly_idx + 1, cand);
+                    search_all_pos(oils, poly_idx + 1, cand, cancelable);
                     if (cand >= 2)
                         return;
                 }
@@ -794,13 +806,26 @@ struct Grid {
     }
     void dfs_ans() {
         rep(i, 2 * N * N) {
-            rectangle_random_search();
+            bool searched;
+            if (eps < 0.05)
+                searched = rectangle_random_search(true);
+            else
+                searched = rectangle_random_search(false);
             search_ng_area();
             vector<vector<int>> oils(N, vector<int>(N));
             int cand = 0;
-            search_all_pos(oils, 0, cand);
-            if (cand <= 1) {
-                submit_ans();
+            if (timer.progress() < 1.0) {
+                search_all_pos(oils, 0, cand, true);
+                if (cand <= 1) {
+                    submit_ans();
+                }
+            } else {
+                if (!searched) {
+                    search_all_pos(oils, 0, cand, false);
+                    if (cand <= 1) {
+                        submit_ans();
+                    }
+                }
             }
             cout << "#: " << timer.progress() << endl;
         }
@@ -878,7 +903,8 @@ int main() {
 
     Grid grid;
     grid.init();
-    if (M < 99) {
+    double parts = 1.0 * M / (oil_sum / M);
+    if ((M < 10 && parts < 2.0) || parts < 1.0) {
         grid.dfs_ans();
     } else {
         grid.random_ans();
