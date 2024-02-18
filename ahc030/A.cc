@@ -807,7 +807,7 @@ struct Grid {
     void dfs_ans() {
         rep(i, 2 * N * N) {
             bool searched;
-            if (eps < 0.05)
+            if (eps < 0.05 && mt() % 2)
                 searched = rectangle_random_search(true);
             else
                 searched = rectangle_random_search(false);
