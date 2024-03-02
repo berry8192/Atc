@@ -21,17 +21,17 @@ ll lmax = 9223372036854775807;
 
 template <class T> ll gcdv(vector<T> gv) {
     assert(gv.size() > 0);
-    ll tmp = gv[0];
+    T tmp = gv[0];
     for (int i = 1; i < (int)gv.size(); i++)
-        tmp = gcd(tmp, gv[i]);
+        tmp = __gcd(tmp, gv[i]);
     return tmp;
 }
 
 template <class T> ll lcmv(vector<T> gv) {
     assert(gv.size() > 0);
-    ll tmp = gv[0];
+    T tmp = gv[0];
     for (ll i = 1; i < (int)gv.size(); i++)
-        tmp = tmp / gcd(tmp, gv[i]) * gv[i];
+        tmp = tmp / __gcd(tmp, gv[i]) * gv[i];
     return tmp;
 }
 
@@ -89,10 +89,22 @@ struct Edge {
     int to;
     ll cost;
 
+    Edge(){};
+    Edge(int ifrom, int ito, ll icost) {
+        from = ifrom;
+        to = ito;
+        cost = icost;
+    }
+
     bool operator<(const Edge &in) const {
         return cost != in.cost ? cost < in.cost
-               : to < in.to    ? to < in.to
+               : to != in.to   ? to < in.to
                                : from < in.from;
+    };
+    bool operator>(const Edge &in) const {
+        return cost != in.cost ? cost > in.cost
+               : to != in.to   ? to > in.to
+                               : from > in.from;
     };
 };
 struct Graph {
@@ -100,6 +112,8 @@ struct Graph {
     vector<vector<Edge>> g;
     vector<Edge> edges;
     vector<vector<ll>> dist;
+
+    Graph(){};
 
     void init(int nn, int mm, bool weight = false, bool directed = false) {
         n = nn;
@@ -134,11 +148,26 @@ struct Graph {
 
         // まだちゃんと書けていない
         for (int i = 0; i < hei - 1; i++) {
-            for (int j = 0; j < wid - 1; j++) {
+            for (int j = 0; j < wid; j++) {
                 if (bb[i][j] == '.' && bb[i + 1][j] == '.') {
                     int ww = 1;
-                    g[i * wid + j].push_back({(i + 1) * wid + j, ww});
-                    g[(i + 1) * wid + j].push_back({i * wid + j, ww});
+                    g[i * wid + j].push_back(
+                        {i * wid + j, (i + 1) * wid + j, ww});
+                    g[(i + 1) * wid + j].push_back(
+                        {(i + 1) * wid + j, i * wid + j, ww});
+                    // edges.push_back({i*wid+j, (i+1)*wid+j, 1}); // edges
+                    // edges.push_back({(i+1)*wid+j, i*wid+j, 1}); // edges
+                }
+            }
+        }
+        for (int i = 0; i < hei; i++) {
+            for (int j = 0; j < wid - 1; j++) {
+                if (bb[i][j] == '.' && bb[i][j + 1] == '.') {
+                    int ww = 1;
+                    g[i * wid + j].push_back(
+                        {i * wid + j, i * wid + j + 1, ww});
+                    g[i * wid + j + 1].push_back(
+                        {i * wid + j + 1, i * wid + j, ww});
                     // edges.push_back({i*wid+j, (i+1)*wid+j, 1}); // edges
                     // edges.push_back({(i+1)*wid+j, i*wid+j, 1}); // edges
                 }
@@ -171,7 +200,7 @@ struct Graph {
         dist.resize(n);
         dist[startIndex][startIndex] = 0;
         priority_queue<Edge, vector<Edge>, greater<Edge>> q;
-        q.emplace((0), startIndex);
+        q.emplace(0, 0, startIndex);
 
         while (!q.empty()) {
             const long long distance = q.top().cost;
@@ -190,7 +219,8 @@ struct Graph {
 
                 // d が現在の記録より小さければ更新
                 if (d < dist[startIndex][edge.to]) {
-                    q.emplace((dist[startIndex][edge.to] = d), edge.to);
+                    dist[startIndex][edge.to] = d;
+                    q.emplace(d, 0, edge.to);
                 }
             }
         }
@@ -198,7 +228,7 @@ struct Graph {
     // ワーシャルフロイド法
     void worshalfroid() {}
     // 閉路検出
-    bool has_cycle() {}
+    bool has_cycle() { return false; }
     // 連結成分に分解
     void decomp(vector<Graph> vg) {}
     void euler_tour(int x) {}
