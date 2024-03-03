@@ -355,7 +355,8 @@ struct Grid {
             Pos nxt_taka = tpos[0];
             ll max_exchange = -llimax;
             for (auto nxt : tpos) {
-                ll tmp = exchange(nxt, dfs_route[i % dfs_route.size()]);
+                ll tmp = exchange(nxt, dfs_route[i % dfs_route.size()]) *
+                         rand(50, 150);
                 if (tmp > 0)
                     swap(board[nxt.h][nxt.w],
 
