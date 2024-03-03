@@ -57,6 +57,22 @@ double end_temp = 10000.0;
 int seed = 1;
 mt19937 mt(seed);
 
+unsigned int randxor() {
+    static unsigned int x = 123456789, y = 362436069, z = 521288629,
+                        w = 88675123;
+    unsigned int t;
+    t = (x ^ (x << 11));
+    x = y;
+    y = z;
+    z = w;
+    return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8)));
+}
+template <typename T> T rand(T a, T b) {
+    assert(a <= b);
+    ll len = (b - a + 1);
+    return randxor() % len + a;
+}
+
 // 入力
 int t, n;
 vector<string> ve, ho;
@@ -221,6 +237,15 @@ struct Grid {
         // cout << "init end" << endl;
     }
 
+    void set_random_start() {
+        pi = rand(0, n - 1);
+        pj = rand(0, n - 1);
+        qi = rand(0, n - 1);
+        qj = rand(0, n - 1);
+        taka = Pos(pi, pj);
+        aoki = Pos(qi, qj);
+    }
+
     long long getDij(Pos p) {
         ll sum = 0;
         for (auto nxt : NN[p.h][p.w]) {
@@ -313,7 +338,7 @@ struct Grid {
 
             vector<Pos> tpos = taka.around_pos();
 
-            int t_idx = mt() % tpos.size();
+            int t_idx = rand(1, int(tpos.size())) - 1;
             // int a_idx = mt() % apos.size();
             ans.emplace_back(s, calc_dir(taka, tpos[t_idx]),
                              calc_dir(aoki, dfs_route[i % dfs_route.size()]));
@@ -365,7 +390,7 @@ int main() {
     // grid.print_ans();
     // cerr << "random_walk:" << rw << endl;
 
-    Grid base, best;
+    Grid best, base;
     base.init();
     // cerr << "random_walk_and_dfs:" << rw_dfs << endl;
     ll best_score = llimax;
@@ -380,6 +405,7 @@ int main() {
         loop++;
 
         Grid grid = base;
+        grid.set_random_start();
         grid.random_walk_and_dfs();
         long long score = grid.getD();
 
