@@ -7,6 +7,20 @@
 #define all(v) v.begin(), v.end()
 #define SP << " "
 #define ll long long
+template <typename T> inline bool chmin(T &a, const T &b) {
+    if (a > b) {
+        a = b;
+        return 1;
+    }
+    return 0;
+}
+template <typename T> inline bool chmax(T &a, const T &b) {
+    if (a < b) {
+        a = b;
+        return 1;
+    }
+    return 0;
+}
 
 using namespace std;
 // using namespace atcoder;
@@ -285,7 +299,7 @@ struct Grid {
         rep(i, 4 * n * n) {
             taka_visit[taka.h][taka.w] += 3;
             aoki_visit[aoki.h][aoki.w] += 3;
-            bool kaizen = (0 <= exchange(taka, aoki));
+            bool kaizen = (0 < exchange(taka, aoki));
             int s;
             if (kaizen)
                 s = 1;
@@ -329,7 +343,7 @@ struct Grid {
             aoki_visit[aoki.h][aoki.w] += 3;
             // outputFile << "i, taka, aoki: " << i SP << taka.h SP << taka.w SP
             //            << aoki.h SP << aoki.w << endl;
-            bool kaizen = (0 <= exchange(taka, aoki));
+            bool kaizen = (0 < exchange(taka, aoki));
             int s;
             if (kaizen)
                 s = 1;
@@ -338,11 +352,24 @@ struct Grid {
 
             vector<Pos> tpos = taka.around_pos();
 
-            int t_idx = rand(1, int(tpos.size())) - 1;
+            Pos nxt_taka = tpos[0];
+            ll max_exchange = -llimax;
+            for (auto nxt : tpos) {
+                ll tmp = exchange(nxt, dfs_route[i % dfs_route.size()]);
+                if (tmp > 0)
+                    swap(board[nxt.h][nxt.w],
+
+                         board[dfs_route[i % dfs_route.size()].h]
+                              [dfs_route[i % dfs_route.size()].w]);
+                if (chmax(max_exchange, tmp)) {
+                    nxt_taka = nxt;
+                }
+            }
+
             // int a_idx = mt() % apos.size();
-            ans.emplace_back(s, calc_dir(taka, tpos[t_idx]),
+            ans.emplace_back(s, calc_dir(taka, nxt_taka),
                              calc_dir(aoki, dfs_route[i % dfs_route.size()]));
-            taka = tpos[t_idx];
+            taka = nxt_taka;
             aoki = dfs_route[i % dfs_route.size()];
         }
     }
