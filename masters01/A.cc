@@ -258,8 +258,8 @@ struct Grid {
     void random_walk() {
         // cout << "random_walk" << endl;
         rep(i, 4 * n * n) {
-            taka_visit[taka.h][taka.w] += 5;
-            aoki_visit[aoki.h][aoki.w] += 5;
+            taka_visit[taka.h][taka.w] += 3;
+            aoki_visit[aoki.h][aoki.w] += 3;
             bool kaizen = (0 <= exchange(taka, aoki));
             int s;
             if (kaizen)
@@ -277,6 +277,51 @@ struct Grid {
             aoki = apos[a_idx];
         }
     }
+
+    void random_walk_and_dfs() {
+
+        vector<int> seen(n * n);
+        vector<Pos> dfs_route;
+
+        auto dfs = [&](auto dfs, Pos p) -> void {
+            seen[p.h * n + p.w] = 1;
+            for (auto nxt : NN[p.h][p.w]) {
+                if (seen[nxt.h * n + nxt.w])
+                    continue;
+                dfs_route.push_back(nxt);
+                dfs(dfs, nxt);
+                dfs_route.push_back(p);
+            }
+            return;
+        };
+
+        dfs(dfs, aoki);
+        // outputFile << dfs_route.size() << endl;
+
+        // cout << "random_walk" << endl;
+        rep(i, 4 * n * n) {
+            taka_visit[taka.h][taka.w] += 3;
+            aoki_visit[aoki.h][aoki.w] += 3;
+            // outputFile << "i, taka, aoki: " << i SP << taka.h SP << taka.w SP
+            //            << aoki.h SP << aoki.w << endl;
+            bool kaizen = (0 <= exchange(taka, aoki));
+            int s;
+            if (kaizen)
+                s = 1;
+            else
+                s = 0;
+
+            vector<Pos> tpos = taka.around_pos();
+
+            int t_idx = mt() % tpos.size();
+            // int a_idx = mt() % apos.size();
+            ans.emplace_back(s, calc_dir(taka, tpos[t_idx]),
+                             calc_dir(aoki, dfs_route[i % dfs_route.size()]));
+            taka = tpos[t_idx];
+            aoki = dfs_route[i % dfs_route.size()];
+        }
+    }
+
     void output_board() {
         outputFile << "board" << endl;
         PVV(board);
@@ -310,35 +355,44 @@ int main() {
     start = chrono::system_clock::now();
 
     inpt();
-    Grid grid;
-    grid.init();
-    grid.random_walk();
-    grid.print_ans();
-    // grid.output_board();
-    return 0;
-    PVV(a);
-    return 0;
+
+    // Grid grid;
+    // grid.init();
+    // long long prev = grid.getD();
+    // cerr << "prev:" << prev << endl;
+    // grid.random_walk();
+    // long long rw = grid.getD();
+    // grid.print_ans();
+    // cerr << "random_walk:" << rw << endl;
+
+    Grid base, best;
+    base.init();
+    // cerr << "random_walk_and_dfs:" << rw_dfs << endl;
+    ll best_score = llimax;
 
     int loop = 0;
     while (1) {
         current = chrono::system_clock::now();
         if (chrono::duration_cast<chrono::milliseconds>(current - start)
                 .count() > TIME_LIMIT) {
-            // break;
+            break;
         }
         loop++;
 
-        Grid grid;
+        Grid grid = base;
+        grid.random_walk_and_dfs();
+        long long score = grid.getD();
 
-        // if (best.score < grid.score) {
-        //     best = space;
-        //     cout << "loop: " << loop << endl;
-        //     best.print_ans();
-        //     cout << "score: " << space.score SP << space.score * 25 << endl;
-        // }
+        if (best_score > score) {
+            best = grid;
+            best_score = score;
+            // cout << "loop: " << loop << endl;
+            // best.print_ans();
+            // cout << "score: " << score << endl;
+        }
     }
     // cout<< space.score SP << space.score*25 <<endl;
-    // best.print_ans();
+    best.print_ans();
 
     return 0;
 }
