@@ -61,7 +61,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 1500.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -172,12 +172,14 @@ struct Pos {
 Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
 char calc_dir(Pos from, Pos to) {
+    if (from == to)
+        return '.';
     rep(i, 4) {
         if (from + d4[i] == to)
             return move_alphabet[i];
     }
     // 一致しない場合
-    return '.';
+    assert(0);
 }
 
 struct Turn {
@@ -308,14 +310,14 @@ struct Grid {
         swap(board[p1.h][p1.w], board[p2.h][p2.w]);
         ll change = getDij(p1) + getDij(p2);
         // if (execute)
-        // cout << change SP << now << endl;
+        // cout << now SP << change << endl;
 
         // 悪化していたらもとに戻す
         if (!execute) {
             swap(board[p1.h][p1.w], board[p2.h][p2.w]);
         }
         // どれだけ改善したか
-        return change - now;
+        return now - change;
     }
 
     void random_walk() {
@@ -433,6 +435,10 @@ struct Grid {
                     }
                 }
             }
+            if (taka == best_taka && aoki == best_aoki) {
+                return;
+                cout << "same" << endl;
+            }
 
             // cout << "kaizen, tuen: " << best_eval SP << best_need_turn <<
             // endl; cout << "goto" << endl; best_taka.print();
@@ -517,7 +523,7 @@ struct Grid {
 void inpt() {
     // cout << "inpt" << endl;
     cin >> t >> n;
-    look = ceil(n);
+    look = ceil(3);
     ve.resize(n);
     ho.resize(n - 1);
     a.resize(n, vector<int>(n));
@@ -559,10 +565,12 @@ int main() {
         }
         loop++;
 
+        // cout << "loop: " << loop << endl;
         Grid grid = base;
         grid.set_random_start();
         grid.NN_walk();
         long long score = grid.getD();
+        // cout << score << endl;
 
         if (best_score > score) {
             best = grid;
@@ -572,7 +580,7 @@ int main() {
             // cout << "score: " << score << endl;
         }
     }
-    // cout<< space.score SP << space.score*25 <<endl;
+    // cout << 25 << endl;
     best.print_ans();
 
     return 0;
