@@ -60,6 +60,7 @@ mt19937 mt(seed);
 
 int W, D, N;
 int HEIGHT, WIDTH;
+int a[50][50];
 
 // 構造体
 struct Pos {
@@ -124,10 +125,13 @@ void inpt() {
     cin >> W >> D >> N;
     HEIGHT = W;
     WIDTH = W;
+    rep(i, D) {
+        rep(j, N) { cin >> a[i][j]; }
+    }
 }
 
 int main() {
     start = chrono::system_clock::now();
 
-        return 0;
+    return 0;
 }
