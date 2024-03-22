@@ -53,10 +53,21 @@ double TIME_LIMIT = 1900.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
 
-// 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed = 1;
-mt19937 mt(seed);
+unsigned int randxor() {
+    static unsigned int x = 123456789, y = 362436069, z = 521288629,
+                        w = 88675123;
+    unsigned int t;
+    t = (x ^ (x << 11));
+    x = y;
+    y = z;
+    z = w;
+    return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8)));
+}
+template <typename T> T rand(T a, T b) {
+    assert(a <= b);
+    long long len = (b - a + 1);
+    return randxor() % len + a;
+}
 
 int W, D, N;
 int HEIGHT, WIDTH;
