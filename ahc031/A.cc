@@ -61,7 +61,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 2700.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -109,6 +109,8 @@ struct Point {
     Point(int hh, int ww) {
         h = hh;
         w = ww;
+        assert(h >= 0 && w >= 0);
+        assert(h <= HEIGHT && w <= WIDTH); // 今回は等号でもOK
     }
 
     bool is_oob() {
@@ -116,10 +118,9 @@ struct Point {
         // assert(h<n);
         // assert(0<=w);
         // assert(w<=h);
-        return !(0 <= h && h < HEIGHT && 0 <= w && w < WIDTH);
+        return !(0 <= h && h <= HEIGHT && 0 <= w && w <= WIDTH);
     }
     int manhattan(Point pos) { return abs(h - pos.h) + abs(w - pos.w); }
-    int index() { return h * WIDTH + w; }
     void print() { cout << "(" << h << ", " << w << ")" << endl; }
     // 受け取った近傍でPointを作る
     vector<Point> around_pos(const vector<Point> &dir) {
@@ -181,16 +182,101 @@ struct Rectangle {
         else
             return true;
     }
+
+    void print() {
+        cout << lu.h << " " << lu.w << " " << rd.h << " " << rd.w << endl;
+    }
 };
 
 struct Grid {
-    vector<Rectangle> rects; // 置かれている長方形
-    set<Point> lu_points;    // 左上角の場所
+    vector<vector<Rectangle>> ans; // 各日の置き方を保存する
+
+    bool fill_all_one_day(int day) {
+        vector<Rectangle> rects; // 置かれている長方形
+        set<Point> lu_points;    // 左上角の場所
+        lu_points.insert({0, 0});
+
+        int i = day;
+        double time_bonus = 1.0 - 5.0 * max(timer.progress() - 0.90, 0.0);
+        // デカいものから置いていく
+        repr(j, N) {
+            int sz = lu_points.size();
+            int area = max(1.0, ceil(a[i][j] * time_bonus));
+            Rectangle rec;
+            bool rec_ok = false;
+            int loop = sqrt(area) * 10;
+            rep(lp, loop) {
+                int idx = rand(0, sz - 1);
+                auto itr = lu_points.begin();
+                rep(k, idx) itr++;
+                Point lu_point = *itr;
+                int maxh = min(W - lu_point.h, area);
+                int maxw = min(W - lu_point.w, area);
+                if (maxh <= 0 || maxw <= 0) {
+                    continue;
+                }
+                int minh = (area + maxw - 1) / maxw;
+
+                if (maxh < minh) {
+                    continue;
+                }
+                int height = rand(minh, maxh);
+                int width = (area + height - 1) / height;
+
+                assert(lu_point.h + height <= W); // 引っ掛からないはず
+                assert(lu_point.w + width <= W);  // 引っ掛からないはず
+                Point rd_point = {lu_point.h + height, lu_point.w + width};
+                rec = Rectangle(lu_point, rd_point);
+                bool overlapped = false;
+                rep(k, rects.size()) {
+                    if (rec.is_overlap(rects[k])) {
+                        overlapped = true;
+                        break;
+                    }
+                }
+                if (!overlapped) {
+                    rec_ok = true;
+                    rects.push_back(rec);
+                    lu_points.erase(itr);
+                    lu_points.insert({lu_point.h + height, lu_point.w});
+                    lu_points.insert({lu_point.h, lu_point.w + width});
+                    break;
+                }
+            }
+            if (!rec_ok) {
+                return false;
+            }
+        }
+        reverse(all(rects));
+        ans[day] = rects;
+        return true;
+    }
+    void fill_all() {
+        ans.resize(D);
+        set<int> rest_days;
+        rep(i, D) rest_days.insert(i);
+        // cout << timer.progress() << endl;
+        rep(lp, 500) {
+            vector<int> clear_days;
+            for (auto day : rest_days) {
+                if (fill_all_one_day(day)) {
+                    clear_days.push_back(day);
+                }
+            }
+            rep(i, clear_days.size()) { rest_days.erase(clear_days[i]); }
+            if (rest_days.empty()) {
+                print_ans();
+                exit(0);
+            }
+        }
+    }
+
+    void print_ans() {
+        rep(i, ans.size()) {
+            rep(j, ans[i].size()) { ans[i][j].print(); }
+        }
+    }
 };
-
-Point itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
-
-Point d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
 void inpt() {
     cin >> W >> D >> N;
@@ -233,7 +319,16 @@ void median_ans() {
 
 int main() {
     inpt();
-    median_ans();
+
+    int loop = 0;
+    while (1) {
+        if (timer.progress() > 1.0)
+            break;
+        loop++;
+        Grid grid;
+        grid.fill_all();
+        // cout << loop SP << timer.progress() << endl;
+    }
 
     return 0;
 }
