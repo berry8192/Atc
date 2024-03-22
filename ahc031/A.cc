@@ -101,12 +101,12 @@ struct Timer {
 };
 Timer timer;
 
-struct Pos {
+struct Point {
     int h;
     int w;
 
-    Pos(){};
-    Pos(int hh, int ww) {
+    Point(){};
+    Point(int hh, int ww) {
         h = hh;
         w = ww;
     }
@@ -118,13 +118,13 @@ struct Pos {
         // assert(w<=h);
         return !(0 <= h && h < HEIGHT && 0 <= w && w < WIDTH);
     }
-    int manhattan(Pos pos) { return abs(h - pos.h) + abs(w - pos.w); }
+    int manhattan(Point pos) { return abs(h - pos.h) + abs(w - pos.w); }
     int index() { return h * WIDTH + w; }
     void print() { cout << "(" << h << ", " << w << ")" << endl; }
-    // 受け取った近傍でPosを作る
-    vector<Pos> around_pos(const vector<Pos> &dir) {
-        vector<Pos> rtn;
-        Pos new_pos;
+    // 受け取った近傍でPointを作る
+    vector<Point> around_pos(const vector<Point> &dir) {
+        vector<Point> rtn;
+        Point new_pos;
         for (int i = 0; i < dir.size(); i++) {
             new_pos = {h + dir[i].h, w + dir[i].w};
             if (!new_pos.is_oob())
@@ -133,31 +133,64 @@ struct Pos {
         return rtn;
     }
 
-    bool operator<(const Pos &in) const {
+    bool operator<(const Point &in) const {
         return h != in.h ? h < in.h : w < in.w;
     };
-    bool operator==(const Pos &cpos) const {
+    bool operator==(const Point &cpos) const {
         return (h == cpos.h && w == cpos.w);
     };
-    Pos operator+(const Pos pos) {
-        Pos rtn;
+    Point operator+(const Point pos) {
+        Point rtn;
         rtn.h = h + pos.h;
         rtn.w = w + pos.w;
         return rtn;
     }
-    Pos operator-(const Pos pos) {
-        Pos rtn;
+    Point operator-(const Point pos) {
+        Point rtn;
         rtn.h = h - pos.h;
         rtn.w = w - pos.w;
         return rtn;
     }
 };
 
-struct Grid {};
+struct Rectangle {
+    Point lu;
+    Point rd;
+    int h;
+    int w;
 
-Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
+    Rectangle(){};
+    Rectangle(Point ilu, Point ird) {
+        lu = ilu;
+        rd = ird;
+        h = rd.h - lu.h + 1;
+        w = rd.w - lu.w + 1;
+    }
+    Rectangle(Point ilu, int ih, int iw) {
+        lu = ilu;
+        rd = {ilu.h + ih - 1, ilu.w + iw - 1};
+        h = rd.h - ilu.h + 1;
+        w = rd.w - ilu.w + 1;
+    }
 
-Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+    bool is_overlap(Rectangle rec) {
+        // 長方形が重なっていたらtrueを返す
+        if (rec.rd.h <= lu.h || rd.h <= rec.lu.h || rec.rd.w <= lu.w ||
+            rd.w <= rec.lu.w)
+            return false;
+        else
+            return true;
+    }
+};
+
+struct Grid {
+    vector<Rectangle> rects; // 置かれている長方形
+    set<Point> lu_points;    // 左上角の場所
+};
+
+Point itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
+
+Point d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
 void inpt() {
     cin >> W >> D >> N;
