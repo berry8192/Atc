@@ -18,12 +18,13 @@ using namespace std;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
-// 	// rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
-// 	cout<< pvv[pvv.size()-1] <<endl;
-// }
+template <class T> void PV(T pvv) {
+    if (!pvv.size())
+        return;
+    rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
+    // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
+    cout << pvv[pvv.size() - 1] << endl;
+}
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
@@ -42,6 +43,18 @@ using namespace std;
 // 	// cout<< "}";
 // 	outputFile<<endl;
 // }
+
+// 累積和
+vector<int> ruiseki(vector<int> vv) {
+    vector<int> xx;
+    xx.resize(vv.size() + 1);
+    xx[0] = 0;
+    for (int i = 0; i < (int)vv.size(); i++) {
+        xx[i + 1] = xx[i] + vv[i];
+        // xx[i+1]=xx[i+1]%mod;
+    }
+    return xx;
+}
 
 int imax = 2147483647;
 long long llimax = 9223372036854775807;
@@ -155,4 +168,39 @@ void inpt() {
     }
 }
 
-int main() { return 0; }
+void median_ans() {
+    // i番目に大きいブースを要求する団体の中央値で仕切りを固定してしまう
+    vector<vector<int>> tmp(N, vector<int>(D));
+    vector<int> med(N);
+    rep(i, N) {
+        rep(j, D) { tmp[i][j] = a[j][i]; }
+        sort(tmp[i].begin(), tmp[i].end());
+        // PV(tmp[i]);
+    }
+    int su = 0;
+    rep(i, N) {
+        med[i] = tmp[i][D / 2];
+        su += med[i];
+    }
+    rep(i, N) { med[i] = floor(1.0 * W * med[i] / su); }
+    // PV(med);
+    vector<int> ans = ruiseki(med);
+    ans[N] = W;
+    rep(i, N) {
+        if (ans[i] >= ans[i + 1]) {
+            ans[i + 1]++;
+        }
+    }
+    // PV(ans);
+    rep(i, D) {
+        rep(j, N) { cout << 0 SP << ans[j] SP << W SP << ans[j + 1] << endl; }
+    }
+    exit(0);
+}
+
+int main() {
+    inpt();
+    median_ans();
+
+    return 0;
+}
