@@ -74,6 +74,20 @@ int HEIGHT, WIDTH;
 int a[50][50];
 
 // 構造体
+struct Timer {
+    chrono::_V2::system_clock::time_point start;
+
+    Timer() { start = chrono::system_clock::now(); }
+    double progress() {
+        chrono::_V2::system_clock::time_point current =
+            chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+                   .count() /
+               TIME_LIMIT;
+    }
+};
+Timer timer;
+
 struct Pos {
     int h;
     int w;
@@ -141,8 +155,4 @@ void inpt() {
     }
 }
 
-int main() {
-    start = chrono::system_clock::now();
-
-    return 0;
-}
+int main() { return 0; }
