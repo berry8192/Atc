@@ -317,8 +317,27 @@ void median_ans() {
     exit(0);
 }
 
+void horizontal_line() {
+    int division;
+    vector<int> h_lines;
+    // vector<vector<?>> ans(D);
+    int low_line;
+
+    rep(i, D) {
+        int used = 0;
+        rep(j, N - 1) {
+            int need = (a[i][j] + 999) / 1000;
+            cout << used SP << 0 SP << used + need SP << W << endl;
+            used += need;
+        }
+        cout << used SP << 0 SP << W SP << W << endl;
+    }
+}
+
 int main() {
     inpt();
+    horizontal_line();
+    return 0;
 
     int loop = 0;
     while (1) {
