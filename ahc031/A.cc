@@ -331,25 +331,21 @@ struct Day {
     Day(int iday) { day = iday; }
 
     // 現在のclustersの状態で無駄なマスがどの程度かを計算する
-    int using_height(vector<int> &heights, vector<vector<int>> &widths) {
+    int using_height(vector<int> &heights, vector<vector<int>> &widths,
+                     int lp) {
         int height_sum = 0;
         rep(i, clusters.size()) {
             int area = 0;
-            rep(j, clusters[i].size()) { area += a[day][clusters[i][j]]; }
+            rep(j, clusters[i].size()) {
+                area += (a[day][clusters[i][j]] + W - 1) / W * W;
+            }
             int height = (area + W - 1) / W; // 必要とされる最低限の高さを出す
             int width_sum = 0;
             rep(j, clusters[i].size()) {
                 // 高さが確定したのでスペースごとに発生する無駄スペースを計算する
                 if (j != clusters[i].size() - 1) {
-                    int width;
-                    // 前半には優しく、後半には厳しく
-                    if (j * 2 < clusters[i].size()) {
-                        width = max(
-                            1.0, ceil(1.0 * a[day][clusters[i][j]] / height));
-                    } else {
-                        width = max(
-                            1.0, floor(1.0 * a[day][clusters[i][j]] / height));
-                    }
+                    int width =
+                        max(1.0, ceil(1.0 * a[day][clusters[i][j]] / height));
                     width_sum += width;
                     widths[i].push_back(width);
                 } else {
@@ -357,8 +353,9 @@ struct Day {
                     widths[i].push_back(W - width_sum);
                 }
             }
-            if (1 || W < width_sum) {
-                height += 1; // 高さが足りない場合1増やす
+            int prob = rand(0, 10000);
+            if (prob < lp) {
+                height = max(0, height - (lp + 9999) / 10000);
             }
             height_sum += height;
             heights[i] = height;
@@ -372,7 +369,11 @@ struct Day {
         int lp = 0;
         while (1) {
             lp++;
-            int mi = max(0.0, division * 0.5);
+            // if (lp > 1000)
+            //     exit(1);
+            // if (lp % 1000 == 0)
+            //     cerr << lp << endl;
+            int mi = max(2.0, division * 0.5);
             int ma = min(N, division * 2);
             int div = rand(mi, ma);
             // int div = division;
@@ -384,9 +385,11 @@ struct Day {
             int area_sum = 0;
             int clu_idx = 0;
             rep(i, N) {
-                // cout << div SP << clu_idx << endl;
+                // cerr << div SP << clu_idx << endl;
                 clusters[clu_idx].push_back(i);
                 area_sum += a[day][i];
+                // clusters[clu_idx].push_back(perm[i]);
+                // area_sum += a[day][perm[i]];
                 if (area_sum > (W * W + div - 1) / div) {
                     area_sum = 0;
                     clu_idx++;
@@ -395,10 +398,13 @@ struct Day {
             vector<int> heights(div);
             vector<vector<int>> widths(div);
 
-            if (using_height(heights, widths) <= W) {
+            int tmp = using_height(heights, widths, lp);
+            if (tmp <= W) {
+                // cerr << lp << endl;
                 set_hv_lines_from_clusters(heights, widths);
                 return;
             }
+            // cerr << tmp << endl;
         }
         exit(1);
     }
