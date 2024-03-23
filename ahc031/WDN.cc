@@ -12,7 +12,7 @@ void inpt() {
     for (int i = 0; i < D; i++) {
         for (int j = 0; j < N; j++) {
             cin >> a[i][j];
-            su += a[i][j];
+            // su += a[i][j];
         }
     }
 }
@@ -22,8 +22,19 @@ int main() {
 
     inpt();
 
-    outputFile << W << ", " << D << ", " << N << ", " << 1.0 * su / D / W / W
-               << endl;
+    int maxa = 0;
+    for (int i = 0; i < D; i++) {
+        int su = 0;
+        for (int j = 0; j < N; j++) {
+            su += a[i][j];
+            maxa = max(maxa, a[i][j]);
+        }
+        outputFile << 1.0 * su / W / W << ", ";
+    }
+    outputFile << endl;
+
+    // outputFile << W << ", " << D << ", " << N << ", " << 1.0 * su / D / W /
+    // W<< endl;
 
     outputFile.close();
 
