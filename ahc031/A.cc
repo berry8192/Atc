@@ -85,6 +85,7 @@ template <typename T> T rand(T a, T b) {
 int W, D, N;
 int HEIGHT, WIDTH;
 int a[50][50];
+// int asum[50];
 
 // 構造体
 struct Timer {
@@ -278,15 +279,6 @@ struct Grid {
     }
 };
 
-void inpt() {
-    cin >> W >> D >> N;
-    HEIGHT = W;
-    WIDTH = W;
-    rep(i, D) {
-        rep(j, N) { cin >> a[i][j]; }
-    }
-}
-
 void median_ans() {
     // i番目に大きいブースを要求する団体の中央値で仕切りを固定してしまう
     vector<vector<int>> tmp(N, vector<int>(D));
@@ -317,6 +309,141 @@ void median_ans() {
     exit(0);
 }
 
+vector<int> shuffle_v(int length) {
+    // cout << "shuffle_v" << endl;
+    vector<int> rtn(length);
+    rep(i, length) rtn[i] = i;
+    // ダステンフェルドのアルゴリズムを使っている、はず
+    rep(i, length - 1) {
+        int j = rand(i, length - 1);
+        swap(rtn[i], rtn[j]);
+    }
+    return rtn;
+}
+
+struct Day {
+    int day;
+    vector<int> h_lines;
+    vector<vector<int>> v_lines;
+    vector<vector<int>> clusters;
+
+    Day() {}
+    Day(int iday) { day = iday; }
+
+    // 現在のclustersの状態で無駄なマスがどの程度かを計算する
+    int using_height(vector<int> &heights, vector<vector<int>> &widths) {
+        int height_sum = 0;
+        rep(i, clusters.size()) {
+            int area = 0;
+            rep(j, clusters[i].size()) { area += a[day][clusters[i][j]]; }
+            int height = (area + W - 1) / W; // 必要とされる最低限の高さを出す
+            int width_sum = 0;
+            rep(j, clusters[i].size()) {
+                // 高さが確定したのでスペースごとに発生する無駄スペースを計算する
+                if (j != clusters[i].size() - 1) {
+                    int width;
+                    // 前半には優しく、後半には厳しく
+                    if (j * 2 < clusters[i].size()) {
+                        width = max(
+                            1.0, ceil(1.0 * a[day][clusters[i][j]] / height));
+                    } else {
+                        width = max(
+                            1.0, floor(1.0 * a[day][clusters[i][j]] / height));
+                    }
+                    width_sum += width;
+                    widths[i].push_back(width);
+                } else {
+                    // 最後のものにしわ寄せがくる
+                    widths[i].push_back(W - width_sum);
+                }
+            }
+            if (1 || W < width_sum) {
+                height += 1; // 高さが足りない場合1増やす
+            }
+            height_sum += height;
+            heights[i] = height;
+        }
+        return height_sum;
+    }
+    // 塊に分ける。塊の和をWで割った余りがなるべく大きくなるようにしてホールに置ける配置を探す
+    void division_by_mod() {
+        // cout << "division_by_mod" << endl;
+        int division = ceil(sqrt(N));
+        int lp = 0;
+        while (1) {
+            lp++;
+            int mi = max(0.0, division * 0.5);
+            int ma = min(N, division * 2);
+            int div = rand(mi, ma);
+            // int div = division;
+            // i個目の塊のj番目の要素がa[day][value]
+            clusters.clear();
+            clusters.resize(div);
+            vector<int> perm = shuffle_v(N);
+            // rep(i, N) { clusters[i % div].push_back(perm[i]); }
+            int area_sum = 0;
+            int clu_idx = 0;
+            rep(i, N) {
+                // cout << div SP << clu_idx << endl;
+                clusters[clu_idx].push_back(i);
+                area_sum += a[day][i];
+                if (area_sum > (W * W + div - 1) / div) {
+                    area_sum = 0;
+                    clu_idx++;
+                }
+            }
+            vector<int> heights(div);
+            vector<vector<int>> widths(div);
+
+            if (using_height(heights, widths) <= W) {
+                set_hv_lines_from_clusters(heights, widths);
+                return;
+            }
+        }
+        exit(1);
+    }
+    void set_hv_lines_from_clusters(vector<int> &heights,
+                                    vector<vector<int>> &widths) {
+        // cout << "set_hv_lines_from_clusters" << endl;
+        v_lines.resize(clusters.size());
+        h_lines = ruiseki(heights);
+        rep(i, clusters.size()) { v_lines[i] = ruiseki(widths[i]); }
+    }
+
+    void print_ans() {
+        // cout << "print_ans: " << day << endl;
+        vector<string> s(N);
+        int u, l, d, r;
+        rep(i, h_lines.size() - 1) {
+            u = h_lines[i];
+            d = h_lines[i + 1];
+            rep(j, int(v_lines[i].size()) - 1) {
+                s[clusters[i][j]] =
+                    to_string(u) + " " + to_string(v_lines[i][j]) + " " +
+                    to_string(d) + " " + to_string(v_lines[i][j + 1]);
+            }
+        }
+        rep(i, N) cout << s[i] << endl;
+    }
+};
+
+struct Hall {
+    vector<Day> days;
+
+    void init() {
+        days.resize(D);
+        rep(i, D) { days[i] = Day(i); }
+    }
+
+    void division_all_day() {
+        rep(i, D) { days[i].division_by_mod(); }
+    }
+
+    void print_ans() {
+        rep(i, D) { days[i].print_ans(); }
+    }
+};
+
 void horizontal_line() {
     int division;
     vector<int> h_lines;
@@ -334,9 +461,27 @@ void horizontal_line() {
     }
 }
 
+void add_vertical_line() {}
+
+void inpt() {
+    cin >> W >> D >> N;
+    HEIGHT = W;
+    WIDTH = W;
+    rep(i, D) {
+        // asum[i] = 0;
+        rep(j, N) {
+            cin >> a[i][j];
+            // asum[i] += a[i][j];
+        }
+    }
+}
+
 int main() {
     inpt();
-    horizontal_line();
+    Hall hall;
+    hall.init();
+    hall.division_all_day();
+    hall.print_ans();
     return 0;
 
     int loop = 0;
