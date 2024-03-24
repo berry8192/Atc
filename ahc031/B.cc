@@ -235,7 +235,7 @@ struct Day {
         return (height_sum <= W);
     }
     bool W_limit_init_day(int division) {
-        rep(lp, 10000) {
+        rep(lp, 1) {
             init_day_random(division);
             if (adjsut_rows())
                 return true;
