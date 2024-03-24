@@ -199,6 +199,17 @@ struct Day {
             rows[i].bottom_pos = height_sum;
         }
     }
+    ll calc_area_shortage_loss() {
+        ll costs = 0;
+        rep(i, rows.size()) {
+            int height = rows[i].height;
+            rep(j, rows[i].columns.size()) {
+                costs += max(0, 100 * (a_day[height * rows[i].columns[j].idx] -
+                                       height * rows[i].columns[j].width));
+            }
+        }
+        return costs;
+    }
 
     void print_ans() {
         // cout << "print_ans: " << day << endl;
@@ -247,6 +258,29 @@ struct Hall {
         rep(i, D) {
             days[i].init_day();
             days[i].adjsut_rows();
+        }
+    }
+    // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
+    ll calc_partition_loss() {
+        ll costs = 0;
+        rep3(i, D, 1) {
+            if (days[i - 1].rows.size() != days[i].rows.size()) {
+                costs += 1000000000000;
+                continue;
+            }
+            rep(j, days[i].rows.size()) {
+                bool same_height_line = days[i].rows[j].bottom_pos ==
+                                        days[i - 1].rows[j].bottom_pos;
+                // 偶然一致したheightでもコスト0として扱う
+                if (same_height_line) {
+                    costs += 2 * W; // 横線を消す分と書く分で2Wかかる
+                }
+                // TODO: 縦線のコスト計算をするようにする
+                // bool same_height =
+                //     same_height_line &&
+                //     (days[i].rows[j].height == days[i - 1].rows[j].height);
+                // rep(k, days[i].rows[j].columns.size()) {}
+            }
         }
     }
 
