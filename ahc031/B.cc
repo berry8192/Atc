@@ -61,7 +61,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 2700.0;
+double TIME_LIMIT = 2900.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -198,7 +198,32 @@ struct Day {
                 {i, width, (i % division + 1) * width});
         } // 左上から正方形で敷き詰めていく
     }
-    void adjsut_rows() {
+    void init_day_random(int division) {
+        // cout << "init_day_random" << endl;
+        // 空のrowsを作らないために必要最小限にする
+        int rows_size = (N + division - 1) / division;
+        rows.resize(rows_size);
+        rep(i, rows_size) {
+            int height = W / division;
+            rows[i] = Row(height, (i + 1) * height);
+        }
+        // vector<int> perm = shuffle_v(N);
+        rep(i, N) {
+            // int row_idx;
+            // if (i < rows_size) {
+            //     row_idx = i;
+            // } else {
+            //     row_idx = rand(0, rows_size - 1);
+            // }
+            int width = W / division;
+
+            // rows[row_idx].columns.push_back(
+            //     {perm[i], width, (i % division + 1) * width});
+            rows[i / division].columns.push_back(
+                {i, width, (i % division + 1) * width});
+        } // 左上から正方形で敷き詰めていく
+    }
+    bool adjsut_rows() {
         // cout << "adjsut_rows" << endl;
         int height_sum = 0;
         rep(i, rows.size()) {
@@ -206,6 +231,16 @@ struct Day {
             height_sum += rows[i].height;
             rows[i].bottom_pos = height_sum;
         }
+        // cout << day SP << height_sum << endl;
+        return (height_sum <= W);
+    }
+    bool W_limit_init_day(int division) {
+        rep(lp, 10000) {
+            init_day_random(division);
+            if (adjsut_rows())
+                return true;
+        }
+        return false;
     }
     void touch_bottom() {
         int diff = W - rows[rows.size() - 1].bottom_pos;
@@ -265,6 +300,7 @@ struct Day {
 };
 
 struct Hall {
+    ll hall_loss;
     vector<Day> days;
 
     void init() {
@@ -272,12 +308,13 @@ struct Hall {
         rep(i, D) { days[i] = Day(i, a[i]); }
     }
 
-    void execute() {
+    bool execute(int division) {
         rep(i, D) {
-            days[i].init_day();
-            days[i].adjsut_rows();
+            if (days[i].W_limit_init_day(division) == false)
+                return false;
             days[i].touch_right_and_bottom();
         }
+        return true;
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
@@ -331,13 +368,13 @@ struct Hall {
         }
         return loss;
     }
-    ll calc_loss() {
+    void calc_loss() {
         ll loss = 1;
         rep(i, D) {
             loss += calc_day_loss(i);
-            cerr << "day: " << i SP << loss << endl;
+            // cerr << "day: " << i SP << loss << endl;
         }
-        return loss;
+        hall_loss = loss;
     }
 
     void print_ans() {
@@ -427,21 +464,34 @@ int main() {
     inpt();
     simple_h_line(); // TODO: いずれ使わなくてもよくなる
 
-    Hall hall;
-    hall.init();
-    hall.execute();
+    Hall best;
+    best.init();
+    best.execute(1);
+    best.calc_loss();
     // hall.output_false_ans_exit();
-    cerr << hall.calc_loss() << endl;
-    hall.print_ans();
-    return 0;
+    // cerr << hall.calc_loss() << endl;
 
     int loop = 0;
     while (1) {
-        if (timer.progress() > 1.0)
+        if (timer.progress() > 1.0) {
             break;
+        }
         loop++;
-        // cout << loop SP << timer.progress() << endl;
+        if (loop > N) {
+            break;
+        }
+        Hall hall;
+        hall.init();
+        if (hall.execute(loop) == false)
+            continue;
+        hall.calc_loss();
+        if (hall.hall_loss < best.hall_loss) {
+            best = hall;
+        }
+        // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
     }
+    // cerr << loop SP << timer.progress() << endl;
+    best.print_ans();
 
     return 0;
 }
