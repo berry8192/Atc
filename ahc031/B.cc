@@ -149,6 +149,19 @@ struct Day {
         day = iday;
         a_day = ia_day;
     }
+
+    void init_day() {
+        // N以上で最小の平方数にする
+        int division = ceil(sqrt(N)) * ceil(sqrt(N));
+        rows.resize(division);
+        rep(i, division) { rows[i] = Row(W / division, (i + 1) * division); }
+        rep(i, N) {
+            rows[i % division].columns.push_back(
+                Column(i, W / division, (i + 1) * division));
+        } // 左上から正方形で敷き詰めていく
+    }
+    void tmp() {}
+
     void print_ans() {
         // cout << "print_ans: " << day << endl;
         vector<string> s(N);
@@ -163,6 +176,12 @@ struct Hall {
         cost = 1;
         days.resize(D);
         rep(i, D) { days[i] = Day(i, a[i]); }
+    }
+
+    void tmp() {
+        // rep(i, D) { days[i].tmp(); }
+        days[0].init_day();
+        days[0].tmp();
     }
 
     void print_ans() {
@@ -235,7 +254,6 @@ void inpt() {
 
 int main() {
     inpt();
-    simple_h_line();
     Hall hall;
     hall.init();
     hall.print_ans();
