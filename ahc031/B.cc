@@ -158,8 +158,16 @@ struct Row {
                                     // 愚直に一番高さを取るものに合わせている
         }
         vector<int> right_poses = ruiseki(new_widths);
-        rep(i, columns.size()) { columns[i].right_pos = right_poses[i + 1]; }
+        rep(i, columns.size()) {
+            columns[i].width = new_widths[i];
+            columns[i].right_pos = right_poses[i + 1];
+        }
         height = max_height;
+    }
+    void touch_right() {
+        int diff = W - columns[columns.size() - 1].width;
+        columns[columns.size() - 1].width += diff;
+        columns[columns.size() - 1].right_pos = W;
     }
 };
 struct Day {
@@ -199,16 +207,26 @@ struct Day {
             rows[i].bottom_pos = height_sum;
         }
     }
+    void touch_bottom() {
+        int diff = W - rows[rows.size() - 1].bottom_pos;
+        rows[rows.size() - 1].height += diff;
+        rows[rows.size() - 1].bottom_pos = W;
+    }
+    void touch_right_and_bottom() {
+        touch_bottom();
+        rep(i, rows.size()) { rows[i].touch_right(); }
+    }
     ll calc_area_shortage_loss() {
-        ll costs = 0;
+        ll loss = 0;
         rep(i, rows.size()) {
-            int height = rows[i].height;
+            ll height = rows[i].height;
             rep(j, rows[i].columns.size()) {
-                costs += max(0, 100 * (a_day[height * rows[i].columns[j].idx] -
-                                       height * rows[i].columns[j].width));
+                ll tmp = 100LL * (a_day[rows[i].columns[j].idx] -
+                                  height * rows[i].columns[j].width);
+                loss += max(0LL, tmp);
             }
         }
-        return costs;
+        return loss;
     }
 
     void print_ans() {
@@ -220,12 +238,14 @@ struct Day {
         int u = 0, l, d, r;
         rep(i, rows.size()) {
             d = min(W, rows[i].bottom_pos); // TODO: minなしにしたい
+            // TODO: bottom_pos側をWに合わせる
             if (i == rows.size() - 1) {
                 d = W;
             }
             l = 0;
             rep(j, rows[i].columns.size()) {
                 r = rows[i].columns[j].right_pos;
+                // TODO: right_pos側をWに合わせる
                 if (j == rows[i].columns.size() - 1) {
                     r = W;
                 }
@@ -246,10 +266,8 @@ struct Day {
 
 struct Hall {
     vector<Day> days;
-    int cost;
 
     void init() {
-        cost = 1;
         days.resize(D);
         rep(i, D) { days[i] = Day(i, a[i]); }
     }
@@ -258,30 +276,68 @@ struct Hall {
         rep(i, D) {
             days[i].init_day();
             days[i].adjsut_rows();
+            days[i].touch_right_and_bottom();
         }
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
-    ll calc_partition_loss() {
-        ll costs = 0;
-        rep3(i, D, 1) {
-            if (days[i - 1].rows.size() != days[i].rows.size()) {
-                costs += 1000000000000;
-                continue;
+    // 右端と下端はWになっているものとしている
+    ll calc_partition_loss(int day) {
+        assert(day != 0);
+        ll loss = 0;
+        if (days[day - 1].rows.size() != days[day].rows.size()) {
+            return 1000000000000000;
+        }
+        rep(j, days[day].rows.size()) {
+            bool same_height_line = days[day].rows[j].bottom_pos ==
+                                    days[day - 1].rows[j].bottom_pos;
+            // 偶然一致したheightでもコスト0として扱う
+            // 一番下の線はWになっているものとする
+            if (!same_height_line && j != days[day].rows.size() - 1) {
+                loss += 2 * W; // 横線を消す分と書く分で2Wかかる
             }
-            rep(j, days[i].rows.size()) {
-                bool same_height_line = days[i].rows[j].bottom_pos ==
-                                        days[i - 1].rows[j].bottom_pos;
-                // 偶然一致したheightでもコスト0として扱う
-                if (same_height_line) {
-                    costs += 2 * W; // 横線を消す分と書く分で2Wかかる
+
+            // 縦線のコスト計算
+            bool same_height =
+                same_height_line &&
+                (days[day].rows[j].height == days[day - 1].rows[j].height);
+            set<int> v_lines;
+            // 一番右の線はWになっているものとする
+            rep(k, days[day - 1].rows[j].columns.size() - 1) {
+                if (same_height) {
+                    v_lines.insert(days[day - 1].rows[j].columns[k].right_pos);
                 }
-                // TODO: 縦線のコスト計算をするようにする
-                // bool same_height =
-                //     same_height_line &&
-                //     (days[i].rows[j].height == days[i - 1].rows[j].height);
-                // rep(k, days[i].rows[j].columns.size()) {}
+                // 前の日の仕切りを回収する場合
+                loss += days[day - 1].rows[j].height;
+            }
+            rep(k, days[day].rows[j].columns.size() - 1) {
+                if (same_height &&
+                    (v_lines.find(days[day].rows[j].columns[k].right_pos) !=
+                     v_lines.end())) {
+                    // 前日は回収せず当日は置かない
+                    loss -= days[day - 1].rows[j].height;
+                } else {
+                    // 当日に仕切りを置く場合
+                    loss += days[day].rows[j].height;
+                }
             }
         }
+        return loss;
+    }
+    ll calc_day_loss(int day) {
+        ll loss = 0;
+        loss += days[day].calc_area_shortage_loss();
+        if (day != 0) {
+            loss += calc_partition_loss(day);
+        }
+        return loss;
+    }
+    ll calc_loss() {
+        ll loss = 1;
+        rep(i, D) {
+            loss += calc_day_loss(i);
+            cerr << "day: " << i SP << loss << endl;
+        }
+        return loss;
     }
 
     void print_ans() {
@@ -374,7 +430,8 @@ int main() {
     Hall hall;
     hall.init();
     hall.execute();
-    hall.output_false_ans_exit();
+    // hall.output_false_ans_exit();
+    cerr << hall.calc_loss() << endl;
     hall.print_ans();
     return 0;
 
