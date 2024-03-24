@@ -22,16 +22,26 @@ int main() {
 
     inpt();
 
-    int maxa = 0;
-    for (int i = 0; i < D; i++) {
-        int su = 0;
-        for (int j = 0; j < N; j++) {
-            su += a[i][j];
-            maxa = max(maxa, a[i][j]);
+    int su = 0;
+    for (int i = 0; i < N; i++) {
+        int ma = 0;
+        for (int j = 0; j < D; j++) {
+            ma = max(ma, a[j][i]);
         }
-        outputFile << 1.0 * su / W / W << ", ";
+        su += ma;
     }
-    outputFile << endl;
+    outputFile << su << endl;
+
+    // int maxa = 0;
+    // for (int i = 0; i < D; i++) {
+    //     int su = 0;
+    //     for (int j = 0; j < N; j++) {
+    //         su += a[i][j];
+    //         maxa = max(maxa, a[i][j]);
+    //     }
+    //     outputFile << 1.0 * su / W / W << ", ";
+    // }
+    // outputFile << endl;
 
     // outputFile << W << ", " << D << ", " << N << ", " << 1.0 * su / D / W /
     // W<< endl;
