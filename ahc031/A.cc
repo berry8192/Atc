@@ -469,6 +469,32 @@ void horizontal_line() {
 
 void add_vertical_line() {}
 
+int calc_max_sum() {
+    int su = 0;
+    for (int i = 0; i < N; i++) {
+        int ma = 0;
+        for (int j = 0; j < D; j++) {
+            ma = max(ma, a[j][i]);
+        }
+        su += ma;
+    }
+    return su;
+}
+
+vector<int> calc_sum() {
+    // int maxa = 0;
+    vector<int> tmp(D);
+    for (int i = 0; i < D; i++) {
+        int su = 0;
+        for (int j = 0; j < N; j++) {
+            su += a[i][j];
+            // maxa = max(maxa, a[i][j]);
+        }
+        tmp[i] = su;
+    }
+    return tmp;
+}
+
 void inpt() {
     cin >> W >> D >> N;
     HEIGHT = W;
