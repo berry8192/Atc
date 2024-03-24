@@ -138,6 +138,29 @@ struct Row {
         height = iheight;
         bottom_pos = ibottom_pos;
     }
+
+    // ロスのない最小の高さにする
+    void adjust_row(vector<int> &a_day) {
+        assert(columns.size() > 0);
+        int area_sum = 0;
+        rep(i, columns.size()) {
+            area_sum += a_day[columns[i].idx];
+        } // TODO: ここは高速化できる
+        int max_height = 0;
+        vector<int> new_widths(columns.size());
+        rep(i, columns.size()) {
+            // 切り捨てで幅を計算する
+            new_widths[i] = max(1, W * a_day[columns[i].idx] / area_sum);
+            max_height = max(
+                max_height,
+                (a_day[columns[i].idx] + new_widths[i] - 1) /
+                    new_widths[i]); // TODO:
+                                    // 愚直に一番高さを取るものに合わせている
+        }
+        vector<int> right_poses = ruiseki(new_widths);
+        rep(i, columns.size()) { columns[i].right_pos = right_poses[i + 1]; }
+        height = max_height;
+    }
 };
 struct Day {
     int day;
@@ -151,20 +174,31 @@ struct Day {
     }
 
     void init_day() {
+        // cout << "init_day" << endl;
         // N以上で最小の平方数にする
         int division = ceil(sqrt(N));
-        rows.resize(division);
-        rep(i, division) {
+        // 空のrowsを作らないために必要最小限にする
+        int rows_size = (N + division - 1) / division;
+        rows.resize(rows_size);
+        rep(i, rows_size) {
             int height = W / division;
             rows[i] = Row(height, (i + 1) * height);
         }
         rep(i, N) {
             int width = W / division;
             rows[i / division].columns.push_back(
-                Column(i, width, (i % division + 1) * width));
+                {i, width, (i % division + 1) * width});
         } // 左上から正方形で敷き詰めていく
     }
-    void tmp() {}
+    void adjsut_rows() {
+        // cout << "adjsut_rows" << endl;
+        int height_sum = 0;
+        rep(i, rows.size()) {
+            rows[i].adjust_row(a_day); // この中でrows[i].heightが書き換わる
+            height_sum += rows[i].height;
+            rows[i].bottom_pos = height_sum;
+        }
+    }
 
     void print_ans() {
         // cout << "print_ans: " << day << endl;
@@ -174,10 +208,17 @@ struct Day {
         vector<int> sr(N);
         int u = 0, l, d, r;
         rep(i, rows.size()) {
-            d = rows[i].bottom_pos;
+            d = min(1000,
+                    rows[i].bottom_pos); // TODO: minなしにしたい
+            if (i == rows.size() - 1) {
+                d = W;
+            }
             l = 0;
             rep(j, rows[i].columns.size()) {
                 r = rows[i].columns[j].right_pos;
+                if (j == rows[i].columns.size() - 1) {
+                    r = W;
+                }
                 su[rows[i].columns[j].idx] = u;
                 sl[rows[i].columns[j].idx] = l;
                 sd[rows[i].columns[j].idx] = d;
@@ -204,10 +245,10 @@ struct Hall {
     }
 
     void tmp() {
-        // rep(i, D) { days[i].tmp(); }
-        days[0].init_day();
-        days[0].tmp();
-        rep(i, D) { days[0].print_ans(); }
+        rep(i, D) {
+            days[i].init_day();
+            days[i].adjsut_rows();
+        }
     }
 
     void print_ans() {
@@ -280,9 +321,12 @@ void inpt() {
 
 int main() {
     inpt();
+    simple_h_line(); // TODO: いずれ使わなくてもよくなる
+
     Hall hall;
     hall.init();
     hall.tmp();
+    hall.print_ans();
     return 0;
 
     int loop = 0;
