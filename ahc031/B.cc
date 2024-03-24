@@ -208,8 +208,7 @@ struct Day {
         vector<int> sr(N);
         int u = 0, l, d, r;
         rep(i, rows.size()) {
-            d = min(1000,
-                    rows[i].bottom_pos); // TODO: minなしにしたい
+            d = min(W, rows[i].bottom_pos); // TODO: minなしにしたい
             if (i == rows.size() - 1) {
                 d = W;
             }
@@ -244,7 +243,7 @@ struct Hall {
         rep(i, D) { days[i] = Day(i, a[i]); }
     }
 
-    void tmp() {
+    void execute() {
         rep(i, D) {
             days[i].init_day();
             days[i].adjsut_rows();
@@ -253,6 +252,21 @@ struct Hall {
 
     void print_ans() {
         rep(i, D) { days[i].print_ans(); }
+    }
+
+    void output_false_ans_exit() {
+        int cnt = 0;
+
+        rep(i, D) {
+            if (days[i].rows[days[i].rows.size() - 1].bottom_pos > W) {
+                cnt++;
+            }
+        }
+
+        std::ofstream outputFile("log.csv", std::ios::app);
+        outputFile << cnt << endl;
+        outputFile.close();
+        exit(0);
     }
 };
 
@@ -325,7 +339,8 @@ int main() {
 
     Hall hall;
     hall.init();
-    hall.tmp();
+    hall.execute();
+    hall.output_false_ans_exit();
     hall.print_ans();
     return 0;
 
