@@ -308,7 +308,14 @@ struct Hall {
         rep(i, D) { days[i] = Day(i, a[i]); }
     }
 
-    bool execute(int division) {
+    void execute() {
+        rep(i, D) {
+            days[i].init_day_random(ceil(sqrt(N)));
+            days[i].adjsut_rows();
+            days[i].touch_right_and_bottom();
+        }
+    }
+    bool execute_random(int division) {
         rep(i, D) {
             if (days[i].W_limit_init_day(division) == false)
                 return false;
@@ -466,7 +473,7 @@ int main() {
 
     Hall best;
     best.init();
-    best.execute(1);
+    best.execute();
     best.calc_loss();
     // hall.output_false_ans_exit();
     // cerr << hall.calc_loss() << endl;
@@ -482,7 +489,7 @@ int main() {
         }
         Hall hall;
         hall.init();
-        if (hall.execute(loop) == false)
+        if (hall.execute_random(loop) == false)
             continue;
         hall.calc_loss();
         if (hall.hall_loss < best.hall_loss) {
