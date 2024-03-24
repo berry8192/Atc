@@ -152,19 +152,44 @@ struct Day {
 
     void init_day() {
         // N以上で最小の平方数にする
-        int division = ceil(sqrt(N)) * ceil(sqrt(N));
+        int division = ceil(sqrt(N));
         rows.resize(division);
-        rep(i, division) { rows[i] = Row(W / division, (i + 1) * division); }
+        rep(i, division) {
+            int height = W / division;
+            rows[i] = Row(height, (i + 1) * height);
+        }
         rep(i, N) {
-            rows[i % division].columns.push_back(
-                Column(i, W / division, (i + 1) * division));
+            int width = W / division;
+            rows[i / division].columns.push_back(
+                Column(i, width, (i % division + 1) * width));
         } // 左上から正方形で敷き詰めていく
     }
     void tmp() {}
 
     void print_ans() {
         // cout << "print_ans: " << day << endl;
-        vector<string> s(N);
+        vector<int> su(N);
+        vector<int> sl(N);
+        vector<int> sd(N);
+        vector<int> sr(N);
+        int u = 0, l, d, r;
+        rep(i, rows.size()) {
+            d = rows[i].bottom_pos;
+            l = 0;
+            rep(j, rows[i].columns.size()) {
+                r = rows[i].columns[j].right_pos;
+                su[rows[i].columns[j].idx] = u;
+                sl[rows[i].columns[j].idx] = l;
+                sd[rows[i].columns[j].idx] = d;
+                sr[rows[i].columns[j].idx] = r;
+                l = r;
+            }
+            u = d;
+        }
+        rep(i, N) {
+            cout << su[i] << " " << sl[i] << " " << sd[i] << " " << sr[i]
+                 << endl;
+        }
     }
 };
 
@@ -182,6 +207,7 @@ struct Hall {
         // rep(i, D) { days[i].tmp(); }
         days[0].init_day();
         days[0].tmp();
+        rep(i, D) { days[0].print_ans(); }
     }
 
     void print_ans() {
@@ -256,7 +282,7 @@ int main() {
     inpt();
     Hall hall;
     hall.init();
-    hall.print_ans();
+    hall.tmp();
     return 0;
 
     int loop = 0;
