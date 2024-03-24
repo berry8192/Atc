@@ -86,6 +86,9 @@ int W, D, N;
 int HEIGHT, WIDTH;
 vector<vector<int>> a;
 
+// Wで割った余りが0になるように切り上げる
+int W_ceil(int x) { return (x + W - 1) / W * W; }
+
 // 構造体
 struct Timer {
     chrono::_V2::system_clock::time_point start;
@@ -167,7 +170,7 @@ struct Hall {
     }
 };
 
-int calc_max_sum() {
+int calc_sum_by_days_max() {
     int su = 0;
     for (int i = 0; i < N; i++) {
         int ma = 0;
@@ -179,7 +182,19 @@ int calc_max_sum() {
     return su;
 }
 
-vector<int> calc_sum() {
+vector<int> calc_days_max() {
+    vector<int> rtn(N);
+    for (int i = 0; i < N; i++) {
+        int ma = 0;
+        for (int j = 0; j < D; j++) {
+            ma = max(ma, a[j][i]);
+        }
+        rtn[i] = ma;
+    }
+    return rtn;
+}
+
+vector<int> calc_sum_by_day() {
     // int maxa = 0;
     vector<int> tmp(D);
     for (int i = 0; i < D; i++) {
@@ -193,6 +208,22 @@ vector<int> calc_sum() {
     return tmp;
 }
 
+// Wで切り上げた数字の総和がWに満たないときはscore1が取れる
+void simple_h_line() {
+    vector<int> cdm = calc_days_max();
+    vector<int> ceiled;
+    rep(i, cdm.size()) { ceiled.push_back((cdm[i] + W - 1) / W); }
+    vector<int> tmp = ruiseki(ceiled);
+    if (tmp[N] <= W) {
+        rep(lp, D) {
+            rep(i, N) {
+                cout << tmp[i] SP << 0 SP << tmp[i + 1] SP << W << endl;
+            }
+        }
+        exit(0);
+    }
+}
+
 void inpt() {
     cin >> W >> D >> N;
     a.resize(D);
@@ -204,6 +235,7 @@ void inpt() {
 
 int main() {
     inpt();
+    simple_h_line();
     Hall hall;
     hall.init();
     hall.print_ans();
