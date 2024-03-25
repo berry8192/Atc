@@ -57,7 +57,7 @@ vector<int> ruiseki(vector<int> vv) {
 }
 
 int imax = 2147483647;
-long long llimax = 9223372036854775807;
+long long lmax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
@@ -132,6 +132,7 @@ struct Row {
     vector<Column> columns;
     int height;     // 高さ
     int bottom_pos; // 下端
+    int loss;
 
     Row() {}
     Row(int iheight, int ibottom_pos) {
@@ -139,7 +140,7 @@ struct Row {
         bottom_pos = ibottom_pos;
     }
 
-    // ロスのない最小の高さにする
+    // ロスのない最小の高さにする、bottomは計算しない
     void adjust_row(vector<int> &a_day) {
         assert(columns.size() > 0);
         int area_sum = 0;
@@ -168,6 +169,11 @@ struct Row {
         int diff = W - columns[columns.size() - 1].width;
         columns[columns.size() - 1].width += diff;
         columns[columns.size() - 1].right_pos = W;
+    }
+    void calc_loss(vector<int> &a_day) {
+        int need_area_sum = 0;
+        rep(i, columns.size()) { need_area_sum += a_day[columns[i].idx]; }
+        loss = height * W - need_area_sum;
     }
 };
 struct Day {
@@ -201,7 +207,9 @@ struct Day {
     void init_day_fixed_division(int division) {
         // cout << "init_day_fixed_division" << endl;
         // 空のrowsを作らないために必要最小限にする
+        rows.clear();
         int rows_size = (N + division - 1) / division;
+        // cerr << rows_size << endl;
         rows.resize(rows_size);
         rep(i, rows_size) {
             int height = W / division;
@@ -223,11 +231,88 @@ struct Day {
                 {i, width, (i % division + 1) * width});
         } // 左上から正方形で敷き詰めていく
     }
-    bool adjsut_rows() {
+    // なるべく低い高さになるようにする
+    void low_height() {
+        // cout << "low_height" << endl;
+        // cerr << "base: " << rows[rows.size() - 1].bottom_pos << endl;
+        assert(rows.size() >= 0); // 先にinit_dayしてから来てね
+        assert(rows.size() >= 1); // 移動の余地がない
+        assert(rows.size() < N);  // 移動の余地がない
+        vector<Row> current_rows = rows;
+
+        rep(i, current_rows.size()) { current_rows[i].calc_loss(a_day); }
+        rep(lp, 100) {
+            // 1番無駄があるrowから2番目に無駄があるrowに移したい、無理そうな時はよしなに
+            ll loss_size[2] = {-imax, -imax}, loss_idx[2];
+            rep(i, current_rows.size()) {
+                if (loss_size[0] < current_rows[i].loss) {
+                    loss_size[1] = loss_size[0];
+                    loss_idx[1] = loss_idx[0];
+                    loss_size[0] = current_rows[i].loss;
+                    loss_idx[0] = i;
+                } else if (loss_size[1] < current_rows[i].loss) {
+                    loss_size[1] = current_rows[i].loss;
+                    loss_idx[1] = i;
+                }
+            }
+            // 移動するrowのidxを設定
+            int move_from, move_to;
+            int idx;
+            if (lp % 10) {
+                do {
+                    idx = rand(0, int(current_rows.size() - 1));
+                    // cerr << idx << endl;
+                } while (current_rows[idx].columns.size() < 2);
+                move_from = idx;
+                move_to = (idx + rand(1, int(current_rows.size() - 1))) %
+                          current_rows.size();
+                // cerr << move_from SP << move_to << endl;
+            } else {
+                if (current_rows[loss_idx[0]].columns.size() >= 2) {
+                    move_from = loss_idx[0];
+                    move_to = loss_idx[1];
+                } else if (current_rows[loss_idx[1]].columns.size() >= 2) {
+                    move_from = loss_idx[1];
+                    move_to = loss_idx[0];
+                } else {
+                    do {
+                        idx = rand(0, int(current_rows.size() - 1));
+                    } while (current_rows[idx].columns.size() < 2);
+                    move_from = idx;
+                    move_to = loss_idx[0];
+                }
+            }
+            // 移動実行
+            int column_size = current_rows[move_from].columns.size();
+            int swap_column_idx = rand(0, column_size - 2);
+            // ランダムに移動元となる最後尾に持ってくる
+            swap(current_rows[move_from].columns[swap_column_idx],
+                 current_rows[move_from].columns[column_size - 1]);
+            current_rows[move_to].columns.push_back(
+                current_rows[move_from].columns[column_size - 1]);
+            current_rows[move_from].columns.pop_back();
+
+            // 移動後にadjust_rowをする
+            current_rows[move_from].adjust_row(a_day);
+            current_rows[move_to].adjust_row(a_day);
+            adjsut_rows(false);
+
+            if (current_rows[current_rows.size() - 1].bottom_pos <
+                current_rows[current_rows.size() - 1].bottom_pos) {
+                rows = current_rows;
+                // cerr << "! " << lp SP << rows[rows.size() - 1].bottom_pos
+                //      << endl;
+            }
+            // cerr << lp SP << rows[rows.size() - 1].bottom_pos << endl;
+        }
+    }
+    bool adjsut_rows(bool exec_adjust_row = true) {
         // cout << "adjsut_rows" << endl;
         int height_sum = 0;
         rep(i, rows.size()) {
-            rows[i].adjust_row(a_day); // この中でrows[i].heightが書き換わる
+            if (exec_adjust_row) {
+                rows[i].adjust_row(a_day); // この中でrows[i].heightが書き換わる
+            }
             height_sum += rows[i].height;
             rows[i].bottom_pos = height_sum;
         }
@@ -310,6 +395,7 @@ struct Hall {
 
     void execute() {
         rep(i, D) {
+            // cerr << "day: " << i << endl;
             days[i].init_day_fixed_division(ceil(sqrt(N)));
             days[i].adjsut_rows();
             days[i].touch_right_and_bottom();
@@ -323,13 +409,46 @@ struct Hall {
         }
         return true;
     }
+    void execute_low_height() {
+        rep(i, D) {
+            // cerr << "day: " << i << endl;
+            Day today(i, a[i]);
+            ll best_cost = lmax;
+            rep3(j, N - 1, 1) {
+                // cerr << " division: " << j << endl;
+                today.init_day_fixed_division(j);
+                // cerr << " rows :" << today.rows.size() << endl;
+                if (today.rows.size() <= 1 || N <= today.rows.size()) {
+                    continue;
+                }
+                today.low_height();
+                today.adjsut_rows();
+                today.touch_right_and_bottom();
+                ll tmp = today.calc_area_shortage_loss();
+                if (tmp < best_cost) {
+                    best_cost = tmp;
+                    days[i] = today;
+                }
+            }
+        }
+    }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
     ll calc_partition_loss(int day) {
         assert(day != 0);
         ll loss = 0;
         if (days[day - 1].rows.size() != days[day].rows.size()) {
-            return 1000000000000000;
+            ll rtn =
+                W * (days[day - 1].rows.size() - 1 + days[day].rows.size() - 1);
+            rep(i, days[day - 1].rows.size()) {
+                rtn += days[day - 1].rows[i].height *
+                       (days[day - 1].rows[i].columns.size() - 1);
+            }
+            rep(i, days[day].rows.size()) {
+                rtn += days[day].rows[i].height *
+                       (days[day].rows[i].columns.size() - 1);
+            }
+            return rtn;
         }
         rep(j, days[day].rows.size()) {
             bool same_height_line = days[day].rows[j].bottom_pos ==
@@ -473,31 +592,32 @@ int main() {
 
     Hall best;
     best.init();
-    best.execute();
+    best.execute_low_height();
     best.calc_loss();
     // hall.output_false_ans_exit();
     // cerr << hall.calc_loss() << endl;
 
-    int loop = 0;
-    while (1) {
-        if (timer.progress() > 1.0) {
-            break;
-        }
-        loop++;
-        if (loop > N) {
-            break;
-        }
-        Hall hall;
-        hall.init();
-        if (hall.execute_random(loop) == false)
-            continue;
-        hall.calc_loss();
-        if (hall.hall_loss < best.hall_loss) {
-            best = hall;
-        }
-        // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
-    }
+    // int loop = 0;
+    // while (1) {
+    //     if (timer.progress() > 1.0) {
+    //         break;
+    //     }
+    //     loop++;
+    //     if (loop > N) {
+    //         break;
+    //     }
+    //     Hall hall;
+    //     hall.init();
+    //     if (hall.execute_random(loop) == false)
+    //         continue;
+    //     hall.calc_loss();
+    //     if (hall.hall_loss < best.hall_loss) {
+    //         best = hall;
+    //     }
+    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
+    // }
     // cerr << loop SP << timer.progress() << endl;
+    // cerr << best.hall_loss << endl;
     best.print_ans();
 
     return 0;
