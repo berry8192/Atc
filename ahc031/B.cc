@@ -198,8 +198,8 @@ struct Day {
                 {i, width, (i % division + 1) * width});
         } // 左上から正方形で敷き詰めていく
     }
-    void init_day_random(int division) {
-        // cout << "init_day_random" << endl;
+    void init_day_fixed_division(int division) {
+        // cout << "init_day_fixed_division" << endl;
         // 空のrowsを作らないために必要最小限にする
         int rows_size = (N + division - 1) / division;
         rows.resize(rows_size);
@@ -236,7 +236,7 @@ struct Day {
     }
     bool W_limit_init_day(int division) {
         rep(lp, 1) {
-            init_day_random(division);
+            init_day_fixed_division(division);
             if (adjsut_rows())
                 return true;
         }
@@ -310,7 +310,7 @@ struct Hall {
 
     void execute() {
         rep(i, D) {
-            days[i].init_day_random(ceil(sqrt(N)));
+            days[i].init_day_fixed_division(ceil(sqrt(N)));
             days[i].adjsut_rows();
             days[i].touch_right_and_bottom();
         }
