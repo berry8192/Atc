@@ -532,6 +532,7 @@ struct Hall {
     vector<Day> days;
 
     void init() {
+        hall_loss = lmax;
         days.resize(D);
         rep(i, D) { days[i] = Day(i, a[i]); }
     }
@@ -660,6 +661,16 @@ struct Hall {
         }
         hall_loss = loss;
     }
+    int calc_max_height_sum() {
+        int max_sum = 0;
+        // すべての日でrowsの長さが同じであることを前提としている
+        rep(i, days[0].rows.size()) {
+            int ma = 0;
+            rep(j, D) { ma = max(ma, days[j].rows[i].height); }
+            max_sum += ma;
+        }
+        return max_sum;
+    }
 
     void print_ans() {
         rep(i, D) { days[i].print_ans(); }
@@ -751,7 +762,7 @@ int main() {
     Hall best;
     best.init();
     best.execute_interval_dp();
-    // cerr << best.hall_loss << endl;
+
     rep(i, N) {
         Hall hall;
         hall.init();
@@ -766,11 +777,8 @@ int main() {
     }
 
     int loop = 0;
-    while (1) {
+    while (timer.progress() < 1.0) {
         loop++;
-        if (timer.progress() > 1.0) {
-            break;
-        }
         Hall hall;
         hall.init();
         hall.execute_shuffle_interval_dp();
