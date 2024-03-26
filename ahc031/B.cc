@@ -279,8 +279,8 @@ struct Day {
                 partition[j][j + i - 1] = par;
             }
         }
-        cerr << min_height[0][N - 1] << endl;
-        cerr << partition[0][N - 1] << endl;
+        // cerr << min_height[0][N - 1] << endl;
+        // cerr << partition[0][N - 1] << endl;
         init_day_from_bitset(partition[0][N - 1]);
     }
     void low_height() {
