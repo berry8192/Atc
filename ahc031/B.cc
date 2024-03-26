@@ -231,8 +231,21 @@ struct Day {
             rows[i / division].columns.push_back(
                 {i, width, (i % division + 1) * width});
         } // 左上から正方形で敷き詰めていく
+    }     // なるべく低い高さになるようにする
+    void init_day_from_bitset_with_shuffle(bitset<50> bs,
+                                           vector<pair<int, int>> &perm) {
+        // cerr << "init_day_from_bitset" << endl;
+        rows.clear();
+        int idx;
+        rep(i, N) {
+            if (bs[i]) {
+                rows.push_back(Row());
+                idx = rows.size() - 1;
+            }
+            rows[idx].columns.push_back({perm[i].second, -1, -1});
+        }
+        adjsut_rows();
     }
-    // なるべく低い高さになるようにする
     void init_day_from_bitset(bitset<50> bs) {
         // cerr << "init_day_from_bitset" << endl;
         rows.clear();
@@ -245,6 +258,60 @@ struct Day {
             rows[idx].columns.push_back({i, -1, -1});
         }
         adjsut_rows();
+    }
+    void gen_shuffle_a_day(vector<pair<int, int>> &perm,
+                           vector<int> &shuffled_a_day) {
+        rep(i, N) { perm[i] = {i, i}; }
+        int lp = rand(1, int(sqrt(N)));
+        rep(i, lp) {
+            int idx1 = rand(0, N - 1);
+            int idx2 = min(N - 1, idx1 + rand(1, int(sqrt(N))));
+            swap(perm[idx1].first, perm[idx2].first);
+            swap(shuffled_a_day[idx1], shuffled_a_day[idx2]);
+        }
+    }
+    void shuffle_interval_dp() {
+        // cerr << "interval_dp" << endl;
+        vector<pair<int, int>> perm(N);
+        vector<int> shuffled_a_day = a_day;
+        gen_shuffle_a_day(perm, shuffled_a_day);
+
+        vector<int> w_day = ruiseki(shuffled_a_day);
+        // 区間の最小高さ
+        vector<vector<int>> min_height(N, vector<int>(N));
+        // 仕切りの左を1として記録する
+        vector<vector<bitset<50>>> partition(N, vector<bitset<50>>(N));
+        for (int i = 1; i <= N; i++) {
+            // i個からなる区間
+            for (int j = 0; j + i - 1 < N; j++) {
+                // jからスタート
+                int su = w_day[i + j] - w_day[j];
+                int mi = 0;
+                for (int k = 0; k < i; k++) {
+                    int tmp_width = max(1, shuffled_a_day[j + k] * W / su);
+                    mi = max(mi, (shuffled_a_day[j + k] + tmp_width - 1) /
+                                     tmp_width);
+                }
+                bitset<50> par;
+                par.set(j); // 最初は[j~j+i]が1番とする
+                // 内包する2区間の結合を取る場合も計算する
+                for (int k = 0; k < i - 1; k++) {
+                    int tmp =
+                        min_height[j][j + k] + min_height[j + k + 1][j + i - 1];
+                    if (tmp < mi) {
+                        mi = tmp;
+                        par = (partition[j][j + k] |
+                               partition[j + k + 1][j + i - 1]);
+                    }
+                }
+                min_height[j][j + i - 1] = mi;
+                partition[j][j + i - 1] = par;
+            }
+        }
+        // cerr << min_height[0][N - 1] << endl;
+        // cerr << partition[0][N - 1] << endl;
+        sort(all(perm));
+        init_day_from_bitset_with_shuffle(partition[0][N - 1], perm);
     }
     void interval_dp() {
         // cerr << "interval_dp" << endl;
@@ -379,9 +446,34 @@ struct Day {
         return false;
     }
     void touch_bottom() {
-        int diff = W - rows[rows.size() - 1].bottom_pos;
-        rows[rows.size() - 1].height += diff;
-        rows[rows.size() - 1].bottom_pos = W;
+        int margin = W - rows[rows.size() - 1].bottom_pos;
+        if (margin > 0) {
+            rows[rows.size() - 1].height += margin;
+            rows[rows.size() - 1].bottom_pos = W;
+        } else {
+            margin = abs(margin);
+            rep(lp, margin) {
+                int largeest_loss = -imax;
+                int best_idx;
+                rep(i, rows.size()) {
+                    rows[i].calc_loss(a_day);
+                    if (rows[i].loss > largeest_loss) {
+                        largeest_loss = rows[i].loss;
+                        best_idx = i;
+                    }
+                }
+                while (rows[best_idx].height == 1) {
+                    best_idx = (best_idx + 1) % rows.size();
+                }
+                rows[best_idx].height--;
+            }
+            int height_sum = 0;
+            rep(i, rows.size()) {
+                height_sum += rows[i].height;
+                rows[i].bottom_pos = height_sum;
+            }
+            assert(rows[rows.size() - 1].bottom_pos == W);
+        }
     }
     void touch_right_and_bottom() {
         touch_bottom();
@@ -452,7 +544,7 @@ struct Hall {
             days[i].touch_right_and_bottom();
         }
     }
-    bool execute_random(int division) {
+    bool execute_fixed_division(int division) {
         rep(i, D) {
             if (days[i].W_limit_init_day(division) == false)
                 return false;
@@ -488,6 +580,14 @@ struct Hall {
             days[i].interval_dp();
             days[i].touch_right_and_bottom();
         }
+        calc_loss();
+    }
+    void execute_shuffle_interval_dp() {
+        rep(i, D) {
+            days[i].shuffle_interval_dp();
+            days[i].touch_right_and_bottom();
+        }
+        calc_loss();
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
@@ -565,7 +665,7 @@ struct Hall {
         rep(i, D) { days[i].print_ans(); }
     }
 
-    void output_false_ans_exit() {
+    void output_false_and_exit() {
         int cnt = 0;
 
         rep(i, D) {
@@ -651,29 +751,35 @@ int main() {
     Hall best;
     best.init();
     best.execute_interval_dp();
-    best.calc_loss();
-    // hall.output_false_ans_exit();
-    // cerr << hall.calc_loss() << endl;
+    // cerr << best.hall_loss << endl;
+    rep(i, N) {
+        Hall hall;
+        hall.init();
+        if (hall.execute_fixed_division(i + 1) == false) {
+            continue;
+        }
+        hall.calc_loss();
+        if (hall.hall_loss < best.hall_loss) {
+            best = hall;
+            // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
+        }
+    }
 
-    // int loop = 0;
-    // while (1) {
-    //     if (timer.progress() > 1.0) {
-    //         break;
-    //     }
-    //     loop++;
-    //     if (loop > N) {
-    //         break;
-    //     }
-    //     Hall hall;
-    //     hall.init();
-    //     if (hall.execute_random(loop) == false)
-    //         continue;
-    //     hall.calc_loss();
-    //     if (hall.hall_loss < best.hall_loss) {
-    //         best = hall;
-    //     }
-    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
-    // }
+    int loop = 0;
+    while (1) {
+        loop++;
+        if (timer.progress() > 1.0) {
+            break;
+        }
+        Hall hall;
+        hall.init();
+        hall.execute_shuffle_interval_dp();
+        if (hall.hall_loss < best.hall_loss) {
+            best = hall;
+            // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
+        }
+        // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
+    }
     // cerr << loop SP << timer.progress() << endl;
     // cerr << best.hall_loss << endl;
     best.print_ans();
