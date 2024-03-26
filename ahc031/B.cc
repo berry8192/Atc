@@ -142,6 +142,7 @@ struct Row {
 
     // ロスのない最小の高さにする、bottomは計算しない
     void adjust_row(vector<int> &a_day) {
+        // cerr << "adjust_row" << endl;
         assert(columns.size() > 0);
         int area_sum = 0;
         rep(i, columns.size()) {
@@ -232,6 +233,56 @@ struct Day {
         } // 左上から正方形で敷き詰めていく
     }
     // なるべく低い高さになるようにする
+    void init_day_from_bitset(bitset<50> bs) {
+        // cerr << "init_day_from_bitset" << endl;
+        rows.clear();
+        int idx;
+        rep(i, N) {
+            if (bs[i]) {
+                rows.push_back(Row());
+                idx = rows.size() - 1;
+            }
+            rows[idx].columns.push_back({i, -1, -1});
+        }
+        adjsut_rows();
+    }
+    void interval_dp() {
+        // cerr << "interval_dp" << endl;
+        vector<int> w_day = ruiseki(a_day);
+        // 区間の最小高さ
+        vector<vector<int>> min_height(N, vector<int>(N));
+        // 仕切りの左を1として記録する
+        vector<vector<bitset<50>>> partition(N, vector<bitset<50>>(N));
+        for (int i = 1; i <= N; i++) {
+            // i個からなる区間
+            for (int j = 0; j + i - 1 < N; j++) {
+                // jからスタート
+                int su = w_day[i + j] - w_day[j];
+                int mi = 0;
+                for (int k = 0; k < i; k++) {
+                    int tmp_width = max(1, a_day[j + k] * W / su);
+                    mi = max(mi, (a_day[j + k] + tmp_width - 1) / tmp_width);
+                }
+                bitset<50> par;
+                par.set(j); // 最初は[j~j+i]が1番とする
+                // 内包する2区間の結合を取る場合も計算する
+                for (int k = 0; k < i - 1; k++) {
+                    int tmp =
+                        min_height[j][j + k] + min_height[j + k + 1][j + i - 1];
+                    if (tmp < mi) {
+                        mi = tmp;
+                        par = (partition[j][j + k] |
+                               partition[j + k + 1][j + i - 1]);
+                    }
+                }
+                min_height[j][j + i - 1] = mi;
+                partition[j][j + i - 1] = par;
+            }
+        }
+        cerr << min_height[0][N - 1] << endl;
+        cerr << partition[0][N - 1] << endl;
+        init_day_from_bitset(partition[0][N - 1]);
+    }
     void low_height() {
         // cout << "low_height" << endl;
         // cerr << "base: " << rows[rows.size() - 1].bottom_pos << endl;
@@ -307,7 +358,7 @@ struct Day {
         }
     }
     bool adjsut_rows(bool exec_adjust_row = true) {
-        // cout << "adjsut_rows" << endl;
+        // cerr << "adjsut_rows" << endl;
         int height_sum = 0;
         rep(i, rows.size()) {
             if (exec_adjust_row) {
@@ -360,14 +411,14 @@ struct Day {
             d = min(W, rows[i].bottom_pos); // TODO: minなしにしたい
             // TODO: bottom_pos側をWに合わせる
             if (i == rows.size() - 1) {
-                d = W;
+                // d = W;
             }
             l = 0;
             rep(j, rows[i].columns.size()) {
                 r = rows[i].columns[j].right_pos;
                 // TODO: right_pos側をWに合わせる
                 if (j == rows[i].columns.size() - 1) {
-                    r = W;
+                    // r = W;
                 }
                 su[rows[i].columns[j].idx] = u;
                 sl[rows[i].columns[j].idx] = l;
@@ -430,6 +481,12 @@ struct Hall {
                     days[i] = today;
                 }
             }
+        }
+    }
+    void execute_interval_dp() {
+        rep(i, D) {
+            days[i].interval_dp();
+            days[i].touch_right_and_bottom();
         }
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
@@ -495,6 +552,7 @@ struct Hall {
         return loss;
     }
     void calc_loss() {
+        // cerr << "calc_loss" << endl;
         ll loss = 1;
         rep(i, D) {
             loss += calc_day_loss(i);
@@ -592,7 +650,7 @@ int main() {
 
     Hall best;
     best.init();
-    best.execute_low_height();
+    best.execute_interval_dp();
     best.calc_loss();
     // hall.output_false_ans_exit();
     // cerr << hall.calc_loss() << endl;
