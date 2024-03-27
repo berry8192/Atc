@@ -538,7 +538,9 @@ struct Day {
         vector<int> sr(N);
         int u = 0, l, d, r;
         rep(i, rows.size()) {
-            d = min(W, rows[i].bottom_pos); // TODO: minなしにしたい
+            // d = rows[i].bottom_pos;
+            d = min(int(W - (rows.size() - i - 1)),
+                    rows[i].bottom_pos); // TODO: minなしにしたい
             // TODO: bottom_pos側をWに合わせる
             if (i == rows.size() - 1) {
                 // d = W;
