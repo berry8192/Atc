@@ -89,6 +89,44 @@ vector<vector<int>> a;
 // Wで割った余りが0になるように切り上げる
 int W_ceil(int x) { return (x + W - 1) / W * W; }
 
+int calc_sum_by_days_max() {
+    int su = 0;
+    for (int i = 0; i < N; i++) {
+        int ma = 0;
+        for (int j = 0; j < D; j++) {
+            ma = max(ma, a[j][i]);
+        }
+        su += ma;
+    }
+    return su;
+}
+
+vector<int> calc_days_max() {
+    vector<int> rtn(N);
+    for (int i = 0; i < N; i++) {
+        int ma = 0;
+        for (int j = 0; j < D; j++) {
+            ma = max(ma, a[j][i]);
+        }
+        rtn[i] = ma;
+    }
+    return rtn;
+}
+
+vector<int> calc_sum_by_day() {
+    // int maxa = 0;
+    vector<int> tmp(D);
+    for (int i = 0; i < D; i++) {
+        int su = 0;
+        for (int j = 0; j < N; j++) {
+            su += a[i][j];
+            // maxa = max(maxa, a[i][j]);
+        }
+        tmp[i] = su;
+    }
+    return tmp;
+}
+
 // 構造体
 struct Timer {
     chrono::_V2::system_clock::time_point start;
@@ -590,6 +628,13 @@ struct Hall {
         }
         calc_loss();
     }
+    void execute_largest_size() {
+        vector<int> a_day = calc_days_max();
+        Day day(-1, a_day);
+        day.interval_dp();
+        rep(i, D) { days[i] = day; }
+        cerr << days[0].rows[days[0].rows.size() - 1].bottom_pos << endl;
+    }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
     ll calc_partition_loss(int day) {
@@ -692,44 +737,6 @@ struct Hall {
     }
 };
 
-int calc_sum_by_days_max() {
-    int su = 0;
-    for (int i = 0; i < N; i++) {
-        int ma = 0;
-        for (int j = 0; j < D; j++) {
-            ma = max(ma, a[j][i]);
-        }
-        su += ma;
-    }
-    return su;
-}
-
-vector<int> calc_days_max() {
-    vector<int> rtn(N);
-    for (int i = 0; i < N; i++) {
-        int ma = 0;
-        for (int j = 0; j < D; j++) {
-            ma = max(ma, a[j][i]);
-        }
-        rtn[i] = ma;
-    }
-    return rtn;
-}
-
-vector<int> calc_sum_by_day() {
-    // int maxa = 0;
-    vector<int> tmp(D);
-    for (int i = 0; i < D; i++) {
-        int su = 0;
-        for (int j = 0; j < N; j++) {
-            su += a[i][j];
-            // maxa = max(maxa, a[i][j]);
-        }
-        tmp[i] = su;
-    }
-    return tmp;
-}
-
 // Wで切り上げた数字の総和がWに満たないときはscore1が取れる
 void simple_h_line() {
     vector<int> cdm = calc_days_max();
@@ -757,18 +764,25 @@ void inpt() {
 
 int main() {
     inpt();
-    simple_h_line(); // TODO: いずれ使わなくてもよくなる
+    // simple_h_line(); // TODO: いずれ使わなくてもよくなる
 
     Hall best;
     best.init();
-    best.execute_interval_dp();
+    best.execute_largest_size();
 
-    rep(i, N) {
+    // Hall best;
+    // best.init();
+    // best.execute_interval_dp();
+    // best.calc_max_height_sum();
+    // cerr << best.calc_max_height_sum() << endl;
+
+    rep(i, 0) {
         Hall hall;
         hall.init();
         if (hall.execute_fixed_division(i + 1) == false) {
             continue;
         }
+        cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() << endl;
         hall.calc_loss();
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
@@ -776,18 +790,19 @@ int main() {
         }
     }
 
-    int loop = 0;
-    while (timer.progress() < 1.0) {
-        loop++;
-        Hall hall;
-        hall.init();
-        hall.execute_shuffle_interval_dp();
-        if (hall.hall_loss < best.hall_loss) {
-            best = hall;
-            // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
-        }
-        // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
-    }
+    // int loop = 0;
+    // while (timer.progress() < 1.0) {
+    //     loop++;
+    //     Hall hall;
+    //     hall.init();
+    //     hall.execute_shuffle_interval_dp();
+    //     if (hall.hall_loss < best.hall_loss) {
+    //         best = hall;
+    //         // cerr << loop SP << timer.progress() SP << hall.hall_loss <<
+    //         endl;
+    //     }
+    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss << endl;
+    // }
     // cerr << loop SP << timer.progress() << endl;
     // cerr << best.hall_loss << endl;
     best.print_ans();
