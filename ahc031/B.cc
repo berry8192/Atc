@@ -86,6 +86,33 @@ vector<int> get_max_element_indices(const vector<double> &vec, int length) {
     rep(i, length) { ans.push_back(p[i].second); }
     return ans;
 }
+void normalize_vector_by_matrix(vector<vector<double>> &mat,
+                                vector<double> &norm) {
+    assert(mat.size() == norm.size());
+    int mat_width = mat[0].size();
+    int mat_sum = 0, norm_sum = 0;
+    rep(i, norm.size()) { norm_sum += norm[i]; }
+    rep(j, mat_width) {
+        rep(i, mat.size()) { mat_sum += mat[i][j]; }
+        rep(i, mat.size()) { mat[i][j] = mat_sum * norm[i] / norm_sum; }
+    }
+}
+vector<double> normalize_vector_by_int(int obj_sum, vector<double> &norm) {
+    vector<double> rtn(norm.size());
+    double norm_sum = 0;
+    rep(i, norm.size()) { norm_sum += norm[i]; }
+    rep(i, norm.size()) { rtn[i] = norm[i] * obj_sum / norm_sum; }
+    return rtn;
+}
+double vectors_value_range(vector<double> &vec) {
+    double mi = 9223372036854775807;
+    double ma = -9223372036854775807;
+    rep(i, vec.size()) {
+        mi = min(mi, vec[i]);
+        ma = max(ma, vec[i]);
+    }
+    return ma - mi;
+}
 
 int imax = 2147483647;
 long long lmax = 9223372036854775807;
@@ -487,11 +514,23 @@ struct Day {
             if (current_rows[current_rows.size() - 1].bottom_pos <
                 current_rows[current_rows.size() - 1].bottom_pos) {
                 rows = current_rows;
-                // cerr << "! " << lp SP << rows[rows.size() - 1].bottom_pos
+                // cerr << "! " << lp SP << rows[rows.size() -
+                // 1].bottom_pos
                 //      << endl;
             }
-            // cerr << lp SP << rows[rows.size() - 1].bottom_pos << endl;
+            // cerr << lp SP << rows[rows.size() - 1].bottom_pos <<
+            // endl;
         }
+    }
+    void optimize(vector<double> &row_height_aves) {
+        vector<double> aim_heights = normalize_vector_by_int(
+            rows[rows.size() - 1].bottom_pos, row_height_aves);
+        PV(aim_heights);
+        // if (vectors_value_range(aim_heights) < 1.5) {
+        //     // もともとまとまっていたら何もしない
+        //     cerr << "no need to optimize" << endl;
+        //     return;
+        // }
     }
     bool adjsut_rows(bool exec_adjust_row = true) {
         // cerr << "adjsut_rows" << endl;
@@ -672,8 +711,8 @@ struct Hall {
             days[i].init_day_fixed_division(sqrt(N));
             days[i].adjsut_rows();
         }
-        // cout << days[0].rows[days[0].rows.size() - 1].bottom_pos << endl;
-        // 各日のrowsの数はすべて同じ（変えない）前提で動く
+        // cout << days[0].rows[days[0].rows.size() - 1].bottom_pos <<
+        // endl; 各日のrowsの数はすべて同じ（変えない）前提で動く
         int row_length = days[0].rows.size();
         vector<double> row_height_aves(row_length);
         vector<vector<double>> row_height_distance_from_aves(row_length,
@@ -686,12 +725,16 @@ struct Hall {
             // cerr << "row: " << i SP << row_height_aves[i] SP
             //      << row_height_variances[i] << endl;
         }
-        // 一番分散がデカいrowをどうにかする
+        // 一番分散がデカいrowをどうにかする、遷移対象は同じdayに対して行う必要がある
+        // PVV(row_height_distance_from_aves);
+        PV(row_height_aves);
+
         rep(lp, 1) {
-            print_annealing(row_height_aves, row_height_distance_from_aves,
-                            row_height_variances);
-            // cerr << target_row_indices[0] SP << target_row_indices[1] <<
-            // endl;
+            rep(i, D) days[i].optimize(row_height_aves);
+            // print_annealing(row_height_aves, row_height_distance_from_aves,
+            //                 row_height_variances);
+            // cerr << target_row_indices[0] SP << target_row_indices[1]
+            // << endl;
         }
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
@@ -877,8 +920,8 @@ int main() {
         hall.calc_loss();
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
-            // cerr << loop SP << timer.progress() SP << hall.hall_loss <<
-            // endl;
+            // cerr << loop SP << timer.progress() SP << hall.hall_loss
+            // << endl;
         }
     }
 
@@ -890,11 +933,12 @@ int main() {
     //     hall.execute_shuffle_interval_dp();
     //     if (hall.hall_loss < best.hall_loss) {
     //         best = hall;
-    //         // cerr << loop SP << timer.progress() SP << hall.hall_loss
+    //         // cerr << loop SP << timer.progress() SP <<
+    //         hall.hall_loss
     //         << endl;
     //     }
-    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss <<
-    //     endl;
+    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss
+    //     << endl;
     // }
     // cerr << loop SP << timer.progress() << endl;
     // cerr << best.hall_loss << endl;
