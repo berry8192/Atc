@@ -522,15 +522,55 @@ struct Day {
             // endl;
         }
     }
+    void make_row_by_indices(vector<int> &indices, Row &row) {
+        int area_sum = 0;
+        rep(i, indices.size()) { area_sum += a_day[indices[i]]; }
+        int max_height = 0;
+        vector<int> new_widths(indices);
+        rep(i, indices.size()) {
+            // 切り捨てで幅を計算する
+            new_widths[i] = max(1, W * a_day[indices[i]] / area_sum);
+            max_height =
+                max(max_height,
+                    (a_day[indices[i]] + new_widths[i] - 1) / new_widths[i]);
+        }
+        row.height = max_height;
+        row.columns.clear();
+        rep(i, new_widths.size()) {
+            row.columns.push_back(Column(indices[i], new_widths[i], -1));
+        }
+    }
     void optimize(vector<double> &row_height_aves) {
         vector<double> aim_heights = normalize_vector_by_int(
             rows[rows.size() - 1].bottom_pos, row_height_aves);
-        PV(aim_heights);
-        // if (vectors_value_range(aim_heights) < 1.5) {
-        //     // もともとまとまっていたら何もしない
-        //     cerr << "no need to optimize" << endl;
-        //     return;
-        // }
+        // PV(aim_heights);
+        // print_rows();
+        int l = 0, r;
+        rep(i, aim_heights.size() - 1) {
+            r = N - aim_heights.size() + i + 1;
+            vector<Row> made_rows(N); // ここをケチるとなぜかバグる
+            double best_distance = imax;
+            vector<int> indices;
+            rep3(j, r + 1, l) {
+                indices.push_back(j);
+                make_row_by_indices(indices, made_rows[j - l]);
+                double distance = abs(made_rows[j - l].height - aim_heights[i]);
+                if (distance < best_distance && j != N - 1) {
+                    best_distance = distance;
+                } else {
+                    rows[i] = made_rows[max(0, j - l - 1)];
+                    l = j;
+                    break;
+                }
+            }
+        }
+        vector<int> indices;
+        rep3(i, N, l) { indices.push_back(i); }
+        Row row;
+        make_row_by_indices(indices, row);
+        rows[aim_heights.size() - 1] = row;
+
+        // print_rows();
     }
     bool adjsut_rows(bool exec_adjust_row = true) {
         // cerr << "adjsut_rows" << endl;
@@ -565,7 +605,7 @@ struct Day {
                 int best_idx;
                 rep(i, rows.size()) {
                     rows[i].calc_loss(a_day);
-                    if (rows[i].loss > largeest_loss) {
+                    if (rows[i].loss > largeest_loss && rows[i].height > 1) {
                         largeest_loss = rows[i].loss;
                         best_idx = i;
                     }
@@ -633,6 +673,17 @@ struct Day {
         rep(i, N) {
             cout << su[i] << " " << sl[i] << " " << sd[i] << " " << sr[i]
                  << endl;
+        }
+    }
+    void print_rows() {
+        rep(i, rows.size()) {
+            cerr << "rows: " << i << "  height: " << rows[i].height
+                 << " bottom_pos: " << rows[i].bottom_pos << endl;
+            cerr << "  widths: ";
+            rep(j, rows[i].columns.size()) {
+                cerr << rows[i].columns[j].idx << " ";
+            }
+            cerr << endl;
         }
     }
 };
@@ -718,24 +769,31 @@ struct Hall {
         vector<vector<double>> row_height_distance_from_aves(row_length,
                                                              vector<double>(D));
         vector<double> row_height_variances(row_length);
-        rep(i, row_length) {
-            row_height_aves[i] = calc_rows_ave(i);
-            row_height_variances[i] = calc_rows_variance_and_days_distance(
-                i, row_height_aves[i], row_height_distance_from_aves[i]);
-            // cerr << "row: " << i SP << row_height_aves[i] SP
-            //      << row_height_variances[i] << endl;
-        }
-        // 一番分散がデカいrowをどうにかする、遷移対象は同じdayに対して行う必要がある
-        // PVV(row_height_distance_from_aves);
-        PV(row_height_aves);
+        rep(lp, 100) {
+            rep(i, row_length) {
+                row_height_aves[i] = calc_rows_ave(i);
+                row_height_variances[i] = calc_rows_variance_and_days_distance(
+                    i, row_height_aves[i], row_height_distance_from_aves[i]);
+                // cerr << "row: " << i SP << row_height_aves[i] SP
+                //      << row_height_variances[i] << endl;
+            }
+            // 一番分散がデカいrowをどうにかする、遷移対象は同じdayに対して行う必要がある
+            // PVV(row_height_distance_from_aves);
+            // print_annealing();
+            // PV(row_height_aves);
 
-        rep(lp, 1) {
-            rep(i, D) days[i].optimize(row_height_aves);
-            // print_annealing(row_height_aves, row_height_distance_from_aves,
-            //                 row_height_variances);
+            rep(i, D) {
+                days[i].optimize(row_height_aves);
+                days[i].adjsut_rows();
+            }
+
             // cerr << target_row_indices[0] SP << target_row_indices[1]
             // << endl;
         }
+        arrange_height();
+        rep(i, D) { days[i].adjsut_rows(false); }
+        touch_right_and_bottom_all_days();
+        // print_annealing();
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
@@ -834,27 +892,47 @@ struct Hall {
         }
         return row_height_variance / D;
     }
+    // 単純に上から各列の最大値まで下げる
+    void arrange_height() {
+        int row_size = days[0].rows.size();
+        int sum_height = 0;
+        rep(i, row_size) {
+            int max_height = 0;
+            for (int j = 0; j < D; j++) {
+                max_height = max(max_height, days[j].rows[i].height);
+            }
+            for (int j = 0; j < D; j++) {
+                days[j].rows[i].height = max_height;
+            }
+            sum_height += max_height;
+            // cerr << max_height << endl;
+        }
+        // cout << sum_height << endl;
+        // exit(0);
+    }
     void print_ans() {
         rep(i, D) { days[i].print_ans(); }
     }
     void
-    print_annealing(vector<double> row_height_aves = {},
+    print_annealing(/*vector<double> row_height_aves = {},
                     vector<vector<double>> row_height_distance_from_aves = {{}},
-                    vector<double> row_height_variances = {}) {
+                    vector<double> row_height_variances = {}*/) {
         int row_size = days[0].rows.size();
         cerr << "row_heights" << endl;
         rep(i, row_size) {
             rep(j, D) { cerr << days[j].rows[i].height SP; }
             cerr << endl;
         }
-        cerr << "row_height_aves" << endl;
-        PV(row_height_aves);
-        cerr << "row_height_distance_from_aves" << endl;
-        PVV(row_height_distance_from_aves);
-        cerr << "row_height_variances" << endl;
-        PV(row_height_variances);
+        // cerr << "row_height_aves" << endl;
+        // PV(row_height_aves);
+        // cerr << "row_height_distance_from_aves" << endl;
+        // PVV(row_height_distance_from_aves);
+        // cerr << "row_height_variances" << endl;
+        // PV(row_height_variances);
     }
-
+    void touch_right_and_bottom_all_days() {
+        rep(i, D) { days[i].touch_right_and_bottom(); }
+    }
     void output_false_and_exit() {
         int cnt = 0;
 
@@ -903,20 +981,28 @@ int main() {
     Hall best;
     best.init();
     best.execute_annealing();
+    best.calc_loss();
+    // cerr << best.hall_loss << endl;
 
-    // Hall best;
-    // best.init();
-    // best.execute_interval_dp();
-    // best.calc_max_height_sum();
+    Hall hall;
+    hall.init();
+    hall.execute_interval_dp();
+    hall.calc_max_height_sum();
     // cerr << best.calc_max_height_sum() << endl;
+    hall.calc_loss();
+    if (hall.hall_loss < best.hall_loss) {
+        best = hall;
+        // cerr << loop SP << timer.progress() SP << hall.hall_loss
+        // << endl;
+    }
 
-    rep(i, 0) {
+    rep(i, N) {
         Hall hall;
         hall.init();
         if (hall.execute_fixed_division(i + 1) == false) {
             continue;
         }
-        cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() << endl;
+        // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() << endl;
         hall.calc_loss();
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
