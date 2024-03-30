@@ -852,6 +852,54 @@ struct Day {
         }
         return true;
     }
+    bool init_day_ul_fixed_order() {
+        rows.clear();
+        int remain_height = W;
+        int remain_width = W;
+        // rep(i, N) {
+        rep(i, N) {
+            int smallest_loss = imax;
+            char smallett_loss_dir;
+            vector<int> vec = {i}; // 後々複数個になるかも
+            int tmp;
+
+            Row rowr('r');
+            tmp = calc_loss_from_width_and_indices(remain_width, vec, rowr, 0,
+                                                   false);
+            if (tmp < smallest_loss) {
+                smallest_loss = tmp;
+                smallett_loss_dir = 'r';
+            }
+
+            Row rowd('d');
+            tmp = calc_loss_from_width_and_indices(remain_height, vec, rowd, 0,
+                                                   false);
+            if (tmp < smallest_loss) {
+                smallest_loss = tmp;
+                smallett_loss_dir = 'd';
+            }
+            Row row(smallett_loss_dir);
+            // cerr << row.dir << endl;
+            if (smallett_loss_dir == 'r') {
+                calc_loss_from_width_and_indices(remain_width, vec, row, 0,
+                                                 true);
+                remain_height -= row.height;
+                if (remain_height < 0) {
+                    return false;
+                }
+            } else {
+                calc_loss_from_width_and_indices(remain_height, vec, row, 0,
+                                                 true);
+                remain_width -= row.height;
+                if (remain_width < 0) {
+                    return false;
+                }
+            }
+            rows.push_back(row);
+        }
+
+        return true;
+    }
     void touch_bottom() {
         int margin = W - rows[rows.size() - 1].bottom_pos;
         if (margin > 0) {
@@ -1113,6 +1161,14 @@ struct Hall {
             }
         }
     }
+    bool execute_ul_fixed() {
+        rep(i, D) {
+            if (!days[i].init_day_ul_fixed_order()) {
+                return false;
+            }
+        }
+        return true;
+    }
     void make_perfect_ul() {
         vector<int> a_day = calc_days_max();
         Day day(-1, a_day);
@@ -1180,6 +1236,7 @@ struct Hall {
         }
         return loss;
     }
+    ll calc_accurate_partition_loss() {}
     ll calc_day_loss(int day) {
         ll loss = 0;
         loss += days[day].calc_area_shortage_loss();
@@ -1310,20 +1367,43 @@ void inpt() {
 
 int main() {
     inpt();
-    // simple_h_line(); // TODO: いずれ使わなくてもよくなる
+
+    Hall perfect_ul;
+    perfect_ul.init();
+    perfect_ul.make_perfect_ul();
+
+    vector<int> days_max = calc_days_max();
+    repr(i, N) {
+        // N-1 -> 0, i個統一する
+        Hall hall;
+        hall.init();
+        rep(j, D) {
+            // j日目を操作
+            rep(k, i + 1) {
+                // N-1からi個
+                // hall.days[j].a_day[k] = days_max[k];
+                hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
+            }
+        }
+        if (hall.execute_ul_fixed()) {
+            hall.print_ans_by_ul();
+            return 0;
+        }
+    }
 
     Hall best;
     best.init();
-    best.make_perfect_ul();
     best.execute_ul();
     best.print_ans_by_ul();
     return 0;
 
-    // Hall hall;
-    // hall.init();
-    // hall.execute_annealing();
-    // hall.calc_loss();
-    // // cerr << hall.hall_loss << endl;
+    Hall hall;
+    hall.init();
+    hall.execute_annealing();
+    hall.calc_loss();
+    hall.print_ans();
+    return 0;
+    // cerr << hall.hall_loss << endl;
 
     // Hall hall;
     // hall.init();
@@ -1344,7 +1424,9 @@ int main() {
     //         continue;
     //     }
     //     // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() <<
-    //     endl; hall.calc_loss(); if (hall.hall_loss < best.hall_loss) {
+    //     // endl;
+    //     hall.calc_loss();
+    //     if (hall.hall_loss < best.hall_loss) {
     //         best = hall;
     //         // cerr << loop SP << timer.progress() SP << hall.hall_loss
     //         // << endl;
@@ -1368,7 +1450,7 @@ int main() {
     // }
     // cerr << loop SP << timer.progress() << endl;
     // cerr << best.hall_loss << endl;
-    best.print_ans();
+    // best.print_ans();
 
     return 0;
 }
