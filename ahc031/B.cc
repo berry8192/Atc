@@ -612,9 +612,12 @@ struct Day {
             max_height =
                 max(max_height,
                     (a_day[indices[i]] + new_widths[i] - 1) / new_widths[i]);
+            // if (max_height > W) {
+            //     cerr << "Max height" << endl;
+            // }
         }
         if (create) {
-            vector<int> right_poses = ruiseki(new_widths);
+            // vector<int> right_poses = ruiseki(new_widths);
             row.columns.resize(
                 indices.size()); // 関数の頭でサイズが0であることを確認済み
             rep(i, indices.size()) {
@@ -661,7 +664,70 @@ struct Day {
                     smallett_loss_dir = 'd';
                 }
             }
+            // 2つずつ使う作戦
+            for (auto idx : unused_indices) {
+                for (auto idx2 : unused_indices) {
+                    if (!(idx < idx2)) {
+                        continue;
+                    }
+                    vector<int> vec = {idx, idx2};
+                    int tmp;
+
+                    Row rowr('r');
+                    tmp = calc_loss_from_width_and_indices(remain_width, vec,
+                                                           rowr, false);
+                    // cerr << tmp << endl;
+                    if (tmp < smallest_loss) {
+                        smallest_loss = tmp;
+                        smallest_loss_vec = vec;
+                        smallett_loss_dir = 'r';
+                    }
+
+                    Row rowd('d');
+                    tmp = calc_loss_from_width_and_indices(remain_height, vec,
+                                                           rowd, false);
+                    // cerr << tmp << endl;
+                    if (tmp < smallest_loss) {
+                        smallest_loss = tmp;
+                        smallest_loss_vec = vec;
+                        smallett_loss_dir = 'd';
+                    }
+                }
+            }
+            // 3つずつ使う作戦
+            for (auto idx : unused_indices) {
+                for (auto idx2 : unused_indices) {
+                    for (auto idx3 : unused_indices) {
+                        if (!(idx < idx2 && idx2 < idx3)) {
+                            continue;
+                        }
+                        vector<int> vec = {idx, idx2, idx3};
+                        int tmp;
+
+                        Row rowr('r');
+                        tmp = calc_loss_from_width_and_indices(
+                            remain_width, vec, rowr, false);
+                        // cerr << tmp << endl;
+                        if (tmp < smallest_loss) {
+                            smallest_loss = tmp;
+                            smallest_loss_vec = vec;
+                            smallett_loss_dir = 'r';
+                        }
+
+                        Row rowd('d');
+                        tmp = calc_loss_from_width_and_indices(
+                            remain_height, vec, rowd, false);
+                        // cerr << tmp << endl;
+                        if (tmp < smallest_loss) {
+                            smallest_loss = tmp;
+                            smallest_loss_vec = vec;
+                            smallett_loss_dir = 'd';
+                        }
+                    }
+                }
+            }
             Row row(smallett_loss_dir);
+            // cerr << row.dir << endl;
             if (smallett_loss_dir == 'r') {
                 calc_loss_from_width_and_indices(remain_width,
                                                  smallest_loss_vec, row, true);
@@ -787,7 +853,7 @@ struct Day {
                 int r = l + rows[i].height;
                 int u = up;
                 rep(j, rows[i].columns.size()) {
-                    int d = l + rows[i].columns[j].width;
+                    int d = u + rows[i].columns[j].width;
                     if (j == rows[i].columns.size() - 1) {
                         d = W;
                     }
@@ -804,7 +870,8 @@ struct Day {
             cout << su[i] << " " << sl[i] << " " << sd[i] << " " << sr[i]
                  << endl;
         }
-        // cerr << (W - left) * (W - up) SP << W - left SP << W - up << endl;
+        // cerr << (W - left) * (W - up) SP << W - left SP << W - up <<
+        // endl;
     }
     void print_rows() {
         rep(i, rows.size()) {
@@ -1145,9 +1212,8 @@ int main() {
     //     if (hall.execute_fixed_division(i + 1) == false) {
     //         continue;
     //     }
-    //     // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() << endl;
-    //     hall.calc_loss();
-    //     if (hall.hall_loss < best.hall_loss) {
+    //     // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() <<
+    //     endl; hall.calc_loss(); if (hall.hall_loss < best.hall_loss) {
     //         best = hall;
     //         // cerr << loop SP << timer.progress() SP << hall.hall_loss
     //         // << endl;
