@@ -833,6 +833,11 @@ struct Day {
             if (smallett_loss_dir == 'r') {
                 calc_loss_from_width_and_indices(
                     remain_width, smallest_loss_vec, row, order_weight, true);
+                if (unused_indices.size() == smallest_loss_vec.size() &&
+                    row.height < remain_height) {
+                    // 最後の1つはすべてを埋める
+                    // row.height = remain_height;
+                }
                 remain_height -= row.height;
                 if (remain_height < 0) {
                     return false;
@@ -840,6 +845,11 @@ struct Day {
             } else {
                 calc_loss_from_width_and_indices(
                     remain_height, smallest_loss_vec, row, order_weight, true);
+                if (unused_indices.size() == smallest_loss_vec.size() &&
+                    row.height < remain_width) {
+                    // 最後の1つはすべてを埋める
+                    // row.height = remain_width;
+                }
                 remain_width -= row.height;
                 if (remain_width < 0) {
                     return false;
@@ -1236,7 +1246,15 @@ struct Hall {
         }
         return loss;
     }
-    ll calc_accurate_partition_loss() {}
+    void calc_accurate_loss() {
+        // 面積不足はないものとする
+        ll sum_loss = 0;
+        rep(i, D) {
+            ll shortage_area = 0;
+
+            days[i];
+        }
+    }
     ll calc_day_loss(int day) {
         ll loss = 0;
         loss += days[day].calc_area_shortage_loss();
@@ -1372,24 +1390,24 @@ int main() {
     perfect_ul.init();
     perfect_ul.make_perfect_ul();
 
-    vector<int> days_max = calc_days_max();
-    repr(i, N) {
-        // N-1 -> 0, i個統一する
-        Hall hall;
-        hall.init();
-        rep(j, D) {
-            // j日目を操作
-            rep(k, i + 1) {
-                // N-1からi個
-                // hall.days[j].a_day[k] = days_max[k];
-                hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
-            }
-        }
-        if (hall.execute_ul_fixed()) {
-            hall.print_ans_by_ul();
-            return 0;
-        }
-    }
+    // vector<int> days_max = calc_days_max();
+    // repr(i, N) {
+    //     // N-1 -> 0, i個統一する
+    //     Hall hall;
+    //     hall.init();
+    //     rep(j, D) {
+    //         // j日目を操作
+    //         rep(k, i + 1) {
+    //             // N-1からi個
+    //             // hall.days[j].a_day[k] = days_max[k];
+    //             hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
+    //         }
+    //     }
+    //     if (hall.execute_ul_fixed()) {
+    //         hall.print_ans_by_ul();
+    //         return 0;
+    //     }
+    // }
 
     Hall best;
     best.init();
