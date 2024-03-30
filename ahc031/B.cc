@@ -600,7 +600,8 @@ struct Day {
     }
     // 便宜上幅から計算する名前にしているが、高さでもOK
     int calc_loss_from_width_and_indices(int width, vector<int> &indices,
-                                         Row &row, bool create = false) {
+                                         Row &row, double order_weight,
+                                         bool create = false) {
         assert(row.columns.size() == 0);
         int area_sum = 0;
         int max_height = 0;
@@ -627,9 +628,10 @@ struct Day {
             }
             row.height = max_height;
         }
-        return max_height * width - area_sum;
+        return max_height * width - area_sum +
+               order_weight * area_sum / indices.size();
     }
-    void init_day_ul() {
+    bool init_day_ul(double order_weight) {
         rows.clear();
         int remain_height = W;
         int remain_width = W;
@@ -639,14 +641,15 @@ struct Day {
             int smallest_loss = imax;
             vector<int> smallest_loss_vec;
             char smallett_loss_dir;
-            // まずは1つずつしか使わない作戦
+            int cnt = 0;
+            // まずは1つずつしか使わない作戦 50
             for (auto idx : unused_indices) {
                 vector<int> vec = {idx}; // 後々複数個になるかも
                 int tmp;
 
                 Row rowr('r');
                 tmp = calc_loss_from_width_and_indices(remain_width, vec, rowr,
-                                                       false);
+                                                       order_weight, false);
                 // cerr << tmp << endl;
                 if (tmp < smallest_loss) {
                     smallest_loss = tmp;
@@ -656,7 +659,7 @@ struct Day {
 
                 Row rowd('d');
                 tmp = calc_loss_from_width_and_indices(remain_height, vec, rowd,
-                                                       false);
+                                                       order_weight, false);
                 // cerr << tmp << endl;
                 if (tmp < smallest_loss) {
                     smallest_loss = tmp;
@@ -664,18 +667,18 @@ struct Day {
                     smallett_loss_dir = 'd';
                 }
             }
-            // 2つずつ使う作戦
+            // 2つずつ使う作戦 1225
             for (auto idx : unused_indices) {
                 for (auto idx2 : unused_indices) {
-                    if (!(idx < idx2)) {
-                        continue;
+                    if (!(idx > idx2)) {
+                        break;
                     }
                     vector<int> vec = {idx, idx2};
                     int tmp;
 
                     Row rowr('r');
-                    tmp = calc_loss_from_width_and_indices(remain_width, vec,
-                                                           rowr, false);
+                    tmp = calc_loss_from_width_and_indices(
+                        remain_width, vec, rowr, order_weight, false);
                     // cerr << tmp << endl;
                     if (tmp < smallest_loss) {
                         smallest_loss = tmp;
@@ -684,8 +687,8 @@ struct Day {
                     }
 
                     Row rowd('d');
-                    tmp = calc_loss_from_width_and_indices(remain_height, vec,
-                                                           rowd, false);
+                    tmp = calc_loss_from_width_and_indices(
+                        remain_height, vec, rowd, order_weight, false);
                     // cerr << tmp << endl;
                     if (tmp < smallest_loss) {
                         smallest_loss = tmp;
@@ -694,34 +697,133 @@ struct Day {
                     }
                 }
             }
-            // 3つずつ使う作戦
-            for (auto idx : unused_indices) {
-                for (auto idx2 : unused_indices) {
-                    for (auto idx3 : unused_indices) {
-                        if (!(idx < idx2 && idx2 < idx3)) {
-                            continue;
+            // 3つずつ使う作戦 4060
+            if (N <= 30) {
+                for (auto idx : unused_indices) {
+                    for (auto idx2 : unused_indices) {
+                        if (!(idx > idx2)) {
+                            break;
                         }
-                        vector<int> vec = {idx, idx2, idx3};
-                        int tmp;
+                        for (auto idx3 : unused_indices) {
+                            if (!(idx2 > idx3)) {
+                                break;
+                            }
+                            vector<int> vec = {idx, idx2, idx3};
+                            int tmp;
 
-                        Row rowr('r');
-                        tmp = calc_loss_from_width_and_indices(
-                            remain_width, vec, rowr, false);
-                        // cerr << tmp << endl;
-                        if (tmp < smallest_loss) {
-                            smallest_loss = tmp;
-                            smallest_loss_vec = vec;
-                            smallett_loss_dir = 'r';
+                            Row rowr('r');
+                            tmp = calc_loss_from_width_and_indices(
+                                remain_width, vec, rowr, order_weight, false);
+                            // cerr << tmp << endl;
+                            if (tmp < smallest_loss) {
+                                smallest_loss = tmp;
+                                smallest_loss_vec = vec;
+                                smallett_loss_dir = 'r';
+                            }
+
+                            Row rowd('d');
+                            tmp = calc_loss_from_width_and_indices(
+                                remain_height, vec, rowd, order_weight, false);
+                            // cerr << tmp << endl;
+                            if (tmp < smallest_loss) {
+                                smallest_loss = tmp;
+                                smallest_loss_vec = vec;
+                                smallett_loss_dir = 'd';
+                            }
                         }
+                    }
+                }
+            }
+            // 4つずつ使う作戦 4845
+            if (N <= 20) {
+                for (auto idx : unused_indices) {
+                    for (auto idx2 : unused_indices) {
+                        if (!(idx > idx2)) {
+                            break;
+                        }
+                        for (auto idx3 : unused_indices) {
+                            if (!(idx2 > idx3)) {
+                                break;
+                            }
+                            for (auto idx4 : unused_indices) {
+                                if (!(idx3 > idx4)) {
+                                    break;
+                                }
+                                vector<int> vec = {idx, idx2, idx3, idx4};
+                                int tmp;
 
-                        Row rowd('d');
-                        tmp = calc_loss_from_width_and_indices(
-                            remain_height, vec, rowd, false);
-                        // cerr << tmp << endl;
-                        if (tmp < smallest_loss) {
-                            smallest_loss = tmp;
-                            smallest_loss_vec = vec;
-                            smallett_loss_dir = 'd';
+                                Row rowr('r');
+                                tmp = calc_loss_from_width_and_indices(
+                                    remain_width, vec, rowr, order_weight,
+                                    false);
+                                // cerr << tmp << endl;
+                                if (tmp < smallest_loss) {
+                                    smallest_loss = tmp;
+                                    smallest_loss_vec = vec;
+                                    smallett_loss_dir = 'r';
+                                }
+
+                                Row rowd('d');
+                                tmp = calc_loss_from_width_and_indices(
+                                    remain_height, vec, rowd, order_weight,
+                                    false);
+                                // cerr << tmp << endl;
+                                if (tmp < smallest_loss) {
+                                    smallest_loss = tmp;
+                                    smallest_loss_vec = vec;
+                                    smallett_loss_dir = 'd';
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // 5つずつ使う作戦 4368
+            if (N <= 16) {
+                for (auto idx : unused_indices) {
+                    for (auto idx2 : unused_indices) {
+                        if (!(idx > idx2)) {
+                            break;
+                        }
+                        for (auto idx3 : unused_indices) {
+                            if (!(idx2 > idx3)) {
+                                break;
+                            }
+                            for (auto idx4 : unused_indices) {
+                                if (!(idx3 > idx4)) {
+                                    break;
+                                }
+                                for (auto idx5 : unused_indices) {
+                                    if (!idx4 > idx5) {
+                                        break;
+                                    }
+                                    vector<int> vec = {idx, idx2, idx3, idx4,
+                                                       idx5};
+                                    int tmp;
+
+                                    Row rowr('r');
+                                    tmp = calc_loss_from_width_and_indices(
+                                        remain_width, vec, rowr, order_weight,
+                                        false);
+                                    // cerr << tmp << endl;
+                                    if (tmp < smallest_loss) {
+                                        smallest_loss = tmp;
+                                        smallest_loss_vec = vec;
+                                        smallett_loss_dir = 'r';
+                                    }
+
+                                    Row rowd('d');
+                                    tmp = calc_loss_from_width_and_indices(
+                                        remain_height, vec, rowd, order_weight,
+                                        false);
+                                    // cerr << tmp << endl;
+                                    if (tmp < smallest_loss) {
+                                        smallest_loss = tmp;
+                                        smallest_loss_vec = vec;
+                                        smallett_loss_dir = 'd';
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -729,19 +831,26 @@ struct Day {
             Row row(smallett_loss_dir);
             // cerr << row.dir << endl;
             if (smallett_loss_dir == 'r') {
-                calc_loss_from_width_and_indices(remain_width,
-                                                 smallest_loss_vec, row, true);
+                calc_loss_from_width_and_indices(
+                    remain_width, smallest_loss_vec, row, order_weight, true);
                 remain_height -= row.height;
+                if (remain_height < 0) {
+                    return false;
+                }
             } else {
-                calc_loss_from_width_and_indices(remain_height,
-                                                 smallest_loss_vec, row, true);
+                calc_loss_from_width_and_indices(
+                    remain_height, smallest_loss_vec, row, order_weight, true);
                 remain_width -= row.height;
+                if (remain_width < 0) {
+                    return false;
+                }
             }
             rows.push_back(row);
             rep(i, smallest_loss_vec.size()) {
                 unused_indices.erase(smallest_loss_vec[i]);
             }
         }
+        return true;
     }
     void touch_bottom() {
         int margin = W - rows[rows.size() - 1].bottom_pos;
@@ -994,7 +1103,28 @@ struct Hall {
         // print_annealing();
     }
     void execute_ul() {
-        rep(i, D) { days[i].init_day_ul(); }
+        rep(i, D) {
+            repr(j, 10) {
+                days[i] = Day(i, a[i]);
+                if (days[i].init_day_ul(-0.01 * j)) {
+                    // cerr << -0.01 * j << endl;
+                    break;
+                }
+            }
+        }
+    }
+    void make_perfect_ul() {
+        vector<int> a_day = calc_days_max();
+        Day day(-1, a_day);
+
+        repr(i, 10) {
+            if (day.init_day_ul(-0.01 * i)) {
+                rep(i, D) { days[i] = day; }
+                print_ans_by_ul();
+                exit(0);
+            }
+        }
+        init();
     }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
@@ -1184,6 +1314,7 @@ int main() {
 
     Hall best;
     best.init();
+    best.make_perfect_ul();
     best.execute_ul();
     best.print_ans_by_ul();
     return 0;
