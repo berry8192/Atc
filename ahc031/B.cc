@@ -229,11 +229,16 @@ struct Row {
     int height;     // 高さ
     int bottom_pos; // 下端
     int loss;
+    char dir;
 
-    Row() {}
-    Row(int iheight, int ibottom_pos) {
-        height = iheight;
-        bottom_pos = ibottom_pos;
+    Row() {
+        dir = 'r'; // 右方向にのびる
+    }
+    Row(char i_dir) { dir = i_dir; }
+    Row(int i_height, int i_bottom_pos, char i_dir = 'r') {
+        height = i_height;
+        bottom_pos = i_bottom_pos;
+        dir = i_dir;
     }
 
     // ロスのない最小の高さにする、bottomは計算しない
@@ -593,6 +598,85 @@ struct Day {
         }
         return false;
     }
+    // 便宜上幅から計算する名前にしているが、高さでもOK
+    int calc_loss_from_width_and_indices(int width, vector<int> &indices,
+                                         Row &row, bool create = false) {
+        assert(row.columns.size() == 0);
+        int area_sum = 0;
+        int max_height = 0;
+        rep(i, indices.size()) { area_sum += a_day[indices[i]]; }
+        vector<int> new_widths(indices.size());
+        rep(i, indices.size()) {
+            // 切り捨てで幅を計算する
+            new_widths[i] = max(1, width * a_day[indices[i]] / area_sum);
+            max_height =
+                max(max_height,
+                    (a_day[indices[i]] + new_widths[i] - 1) / new_widths[i]);
+        }
+        if (create) {
+            vector<int> right_poses = ruiseki(new_widths);
+            row.columns.resize(
+                indices.size()); // 関数の頭でサイズが0であることを確認済み
+            rep(i, indices.size()) {
+                row.columns[i].idx = indices[i];
+                row.columns[i].width = new_widths[i];
+                // row.columns[i].right_pos = right_poses[i + 1];
+            }
+            row.height = max_height;
+        }
+        return max_height * width - area_sum;
+    }
+    void init_day_ul() {
+        rows.clear();
+        int remain_height = W;
+        int remain_width = W;
+        set<int> unused_indices;
+        rep(i, N) { unused_indices.insert(i); }
+        while (!unused_indices.empty()) {
+            int smallest_loss = imax;
+            vector<int> smallest_loss_vec;
+            char smallett_loss_dir;
+            // まずは1つずつしか使わない作戦
+            for (auto idx : unused_indices) {
+                vector<int> vec = {idx}; // 後々複数個になるかも
+                int tmp;
+
+                Row rowr('r');
+                tmp = calc_loss_from_width_and_indices(remain_width, vec, rowr,
+                                                       false);
+                // cerr << tmp << endl;
+                if (tmp < smallest_loss) {
+                    smallest_loss = tmp;
+                    smallest_loss_vec = vec;
+                    smallett_loss_dir = 'r';
+                }
+
+                Row rowd('d');
+                tmp = calc_loss_from_width_and_indices(remain_height, vec, rowd,
+                                                       false);
+                // cerr << tmp << endl;
+                if (tmp < smallest_loss) {
+                    smallest_loss = tmp;
+                    smallest_loss_vec = vec;
+                    smallett_loss_dir = 'd';
+                }
+            }
+            Row row(smallett_loss_dir);
+            if (smallett_loss_dir == 'r') {
+                calc_loss_from_width_and_indices(remain_width,
+                                                 smallest_loss_vec, row, true);
+                remain_height -= row.height;
+            } else {
+                calc_loss_from_width_and_indices(remain_height,
+                                                 smallest_loss_vec, row, true);
+                remain_width -= row.height;
+            }
+            rows.push_back(row);
+            rep(i, smallest_loss_vec.size()) {
+                unused_indices.erase(smallest_loss_vec[i]);
+            }
+        }
+    }
     void touch_bottom() {
         int margin = W - rows[rows.size() - 1].bottom_pos;
         if (margin > 0) {
@@ -674,6 +758,53 @@ struct Day {
             cout << su[i] << " " << sl[i] << " " << sd[i] << " " << sr[i]
                  << endl;
         }
+    }
+    void print_ans_by_ul() {
+        vector<int> su(N);
+        vector<int> sl(N);
+        vector<int> sd(N);
+        vector<int> sr(N);
+        int up = 0, left = 0;
+        rep(i, rows.size()) {
+            if (rows[i].dir == 'r') {
+                int u = up;
+                int d = u + rows[i].height;
+                int l = left;
+                rep(j, rows[i].columns.size()) {
+                    int r = l + rows[i].columns[j].width;
+                    if (j == rows[i].columns.size() - 1) {
+                        r = W;
+                    }
+                    su[rows[i].columns[j].idx] = u;
+                    sl[rows[i].columns[j].idx] = l;
+                    sd[rows[i].columns[j].idx] = d;
+                    sr[rows[i].columns[j].idx] = r;
+                    l = r;
+                }
+                up = d;
+            } else {
+                int l = left;
+                int r = l + rows[i].height;
+                int u = up;
+                rep(j, rows[i].columns.size()) {
+                    int d = l + rows[i].columns[j].width;
+                    if (j == rows[i].columns.size() - 1) {
+                        d = W;
+                    }
+                    su[rows[i].columns[j].idx] = u;
+                    sl[rows[i].columns[j].idx] = l;
+                    sd[rows[i].columns[j].idx] = d;
+                    sr[rows[i].columns[j].idx] = r;
+                    u = d;
+                }
+                left = r;
+            }
+        }
+        rep(i, N) {
+            cout << su[i] << " " << sl[i] << " " << sd[i] << " " << sr[i]
+                 << endl;
+        }
+        // cerr << (W - left) * (W - up) SP << W - left SP << W - up << endl;
     }
     void print_rows() {
         rep(i, rows.size()) {
@@ -795,6 +926,9 @@ struct Hall {
         touch_right_and_bottom_all_days();
         // print_annealing();
     }
+    void execute_ul() {
+        rep(i, D) { days[i].init_day_ul(); }
+    }
     // 厳密な計算ではないが、横線の数が違う場合は適当にコストを増やす
     // 右端と下端はWになっているものとしている
     ll calc_partition_loss(int day) {
@@ -913,6 +1047,9 @@ struct Hall {
     void print_ans() {
         rep(i, D) { days[i].print_ans(); }
     }
+    void print_ans_by_ul() {
+        rep(i, D) { days[i].print_ans_by_ul(); }
+    }
     void
     print_annealing(/*vector<double> row_height_aves = {},
                     vector<vector<double>> row_height_distance_from_aves = {{}},
@@ -980,36 +1117,42 @@ int main() {
 
     Hall best;
     best.init();
-    best.execute_annealing();
-    best.calc_loss();
-    // cerr << best.hall_loss << endl;
+    best.execute_ul();
+    best.print_ans_by_ul();
+    return 0;
 
-    Hall hall;
-    hall.init();
-    hall.execute_interval_dp();
-    hall.calc_max_height_sum();
-    // cerr << best.calc_max_height_sum() << endl;
-    hall.calc_loss();
-    if (hall.hall_loss < best.hall_loss) {
-        best = hall;
-        // cerr << loop SP << timer.progress() SP << hall.hall_loss
-        // << endl;
-    }
+    // Hall hall;
+    // hall.init();
+    // hall.execute_annealing();
+    // hall.calc_loss();
+    // // cerr << hall.hall_loss << endl;
 
-    rep(i, N) {
-        Hall hall;
-        hall.init();
-        if (hall.execute_fixed_division(i + 1) == false) {
-            continue;
-        }
-        // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() << endl;
-        hall.calc_loss();
-        if (hall.hall_loss < best.hall_loss) {
-            best = hall;
-            // cerr << loop SP << timer.progress() SP << hall.hall_loss
-            // << endl;
-        }
-    }
+    // Hall hall;
+    // hall.init();
+    // hall.execute_interval_dp();
+    // hall.calc_max_height_sum();
+    // // cerr << best.calc_max_height_sum() << endl;
+    // hall.calc_loss();
+    // if (hall.hall_loss < best.hall_loss) {
+    //     best = hall;
+    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss
+    //     // << endl;
+    // }
+
+    // rep(i, N) {
+    //     Hall hall;
+    //     hall.init();
+    //     if (hall.execute_fixed_division(i + 1) == false) {
+    //         continue;
+    //     }
+    //     // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() << endl;
+    //     hall.calc_loss();
+    //     if (hall.hall_loss < best.hall_loss) {
+    //         best = hall;
+    //         // cerr << loop SP << timer.progress() SP << hall.hall_loss
+    //         // << endl;
+    //     }
+    // }
 
     // int loop = 0;
     // while (timer.progress() < 1.0) {
