@@ -1545,8 +1545,8 @@ int main() {
     best.init();
     best.execute_ul();
     best.calc_accurate_loss_ul();
-    cerr << "calc_accurate_loss_ul" << endl;
-    cerr << best.hall_loss << endl;
+    // cerr << "calc_accurate_loss_ul" << endl;
+    // cerr << best.hall_loss << endl;
 
     vector<int> days_max = calc_days_max();
     repr(i, N) {
@@ -1563,8 +1563,8 @@ int main() {
         }
         if (hall.execute_ul_fixed()) {
             hall.calc_accurate_loss_ul();
-            cerr << "execute_ul_fixed: " << i << endl;
-            cerr << hall.hall_loss << endl;
+            // cerr << "execute_ul_fixed: " << i << endl;
+            // cerr << hall.hall_loss << endl;
             if (hall.hall_loss < best.hall_loss) {
                 best = hall;
             }
@@ -1575,8 +1575,8 @@ int main() {
     hall.init();
     hall.execute_annealing();
     hall.calc_accurate_loss_ul();
-    cerr << "execute_annealing" << endl;
-    cerr << hall.hall_loss << endl;
+    // cerr << "execute_annealing" << endl;
+    // cerr << hall.hall_loss << endl;
     if (hall.hall_loss < best.hall_loss) {
         best = hall;
     }
@@ -1586,8 +1586,8 @@ int main() {
     hall.calc_max_height_sum();
     // cerr << best.calc_max_height_sum() << endl;
     hall.calc_accurate_loss_ul();
-    cerr << "execute_interval_dp" << endl;
-    cerr << hall.hall_loss << endl;
+    // cerr << "execute_interval_dp" << endl;
+    // cerr << hall.hall_loss << endl;
     if (hall.hall_loss < best.hall_loss) {
         best = hall;
     }
@@ -1598,8 +1598,8 @@ int main() {
             continue;
         }
         hall.calc_accurate_loss_ul();
-        cerr << "execute_fixed_division" << endl;
-        cerr << hall.hall_loss << endl;
+        // cerr << "execute_fixed_division" << endl;
+        // cerr << hall.hall_loss << endl;
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
         }
@@ -1614,8 +1614,8 @@ int main() {
             best = hall;
         }
     }
-    cerr << loop SP << timer.progress() << endl;
-    cerr << best.hall_loss << endl;
+    // cerr << loop SP << timer.progress() << endl;
+    // cerr << best.hall_loss << endl;
     best.print_ans();
 
     return 0;
