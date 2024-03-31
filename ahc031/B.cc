@@ -947,7 +947,41 @@ struct Day {
         }
         rows.push_back(row);
     }
-    void adjust_row_size(int row_size) {}
+    void adjust_row_size(int row_size, Day &max_day) {
+        vector<Row> open_rows;
+        rep3(i, max_day.rows.size(), rows.size()) {
+            Row row(max_day.rows[i].height, -1, max_day.rows[i].dir);
+            int sum_width = 0;
+            rep(j, max_day.rows[i].columns.size()) {
+                sum_width += max_day.rows[i].columns[j].width;
+            }
+            row.columns.push_back({-1, sum_width, -1});
+            open_rows.push_back(row);
+        }
+        int remain_size_up = row_size - rows.size();
+
+        vector<Row> add_rows;
+        rep(i, rows.size()) {
+            while (rows[i].columns.size() >= 2 && !open_rows.empty()) {
+                if (a_day[rows[i].columns[1].idx] <=
+                    open_rows[open_rows.size() - 1].height *
+                        open_rows[open_rows.size() - 1].columns[0].width) {
+                    add_rows.push_back(open_rows[open_rows.size() - 1]);
+                    add_rows[add_rows.size() - 1].columns[0].idx =
+                        rows[i].columns[1].idx;
+                    open_rows.pop_back();
+                    rows[i].columns[0].width += rows[i].columns[1].width;
+                    rows[i].columns.erase(rows[i].columns.begin() + 1);
+                    if (open_rows.empty()) {
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+        }
+        repr(i, add_rows.size()) { rows.push_back(add_rows[i]); }
+    }
     void touch_bottom() {
         int margin = W - rows[rows.size() - 1].bottom_pos;
         if (margin > 0) {
@@ -1137,6 +1171,9 @@ struct Day {
                     int r = l + rows[i].columns[j].width;
                     if (j == rows[i].columns.size() - 1) {
                         r = W;
+                        if (i == rows.size() - 1) {
+                            d = W;
+                        }
                     }
                     su[rows[i].columns[j].idx] = u;
                     sl[rows[i].columns[j].idx] = l;
@@ -1153,6 +1190,9 @@ struct Day {
                     int d = u + rows[i].columns[j].width;
                     if (j == rows[i].columns.size() - 1) {
                         d = W;
+                        if (i == rows.size() - 1) {
+                            r = W;
+                        }
                     }
                     su[rows[i].columns[j].idx] = u;
                     sl[rows[i].columns[j].idx] = l;
@@ -1317,10 +1357,14 @@ struct Hall {
     }
     void slide_idx() {
         int max_row_size = 0;
+        int day_idx;
         rep(i, D) {
-            max_row_size = max(max_row_size, int(days[i].rows.size()));
+            if (max_row_size < int(days[i].rows.size())) {
+                max_row_size = (days[i].rows.size());
+                day_idx = i;
+            }
         }
-        rep(i, D) { days[i].adjust_row_size(max_row_size); }
+        rep(i, D) { days[i].adjust_row_size(max_row_size, days[day_idx]); }
     }
     bool execute_pack(int idx_dist_lim, int additional_length, int fixed_head,
                       bool last_one) {
@@ -1361,25 +1405,25 @@ struct Hall {
                                              days_remain_area_idx[i],
                                              idx_dist_lim, fixed_head,
                                              last_one);
-                    if (days_remain_area_idx[i].empty() &&
-                        days[i].rows[days[i].rows.size() - 1].height <
-                            remain_height) {
-                        // 最後の1つはすべてを埋める
-                        days[i].rows[days[i].rows.size() - 1].height =
-                            remain_height;
-                    }
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_height) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_height;
+                    // }
                 } else {
                     days[i].make_row_by_pack(
                         rows_dir, use_height, remain_height,
                         days_remain_area_idx[i], idx_dist_lim, fixed_head,
                         last_one);
-                    if (days_remain_area_idx[i].empty() &&
-                        days[i].rows[days[i].rows.size() - 1].height <
-                            remain_width) {
-                        // 最後の1つはすべてを埋める
-                        days[i].rows[days[i].rows.size() - 1].height =
-                            remain_width;
-                    }
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_width) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_width;
+                    // }
                 }
             }
             if (rows_dir == 'r') {
@@ -1664,7 +1708,7 @@ int main() {
     best.hall_loss = lmax;
 
     // cerr << "execute_ul" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         Hall hall;
         hall.init();
         hall.execute_ul();
@@ -1676,7 +1720,7 @@ int main() {
     }
 
     // cerr << "execute_ul_fixed: " << i << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         vector<int> days_max = calc_days_max();
         repr(i, N) {
             // N-1 -> 0, i個統一する
@@ -1701,7 +1745,7 @@ int main() {
     }
 
     // cerr << "execute_annealing" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         rep3(i, N, 1) {
             Hall hall;
             hall.init();
@@ -1715,7 +1759,7 @@ int main() {
     }
 
     // cerr << "execute_interval_dp" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         Hall hall;
         hall.init();
         hall.execute_interval_dp();
@@ -1729,7 +1773,7 @@ int main() {
     }
 
     // cerr << "execute_fixed_division" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         rep(i, N) {
             Hall hall;
             hall.init();
@@ -1745,11 +1789,11 @@ int main() {
 
     // cerr << "execute_pack_ul" << endl;
     rep(lp, 1) {
-        rep(i, N) {
+        rep3(i, N * 3 / 4, N / 4) {
             // idx_dist_lim
             // rep(j, 10) {
             // additional_length
-            rep(k, 4) {
+            rep(k, 5) {
                 // fixed_head
                 rep(l, 2) {
                     // last_one
@@ -1768,16 +1812,16 @@ int main() {
             }
             // }
         }
-        Hall hall;
-        hall.init();
-        // if (hall.execute_pack(i, j * 10)) {
-        if (hall.execute_pack(N, 0, 0, true)) {
-            hall.calc_accurate_loss_ul();
-            // cerr << hall.hall_loss << endl;
-            if (hall.hall_loss < best.hall_loss) {
-                best = hall;
-            }
-        }
+        // Hall hall;
+        // hall.init();
+        // // if (hall.execute_pack(i, j * 10)) {
+        // if (hall.execute_pack(N, 0, 0, true)) {
+        //     hall.calc_accurate_loss_ul();
+        //     // cerr << hall.hall_loss << endl;
+        //     if (hall.hall_loss < best.hall_loss) {
+        //         best = hall;
+        //     }
+        // }
     }
 
     // 今のところ効果なし
