@@ -1542,81 +1542,102 @@ int main() {
     perfect_ul.make_perfect_ul();
 
     Hall best;
-    best.init();
-    best.execute_ul();
-    best.calc_accurate_loss_ul();
-    // cerr << "calc_accurate_loss_ul" << endl;
-    // cerr << best.hall_loss << endl;
+    best.hall_loss = lmax;
 
-    vector<int> days_max = calc_days_max();
-    repr(i, N) {
-        // N-1 -> 0, i個統一する
+    rep(lp, 1) {
         Hall hall;
         hall.init();
-        rep(j, D) {
-            // j日目を操作
-            rep(k, i + 1) {
-                // N-1からi個
-                hall.days[j].a_day[k] = days_max[k];
-                // hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
-            }
-        }
-        if (hall.execute_ul_fixed()) {
-            hall.calc_accurate_loss_ul();
-            // cerr << "execute_ul_fixed: " << i << endl;
-            // cerr << hall.hall_loss << endl;
-            if (hall.hall_loss < best.hall_loss) {
-                best = hall;
-            }
-        }
-    }
-
-    Hall hall;
-    hall.init();
-    hall.execute_annealing();
-    hall.calc_accurate_loss_ul();
-    // cerr << "execute_annealing" << endl;
-    // cerr << hall.hall_loss << endl;
-    if (hall.hall_loss < best.hall_loss) {
-        best = hall;
-    }
-
-    hall.init();
-    hall.execute_interval_dp();
-    hall.calc_max_height_sum();
-    // cerr << best.calc_max_height_sum() << endl;
-    hall.calc_accurate_loss_ul();
-    // cerr << "execute_interval_dp" << endl;
-    // cerr << hall.hall_loss << endl;
-    if (hall.hall_loss < best.hall_loss) {
-        best = hall;
-    }
-
-    rep(i, N) {
-        hall.init();
-        if (hall.execute_fixed_division(i + 1) == false) {
-            continue;
-        }
+        hall.execute_ul();
         hall.calc_accurate_loss_ul();
-        // cerr << "execute_fixed_division" << endl;
-        // cerr << hall.hall_loss << endl;
+        cerr << "execute_ul" << endl;
+        cerr << hall.hall_loss << endl;
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
         }
     }
 
-    int loop = 0;
-    while (timer.progress() < 1.0) {
-        loop++;
+    rep(lp, 1) {
+        vector<int> days_max = calc_days_max();
+        repr(i, N) {
+            // N-1 -> 0, i個統一する
+            Hall hall;
+            hall.init();
+            rep(j, D) {
+                // j日目を操作
+                rep(k, i + 1) {
+                    // N-1からi個
+                    hall.days[j].a_day[k] = days_max[k];
+                    // hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
+                }
+            }
+            if (hall.execute_ul_fixed()) {
+                hall.calc_accurate_loss_ul();
+                cerr << "execute_ul_fixed: " << i << endl;
+                cerr << hall.hall_loss << endl;
+                if (hall.hall_loss < best.hall_loss) {
+                    best = hall;
+                }
+            }
+        }
+    }
+
+    rep(lp, 1) {
+        Hall hall;
         hall.init();
-        hall.execute_shuffle_interval_dp();
+        hall.execute_annealing();
+        hall.calc_accurate_loss_ul();
+        cerr << "execute_annealing" << endl;
+        cerr << hall.hall_loss << endl;
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
         }
     }
+
+    rep(lp, 1) {
+        Hall hall;
+        hall.init();
+        hall.execute_interval_dp();
+        hall.calc_max_height_sum();
+        // cerr << best.calc_max_height_sum() << endl;
+        hall.calc_accurate_loss_ul();
+        cerr << "execute_interval_dp" << endl;
+        cerr << hall.hall_loss << endl;
+        if (hall.hall_loss < best.hall_loss) {
+            best = hall;
+        }
+    }
+
+    rep(lp, 1) {
+        rep(i, N) {
+            Hall hall;
+            hall.init();
+            if (hall.execute_fixed_division(i + 1)) {
+                hall.calc_accurate_loss_ul();
+                cerr << "execute_fixed_division" << endl;
+                cerr << hall.hall_loss << endl;
+                if (hall.hall_loss < best.hall_loss) {
+                    best = hall;
+                }
+            }
+        }
+    }
+
+    // 今のところ効果なし
+    // int loop = 0;
+    // while (timer.progress() < 0.0) {
+    //     loop++;
+    //     Hall hall;
+    //     hall.init();
+    //     hall.execute_shuffle_interval_dp();
+    //     hall.calc_accurate_loss_ul();
+    //     if (hall.hall_loss < best.hall_loss) {
+    //         best = hall;
+    //         cerr << loop SP << timer.progress() SP << best.hall_loss << endl;
+    //     }
+    // }
     // cerr << loop SP << timer.progress() << endl;
     // cerr << best.hall_loss << endl;
-    best.print_ans();
+    best.print_ans_by_ul();
 
     return 0;
 }
