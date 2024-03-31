@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-std::ofstream outputFile("log.csv", std::ios::app);
+// std::ofstream outputFile("log.csv", std::ios::app);
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -638,6 +638,9 @@ struct Day {
         set<int> unused_indices;
         rep(i, N) { unused_indices.insert(i); }
         while (!unused_indices.empty()) {
+            if (remain_height == 0 || remain_width == 0) {
+                return false;
+            }
             int smallest_loss = imax;
             vector<int> smallest_loss_vec;
             char smallett_loss_dir;
@@ -956,7 +959,7 @@ struct Day {
         }
         return loss;
     }
-    void get_partitions_ul(int &partition_length,
+    void get_partitions_ul(int &partition_length, int &area_loss,
                            map<int, set<pair<int, int>>> &right_partitions,
                            map<int, set<pair<int, int>>> &down_partitions) {
         map<int, set<pair<int, int>>> rps;
@@ -976,18 +979,12 @@ struct Day {
                         rps[u].insert(make_pair(l, r));
                         partition_length += r - l;
                     }
-                    // if (d != W) {
-                    //     rps[d].insert(make_pair(l, r));
-                    //     partition_length += r - l;
-                    // }
                     if (l != 0) {
                         dps[l].insert(make_pair(u, d));
                         partition_length += d - u;
                     }
-                    // if (r != W) {
-                    //     dps[r].insert(make_pair(u, d));
-                    //     partition_length += d - u;
-                    // }
+                    area_loss += 100 * (max(0, a_day[rows[i].columns[j].idx] -
+                                                   (d - u) * (r - l)));
                     l = r;
                 }
                 up = d;
@@ -1004,18 +1001,12 @@ struct Day {
                         rps[u].insert(make_pair(l, r));
                         partition_length += r - l;
                     }
-                    // if (d != W) {
-                    //     rps[d].insert(make_pair(l, r));
-                    //     partition_length += r - l;
-                    // }
                     if (l != 0) {
                         dps[l].insert(make_pair(u, d));
                         partition_length += d - u;
                     }
-                    // if (r != W) {
-                    //     dps[r].insert(make_pair(u, d));
-                    //     partition_length += d - u;
-                    // }
+                    area_loss += 100 * (max(0, a_day[rows[i].columns[j].idx] -
+                                                   (d - u) * (r - l)));
                     u = d;
                 }
                 left = r;
@@ -1264,16 +1255,22 @@ struct Hall {
         touch_right_and_bottom_all_days();
         // print_annealing();
     }
-    void execute_ul() {
+    bool execute_ul() {
         rep(i, D) {
+            bool created = false;
             repr(j, 10) {
                 days[i] = Day(i, a[i]);
                 if (days[i].init_day_ul(-0.01 * j)) {
                     // cerr << -0.01 * j << endl;
+                    created = true;
                     break;
                 }
             }
+            if (created == false) {
+                return false;
+            }
         }
+        return true;
     }
     bool execute_ul_fixed() {
         rep(i, D) {
@@ -1373,17 +1370,18 @@ struct Hall {
         map<int, set<pair<int, int>>> right_partitions, down_partitions;
         map<int, set<pair<int, int>>> right_partitions2, down_partitions2;
         vector<int> partition_length(D);
+        vector<int> area_loss(D);
         vector<int> partition_duplicate(D - 1); // i日目とi+1日目の間
         rep(i, D) {
             if (i % 2 == 0) {
                 right_partitions.clear();
                 down_partitions.clear();
-                days[i].get_partitions_ul(partition_length[i], right_partitions,
-                                          down_partitions);
+                days[i].get_partitions_ul(partition_length[i], area_loss[i],
+                                          right_partitions, down_partitions);
             } else {
                 right_partitions2.clear();
                 down_partitions2.clear();
-                days[i].get_partitions_ul(partition_length[i],
+                days[i].get_partitions_ul(partition_length[i], area_loss[i],
                                           right_partitions2, down_partitions2);
             }
             // 初日は設置コストが発生しない
@@ -1395,6 +1393,7 @@ struct Hall {
             }
         }
         int partition_loss_sum = 1;
+        partition_loss_sum += area_loss[0];
         rep3(i, D, 1) {
             // 前日を撤去
             partition_loss_sum += partition_length[i - 1];
@@ -1402,6 +1401,8 @@ struct Hall {
             partition_loss_sum += partition_length[i];
             // 動かさなくてよかった部分は保持
             partition_loss_sum -= 2 * partition_duplicate[i - 1];
+            // 面積不足ペナルティ
+            partition_loss_sum += area_loss[i];
         }
         hall_loss = partition_loss_sum;
     }
@@ -1536,93 +1537,86 @@ void inpt() {
 int main() {
     inpt();
 
-    // Hall perfect_ul;
-    // perfect_ul.init();
-    // perfect_ul.make_perfect_ul();
-
-    // vector<int> days_max = calc_days_max();
-    // repr(i, N) {
-    //     // N-1 -> 0, i個統一する
-    //     Hall hall;
-    //     hall.init();
-    //     rep(j, D) {
-    //         // j日目を操作
-    //         rep(k, i + 1) {
-    //             // N-1からi個
-    //             hall.days[j].a_day[k] = days_max[k];
-    //             // hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
-    //         }
-    //     }
-    //     if (hall.execute_ul_fixed()) {
-    //         hall.print_ans_by_ul();
-    //         return 0;
-    //     }
-    // }
+    Hall perfect_ul;
+    perfect_ul.init();
+    perfect_ul.make_perfect_ul();
 
     Hall best;
     best.init();
     best.execute_ul();
     best.calc_accurate_loss_ul();
-    outputFile << best.hall_loss << endl;
-    best.print_ans_by_ul();
-    return 0;
+    cerr << "calc_accurate_loss_ul" << endl;
+    cerr << best.hall_loss << endl;
 
-    // Hall hall;
-    // hall.init();
-    // hall.execute_annealing();
-    // hall.calc_loss();
-    // if (hall.hall_loss < best.hall_loss) {
-    //     best = hall;
-    // }
-    // hall.print_ans();
-    // cerr << hall.hall_loss << endl;
+    vector<int> days_max = calc_days_max();
+    repr(i, N) {
+        // N-1 -> 0, i個統一する
+        Hall hall;
+        hall.init();
+        rep(j, D) {
+            // j日目を操作
+            rep(k, i + 1) {
+                // N-1からi個
+                hall.days[j].a_day[k] = days_max[k];
+                // hall.days[j].a_day[N - 1 - k] = days_max[N - 1 - k];
+            }
+        }
+        if (hall.execute_ul_fixed()) {
+            hall.calc_accurate_loss_ul();
+            cerr << "execute_ul_fixed: " << i << endl;
+            cerr << hall.hall_loss << endl;
+            if (hall.hall_loss < best.hall_loss) {
+                best = hall;
+            }
+        }
+    }
 
-    // Hall hall;
-    // hall.init();
-    // hall.execute_interval_dp();
-    // hall.calc_max_height_sum();
-    // // cerr << best.calc_max_height_sum() << endl;
-    // hall.calc_loss();
-    // if (hall.hall_loss < best.hall_loss) {
-    //     best = hall;
-    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss
-    //     // << endl;
-    // }
+    Hall hall;
+    hall.init();
+    hall.execute_annealing();
+    hall.calc_accurate_loss_ul();
+    cerr << "execute_annealing" << endl;
+    cerr << hall.hall_loss << endl;
+    if (hall.hall_loss < best.hall_loss) {
+        best = hall;
+    }
 
-    // rep(i, N) {
-    //     Hall hall;
-    //     hall.init();
-    //     if (hall.execute_fixed_division(i + 1) == false) {
-    //         continue;
-    //     }
-    //     // cerr << "div: " << i + 1 SP << hall.calc_max_height_sum() <<
-    //     // endl;
-    //     hall.calc_loss();
-    //     if (hall.hall_loss < best.hall_loss) {
-    //         best = hall;
-    //         // cerr << loop SP << timer.progress() SP << hall.hall_loss
-    //         // << endl;
-    //     }
-    // }
+    hall.init();
+    hall.execute_interval_dp();
+    hall.calc_max_height_sum();
+    // cerr << best.calc_max_height_sum() << endl;
+    hall.calc_accurate_loss_ul();
+    cerr << "execute_interval_dp" << endl;
+    cerr << hall.hall_loss << endl;
+    if (hall.hall_loss < best.hall_loss) {
+        best = hall;
+    }
 
-    // int loop = 0;
-    // while (timer.progress() < 1.0) {
-    //     loop++;
-    //     Hall hall;
-    //     hall.init();
-    //     hall.execute_shuffle_interval_dp();
-    //     if (hall.hall_loss < best.hall_loss) {
-    //         best = hall;
-    //         // cerr << loop SP << timer.progress() SP <<
-    //         hall.hall_loss
-    //         << endl;
-    //     }
-    //     // cerr << loop SP << timer.progress() SP << hall.hall_loss
-    //     << endl;
-    // }
-    // cerr << loop SP << timer.progress() << endl;
-    // cerr << best.hall_loss << endl;
-    // best.print_ans();
+    rep(i, N) {
+        hall.init();
+        if (hall.execute_fixed_division(i + 1) == false) {
+            continue;
+        }
+        hall.calc_accurate_loss_ul();
+        cerr << "execute_fixed_division" << endl;
+        cerr << hall.hall_loss << endl;
+        if (hall.hall_loss < best.hall_loss) {
+            best = hall;
+        }
+    }
+
+    int loop = 0;
+    while (timer.progress() < 1.0) {
+        loop++;
+        hall.init();
+        hall.execute_shuffle_interval_dp();
+        if (hall.hall_loss < best.hall_loss) {
+            best = hall;
+        }
+    }
+    cerr << loop SP << timer.progress() << endl;
+    cerr << best.hall_loss << endl;
+    best.print_ans();
 
     return 0;
 }
