@@ -913,6 +913,33 @@ struct Day {
 
         return true;
     }
+    void make_row_by_pack(char rows_dir, int use_height, int remain_width,
+                          set<int> &remain_area_idx, int idx_dist_lim) {
+        Row row(use_height, -1, rows_dir);
+        vector<int> used_idx;
+        vector<int> use_width(N);
+        for (auto itr = remain_area_idx.rbegin(); itr != remain_area_idx.rend();
+             itr++) {
+            int idx = *itr;
+            use_width[idx] = (a_day[idx] + use_height - 1) / use_height;
+            if (use_width[idx] <= remain_width) {
+                if (!used_idx.empty() && used_idx[0] - idx > idx_dist_lim) {
+                    break;
+                }
+                remain_width -= use_width[idx];
+                used_idx.push_back(idx);
+                // if (used_idx.size() == 3) {
+                //     break;
+                // }
+            }
+        }
+        rep(i, used_idx.size()) {
+            row.columns.push_back(
+                Column(used_idx[i], use_width[used_idx[i]], -1));
+            remain_area_idx.erase(used_idx[i]);
+        }
+        rows.push_back(row);
+    }
     void touch_bottom() {
         int margin = W - rows[rows.size() - 1].bottom_pos;
         if (margin > 0) {
@@ -1280,6 +1307,79 @@ struct Hall {
         }
         return true;
     }
+    bool execute_pack(int idx_dist_lim, int additional_length) {
+        vector<set<int>> days_remain_area_idx(D);
+        rep(i, D) {
+            rep(j, N) { days_remain_area_idx[i].insert(j); }
+        }
+        int remain_height = W, remain_width = W;
+        char rows_dir = 'r';
+        bool remain_area = true;
+        while (remain_area) {
+            if (remain_height == 0 || remain_width == 0) {
+                return false;
+            }
+            remain_area = false;
+            int remain_max = -1;
+            rep(i, D) {
+                if (days_remain_area_idx[i].empty()) {
+                    continue;
+                }
+                remain_area = true;
+                int max_idx = *days_remain_area_idx[i].rbegin();
+                remain_max = max(remain_max, a[i][max_idx]);
+            }
+            int use_height;
+            if (rows_dir == 'r') {
+                use_height = (remain_max + remain_width - 1) / remain_width;
+            } else {
+                use_height = (remain_max + remain_height - 1) / remain_height;
+            }
+            use_height += additional_length;
+            rep(i, D) {
+                if (days_remain_area_idx[i].empty()) {
+                    continue;
+                }
+                if (rows_dir == 'r') {
+                    days[i].make_row_by_pack(rows_dir, use_height, remain_width,
+                                             days_remain_area_idx[i],
+                                             idx_dist_lim);
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_height) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_height;
+                    // }
+                } else {
+                    days[i].make_row_by_pack(
+                        rows_dir, use_height, remain_height,
+                        days_remain_area_idx[i], idx_dist_lim);
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_width) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_width;
+                    // }
+                }
+            }
+            if (rows_dir == 'r') {
+                remain_height -= use_height;
+                if (remain_height < 0) {
+                    return false;
+                }
+                rows_dir = 'd';
+            } else {
+                remain_width -= use_height;
+                if (remain_width < 0) {
+                    return false;
+                }
+                rows_dir = 'r';
+            }
+        }
+        return true;
+    }
     void make_perfect_ul() {
         vector<int> a_day = calc_days_max();
         Day day(-1, a_day);
@@ -1544,19 +1644,19 @@ int main() {
     Hall best;
     best.hall_loss = lmax;
 
-    rep(lp, 0) {
+    rep(lp, 1) {
         Hall hall;
         hall.init();
         hall.execute_ul();
         hall.calc_accurate_loss_ul();
-        cerr << "execute_ul" << endl;
-        cerr << hall.hall_loss << endl;
+        // cerr << "execute_ul" << endl;
+        // cerr << hall.hall_loss << endl;
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
         }
     }
 
-    rep(lp, 0) {
+    rep(lp, 1) {
         vector<int> days_max = calc_days_max();
         repr(i, N) {
             // N-1 -> 0, i個統一する
@@ -1572,8 +1672,8 @@ int main() {
             }
             if (hall.execute_ul_fixed()) {
                 hall.calc_accurate_loss_ul();
-                cerr << "execute_ul_fixed: " << i << endl;
-                cerr << hall.hall_loss << endl;
+                // cerr << "execute_ul_fixed: " << i << endl;
+                // cerr << hall.hall_loss << endl;
                 if (hall.hall_loss < best.hall_loss) {
                     best = hall;
                 }
@@ -1581,46 +1681,64 @@ int main() {
         }
     }
 
-    rep(lp, 0) {
+    rep(lp, 1) {
         rep3(i, N, 1) {
             Hall hall;
             hall.init();
             hall.execute_annealing(i);
             hall.calc_accurate_loss_ul();
-            cerr << "execute_annealing" << endl;
-            cerr << hall.hall_loss << endl;
+            // cerr << "execute_annealing" << endl;
+            // cerr << hall.hall_loss << endl;
             if (hall.hall_loss < best.hall_loss) {
                 best = hall;
             }
         }
     }
 
-    rep(lp, 0) {
+    rep(lp, 1) {
         Hall hall;
         hall.init();
         hall.execute_interval_dp();
         hall.calc_max_height_sum();
         // cerr << best.calc_max_height_sum() << endl;
         hall.calc_accurate_loss_ul();
-        cerr << "execute_interval_dp" << endl;
-        cerr << hall.hall_loss << endl;
+        // cerr << "execute_interval_dp" << endl;
+        // cerr << hall.hall_loss << endl;
         if (hall.hall_loss < best.hall_loss) {
             best = hall;
         }
     }
 
-    rep(lp, 0) {
+    rep(lp, 1) {
         rep(i, N) {
             Hall hall;
             hall.init();
             if (hall.execute_fixed_division(i + 1)) {
                 hall.calc_accurate_loss_ul();
-                cerr << "execute_fixed_division" << endl;
-                cerr << hall.hall_loss << endl;
+                // cerr << "execute_fixed_division" << endl;
+                // cerr << hall.hall_loss << endl;
                 if (hall.hall_loss < best.hall_loss) {
                     best = hall;
                 }
             }
+        }
+    }
+
+    rep(lp, 1) {
+        rep(i, N) {
+            // rep(j, 10) {
+            Hall hall;
+            hall.init();
+            // if (hall.execute_pack(i, j * 10)) {
+            if (hall.execute_pack(i, 0)) {
+                hall.calc_accurate_loss_ul();
+                // cerr << "execute_pack_ul" << endl;
+                // cerr << hall.hall_loss << endl;
+                if (hall.hall_loss < best.hall_loss) {
+                    best = hall;
+                }
+            }
+            // }
         }
     }
 
@@ -1634,7 +1752,8 @@ int main() {
     //     hall.calc_accurate_loss_ul();
     //     if (hall.hall_loss < best.hall_loss) {
     //         best = hall;
-    //         cerr << loop SP << timer.progress() SP << best.hall_loss << endl;
+    //         cerr << loop SP << timer.progress() SP << best.hall_loss <<
+    //         endl;
     //     }
     // }
     // cerr << loop SP << timer.progress() << endl;
