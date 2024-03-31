@@ -1217,9 +1217,9 @@ struct Hall {
         day.interval_dp();
         rep(i, D) { days[i] = day; }
     }
-    void execute_annealing() {
+    void execute_annealing(int division) {
         rep(i, D) {
-            days[i].init_day_fixed_division(sqrt(N));
+            days[i].init_day_fixed_division(division);
             days[i].adjsut_rows();
         }
         // cout << days[0].rows[days[0].rows.size() - 1].bottom_pos <<
@@ -1544,7 +1544,7 @@ int main() {
     Hall best;
     best.hall_loss = lmax;
 
-    rep(lp, 1) {
+    rep(lp, 0) {
         Hall hall;
         hall.init();
         hall.execute_ul();
@@ -1556,7 +1556,7 @@ int main() {
         }
     }
 
-    rep(lp, 1) {
+    rep(lp, 0) {
         vector<int> days_max = calc_days_max();
         repr(i, N) {
             // N-1 -> 0, i個統一する
@@ -1581,19 +1581,21 @@ int main() {
         }
     }
 
-    rep(lp, 1) {
-        Hall hall;
-        hall.init();
-        hall.execute_annealing();
-        hall.calc_accurate_loss_ul();
-        cerr << "execute_annealing" << endl;
-        cerr << hall.hall_loss << endl;
-        if (hall.hall_loss < best.hall_loss) {
-            best = hall;
+    rep(lp, 0) {
+        rep3(i, N, 1) {
+            Hall hall;
+            hall.init();
+            hall.execute_annealing(i);
+            hall.calc_accurate_loss_ul();
+            cerr << "execute_annealing" << endl;
+            cerr << hall.hall_loss << endl;
+            if (hall.hall_loss < best.hall_loss) {
+                best = hall;
+            }
         }
     }
 
-    rep(lp, 1) {
+    rep(lp, 0) {
         Hall hall;
         hall.init();
         hall.execute_interval_dp();
@@ -1607,7 +1609,7 @@ int main() {
         }
     }
 
-    rep(lp, 1) {
+    rep(lp, 0) {
         rep(i, N) {
             Hall hall;
             hall.init();
