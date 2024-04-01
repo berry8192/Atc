@@ -1486,6 +1486,88 @@ struct Hall {
         slide_idx();
         return true;
     }
+    bool execute_pack_weak(int idx_dist_lim, int additional_length,
+                           int fixed_head, bool last_one, int start_day,
+                           int end_day) {
+        vector<set<int>> days_remain_area_idx(D);
+        rep3(i, end_day, start_day) {
+            days[i] = Day(i, a[i]);
+            rep(j, N) { days_remain_area_idx[i].insert(j); }
+        }
+        int remain_height = W, remain_width = W;
+        char rows_dir = 'r';
+        bool remain_area = true;
+        while (1) {
+            if (remain_height == 0 || remain_width == 0) {
+                return false;
+            }
+            remain_area = false;
+            int remain_max = -1;
+            rep3(i, end_day, start_day) {
+                if (days_remain_area_idx[i].empty()) {
+                    continue;
+                }
+                remain_area = true;
+                int max_idx = *days_remain_area_idx[i].rbegin();
+                remain_max = max(remain_max, a[i][max_idx]);
+            }
+            if (remain_area == false) {
+                break;
+            }
+            int use_height;
+            if (rows_dir == 'r') {
+                use_height = (remain_max + remain_width - 1) / remain_width;
+            } else {
+                use_height = (remain_max + remain_height - 1) / remain_height;
+            }
+            use_height += additional_length;
+            rep3(i, end_day, start_day) {
+                if (days_remain_area_idx[i].empty()) {
+                    continue;
+                }
+                if (rows_dir == 'r') {
+                    days[i].make_row_by_pack(rows_dir, use_height, remain_width,
+                                             days_remain_area_idx[i],
+                                             idx_dist_lim, fixed_head,
+                                             last_one);
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_height) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_height;
+                    // }
+                } else {
+                    days[i].make_row_by_pack(
+                        rows_dir, use_height, remain_height,
+                        days_remain_area_idx[i], idx_dist_lim, fixed_head,
+                        last_one);
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_width) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_width;
+                    // }
+                }
+            }
+            if (rows_dir == 'r') {
+                remain_height -= use_height;
+                if (remain_height < 0) {
+                    return false;
+                }
+                rows_dir = 'd';
+            } else {
+                remain_width -= use_height;
+                if (remain_width < 0) {
+                    return false;
+                }
+                rows_dir = 'r';
+            }
+        }
+        // slide_idx();
+        return true;
+    }
     bool execute_pack_with_random(int idx_dist_lim, int additional_length,
                                   int fixed_head, bool last_one, int prob) {
         vector<set<int>> days_remain_area_idx(D);
@@ -1834,16 +1916,16 @@ int main() {
     inpt();
     bool display_score = false;
 
-    // Hall perfect_ul;
-    // perfect_ul.init();
-    // perfect_ul.make_perfect_ul();
+    Hall perfect_ul;
+    perfect_ul.init();
+    perfect_ul.make_perfect_ul();
 
     Hall best;
     best.hall_loss = lmax;
 
     if (display_score)
         cerr << "execute_ul" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         Hall hall;
         hall.init();
         hall.execute_ul();
@@ -1857,7 +1939,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_ul_fixed" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         vector<int> days_max = calc_days_max();
         repr(i, N) {
             // N-1 -> 0, i個統一する
@@ -1884,7 +1966,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_annealing" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         rep3(i, N, 1) {
             Hall hall;
             hall.init();
@@ -1900,7 +1982,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_interval_dp" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         Hall hall;
         hall.init();
         hall.execute_interval_dp();
@@ -1916,7 +1998,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_fixed_division" << endl;
-    rep(lp, 0) {
+    rep(lp, 1) {
         rep(i, N) {
             Hall hall;
             hall.init();
@@ -1962,6 +2044,36 @@ int main() {
         }
     }
 
+    rep(lp, 1) {
+        Hall hall;
+        hall.init();
+        // if (hall.execute_pack(i, j * 10)) {
+        bool complete = true;
+        rep(i, D) {
+            for (int j = D; j > i; j--) {
+                if (hall.execute_pack_weak(N, 0, 0, false, i, j)) {
+                    i = j - 1;
+                    break;
+                }
+                if (i + 1 == j) {
+                    complete = false;
+                    i = D;
+                    break;
+                }
+            }
+        }
+        if (complete) {
+            hall.calc_accurate_loss_ul();
+            // cerr << hall.hall_loss << endl;
+            if (hall.hall_loss < best.hall_loss) {
+                best = hall;
+                // cerr << loop SP << timer.progress() SP << best.hall_loss
+                //      << endl;
+            }
+        }
+    }
+
+    // random_packは無意味だった
     // int loop = 0;
     // if (do_pack_weak) {
     //     while (timer.progress() < 1.0) {
