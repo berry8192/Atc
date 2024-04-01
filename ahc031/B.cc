@@ -990,6 +990,74 @@ struct Day {
         rows.push_back(row);
         return true;
     }
+    bool align_before_day(Day &before_day, int align_idx) {
+        vector<int> use_width(N);
+        set<int> remain_area_idx;
+        rep(i, N) { remain_area_idx.insert(i); }
+        int remain_height = W;
+        int remain_width = W;
+
+        rep(i, align_idx) {
+            if (remain_height == 0 || remain_width == 0) {
+                return false;
+            }
+            Row row;
+            int using_width = 0;
+            for (auto itr = remain_area_idx.rbegin();
+                 itr != remain_area_idx.rend(); itr++) {
+                if (i < align_idx) {
+                    row = Row(before_day.rows[i].height, -1,
+                              before_day.rows[i].dir);
+                    int use_height = before_day.rows[i].height;
+                    if (before_day.rows[i].dir == 'r') {
+                        // usable_width = remain_width;
+                        remain_height -= use_height;
+                        if (remain_height < 0) {
+                            return false;
+                        }
+                    } else {
+                        // usable_width = remain_height;
+                        remain_width -= use_height;
+                        if (remain_width < 0) {
+                            return false;
+                        }
+                    }
+                    int idx = *itr;
+                    use_width[idx] = (a_day[idx] + use_height - 1) / use_height;
+                    if (row.dir == 'r') {
+                        if (using_width <= remain_width) {
+                            using_width += use_width[idx];
+                            row.columns.push_back(
+                                Column(idx, use_width[idx], -1));
+                            remain_area_idx.erase(idx);
+                        }
+                    } else {
+                        if (using_width <= remain_height) {
+                            using_width += use_width[idx];
+                            row.columns.push_back(
+                                Column(idx, use_width[idx], -1));
+                            remain_area_idx.erase(idx);
+                        }
+                    }
+                } else {
+                    int idx = *itr;
+                    int use_height =
+                        (a_day[idx] + remain_width - 1) / remain_width;
+                    if (use_height <= remain_height) {
+                        Row row(use_height, -1, 'r');
+                        row.columns.push_back(Column(idx, remain_width, -1));
+                    } else {
+                        return false;
+                    }
+                }
+            }
+            if (row.columns.empty()) {
+                return false;
+            }
+            rows.push_back(row);
+        }
+        return true;
+    }
     void adjust_row_size(int row_size, Day &max_day) {
         vector<Row> open_rows;
         rep3(i, max_day.rows.size(), rows.size()) {
@@ -1568,6 +1636,19 @@ struct Hall {
         // slide_idx();
         return true;
     }
+    void align_before_days(vector<int> &alone_days) {
+        rep(i, alone_days.size()) {
+            // cerr << i << endl;
+            Day day(alone_days[i], a[alone_days[i]]);
+            for (int j = days[alone_days[i] - 1].rows.size() - 1; j > 0; j--) {
+                if (day.align_before_day(days[alone_days[i] - 1], j)) {
+                    // cerr << i SP << j << endl;
+                    days[alone_days[i]] = day;
+                    break;
+                }
+            }
+        }
+    }
     bool execute_pack_with_random(int idx_dist_lim, int additional_length,
                                   int fixed_head, bool last_one, int prob) {
         vector<set<int>> days_remain_area_idx(D);
@@ -1925,7 +2006,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_ul" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         Hall hall;
         hall.init();
         hall.execute_ul();
@@ -1939,7 +2020,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_ul_fixed" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         vector<int> days_max = calc_days_max();
         repr(i, N) {
             // N-1 -> 0, i個統一する
@@ -1966,7 +2047,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_annealing" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         rep3(i, N, 1) {
             Hall hall;
             hall.init();
@@ -1982,7 +2063,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_interval_dp" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         Hall hall;
         hall.init();
         hall.execute_interval_dp();
@@ -1998,7 +2079,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_fixed_division" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         rep(i, N) {
             Hall hall;
             hall.init();
@@ -2016,7 +2097,7 @@ int main() {
     bool do_pack_weak = true;
     if (display_score)
         cerr << "execute_pack_ul" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         rep3(i, N * 3 / 4, N / 4) {
             // idx_dist_lim
             // rep(j, 10) {
@@ -2044,6 +2125,7 @@ int main() {
         }
     }
 
+    vector<int> alone;
     rep(lp, 1) {
         Hall hall;
         hall.init();
@@ -2052,6 +2134,9 @@ int main() {
         rep(i, D) {
             for (int j = D; j > i; j--) {
                 if (hall.execute_pack_weak(N, 0, 0, false, i, j)) {
+                    if (i + 1 == j && i != 0) {
+                        alone.push_back(i);
+                    }
                     i = j - 1;
                     break;
                 }
@@ -2063,6 +2148,7 @@ int main() {
             }
         }
         if (complete) {
+            hall.align_before_days(alone);
             hall.calc_accurate_loss_ul();
             // cerr << hall.hall_loss << endl;
             if (hall.hall_loss < best.hall_loss) {
@@ -2070,6 +2156,7 @@ int main() {
                 // cerr << loop SP << timer.progress() SP << best.hall_loss
                 //      << endl;
             }
+            // PV(alone);
         }
     }
 
@@ -2087,7 +2174,8 @@ int main() {
     //             // cerr << hall.hall_loss << endl;
     //             if (hall.hall_loss < best.hall_loss) {
     //                 best = hall;
-    //                 cerr << loop SP << timer.progress() SP << best.hall_loss
+    //                 cerr << loop SP << timer.progress() SP <<
+    //                 best.hall_loss
     //                      << endl;
     //             }
     //         }
