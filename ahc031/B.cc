@@ -947,6 +947,49 @@ struct Day {
         }
         rows.push_back(row);
     }
+    bool make_row_by_pack_with_random(char rows_dir, int use_height,
+                                      int remain_width,
+                                      set<int> &remain_area_idx,
+                                      int idx_dist_lim, int fixed_head,
+                                      bool last_one, int prob) {
+        Row row(use_height, -1, rows_dir);
+        vector<int> used_idx;
+        vector<int> use_width(N);
+        for (auto itr = remain_area_idx.rbegin(); itr != remain_area_idx.rend();
+             itr++) {
+            int idx = *itr;
+            use_width[idx] = (a_day[idx] + use_height - 1) / use_height;
+            if (use_width[idx] <= remain_width) {
+                if (rand(0, 100) <= prob) {
+                    continue;
+                }
+                if (!used_idx.empty() && used_idx[0] - idx > idx_dist_lim) {
+                    break;
+                }
+                remain_width -= use_width[idx];
+                used_idx.push_back(idx);
+                if (rows.size() < fixed_head) {
+                    break;
+                }
+                // if (used_idx.size() == 3) {
+                //     break;
+                // }
+                if (last_one && remain_area_idx.size() == used_idx.size() + 1) {
+                    break;
+                }
+            }
+        }
+        if (used_idx.empty()) {
+            return false;
+        }
+        rep(i, used_idx.size()) {
+            row.columns.push_back(
+                Column(used_idx[i], use_width[used_idx[i]], -1));
+            remain_area_idx.erase(used_idx[i]);
+        }
+        rows.push_back(row);
+        return true;
+    }
     void adjust_row_size(int row_size, Day &max_day) {
         vector<Row> open_rows;
         rep3(i, max_day.rows.size(), rows.size()) {
@@ -1443,6 +1486,96 @@ struct Hall {
         slide_idx();
         return true;
     }
+    bool execute_pack_with_random(int idx_dist_lim, int additional_length,
+                                  int fixed_head, bool last_one, int prob) {
+        vector<set<int>> days_remain_area_idx(D);
+        rep(i, D) {
+            rep(j, N) { days_remain_area_idx[i].insert(j); }
+        }
+        int remain_height = W, remain_width = W;
+        char rows_dir = 'r';
+        bool remain_area = true;
+        while (remain_area) {
+            if (remain_height == 0 || remain_width == 0) {
+                return false;
+            }
+            remain_area = false;
+            int remain_max = -1;
+            rep(i, D) {
+                if (days_remain_area_idx[i].empty()) {
+                    continue;
+                }
+                remain_area = true;
+                int max_idx = *days_remain_area_idx[i].rbegin();
+                remain_max = max(remain_max, a[i][max_idx]);
+            }
+            int use_height;
+            if (rows_dir == 'r') {
+                use_height = (remain_max + remain_width - 1) / remain_width;
+            } else {
+                use_height = (remain_max + remain_height - 1) / remain_height;
+            }
+            use_height += additional_length;
+            rep(i, D) {
+                if (days_remain_area_idx[i].empty()) {
+                    continue;
+                }
+                bool created_row = false;
+                if (rows_dir == 'r') {
+                    rep(j, N) {
+                        if (days[i].make_row_by_pack_with_random(
+                                rows_dir, use_height, remain_width,
+                                days_remain_area_idx[i], idx_dist_lim,
+                                fixed_head, last_one, prob)) {
+                            created_row = true;
+                            break;
+                        }
+                    }
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_height) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_height;
+                    // }
+                } else {
+                    rep(j, N) {
+                        if (days[i].make_row_by_pack_with_random(
+                                rows_dir, use_height, remain_height,
+                                days_remain_area_idx[i], idx_dist_lim,
+                                fixed_head, last_one, prob)) {
+                            created_row = true;
+                            break;
+                        }
+                    }
+                    // if (days_remain_area_idx[i].empty() &&
+                    //     days[i].rows[days[i].rows.size() - 1].height <
+                    //         remain_width) {
+                    //     // 最後の1つはすべてを埋める
+                    //     days[i].rows[days[i].rows.size() - 1].height =
+                    //         remain_width;
+                    // }
+                }
+                if (created_row == false) {
+                    return false;
+                }
+                if (rows_dir == 'r') {
+                    remain_height -= use_height;
+                    if (remain_height < 0) {
+                        return false;
+                    }
+                    rows_dir = 'd';
+                } else {
+                    remain_width -= use_height;
+                    if (remain_width < 0) {
+                        return false;
+                    }
+                    rows_dir = 'r';
+                }
+            }
+        }
+        return true;
+    }
     void make_perfect_ul() {
         vector<int> a_day = calc_days_max();
         Day day(-1, a_day);
@@ -1699,10 +1832,10 @@ void inpt() {
 
 int main() {
     inpt();
-    bool display_score = true;
+    bool display_score = false;
 
-    Hall perfect_ul;
-    perfect_ul.init();
+    // Hall perfect_ul;
+    // perfect_ul.init();
     // perfect_ul.make_perfect_ul();
 
     Hall best;
@@ -1710,7 +1843,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_ul" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         Hall hall;
         hall.init();
         hall.execute_ul();
@@ -1724,7 +1857,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_ul_fixed" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         vector<int> days_max = calc_days_max();
         repr(i, N) {
             // N-1 -> 0, i個統一する
@@ -1751,7 +1884,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_annealing" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         rep3(i, N, 1) {
             Hall hall;
             hall.init();
@@ -1767,7 +1900,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_interval_dp" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         Hall hall;
         hall.init();
         hall.execute_interval_dp();
@@ -1783,7 +1916,7 @@ int main() {
 
     if (display_score)
         cerr << "execute_fixed_division" << endl;
-    rep(lp, 1) {
+    rep(lp, 0) {
         rep(i, N) {
             Hall hall;
             hall.init();
@@ -1798,6 +1931,7 @@ int main() {
         }
     }
 
+    bool do_pack_weak = true;
     if (display_score)
         cerr << "execute_pack_ul" << endl;
     rep(lp, 1) {
@@ -1819,27 +1953,41 @@ int main() {
                                 cerr << hall.hall_loss SP << i SP << k SP << l
                                      << endl;
                             best = hall;
+                            do_pack_weak = false;
                         }
                     }
                 }
             }
             // }
         }
-        // Hall hall;
-        // hall.init();
-        // // if (hall.execute_pack(i, j * 10)) {
-        // if (hall.execute_pack(N, 0, 0, true)) {
-        //     hall.calc_accurate_loss_ul();
-        //     // cerr << hall.hall_loss << endl;
-        //     if (hall.hall_loss < best.hall_loss) {
-        //         best = hall;
-        //     }
-        // }
     }
+
+    // int loop = 0;
+    // if (do_pack_weak) {
+    //     while (timer.progress() < 1.0) {
+    //         Hall hall;
+    //         hall.init();
+    //         // if (hall.execute_pack(i, j * 10)) {
+    //         if (hall.execute_pack_with_random(rand(0, N), 0, rand(0, N),
+    //         false,
+    //                                           rand(0, 100))) {
+    //             hall.calc_accurate_loss_ul();
+    //             // cerr << hall.hall_loss << endl;
+    //             if (hall.hall_loss < best.hall_loss) {
+    //                 best = hall;
+    //                 cerr << loop SP << timer.progress() SP << best.hall_loss
+    //                      << endl;
+    //             }
+    //         }
+    //     }
+    // }
+
+    // cerr << loop SP << timer.progress() << endl;
+    // cerr << best.hall_loss << endl;
 
     // 今のところ効果なし
     // int loop = 0;
-    // while (timer.progress() < 0.0) {
+    // while (timer.progress() < 1.0) {
     //     loop++;
     //     Hall hall;
     //     hall.init();
