@@ -93,8 +93,69 @@ vector<vector<vector<int>>> s;
 
 struct Grid {
     vector<vector<int>> board;
+    multiset<tuple<int, int, int>> ans;
 
     void init() { board = a; }
+
+    void maximize() {
+        bool updated;
+        tuple<int, int, int> use;
+        rep(lp, K) {
+            updated = false;
+            rep(i, N - 2) {
+                rep(j, N - 2) {
+                    ll max_score = 0;
+                    rep(l, STAMP_SIZE) {
+                        rep(m, STAMP_SIZE) { max_score += board[i + l][j + m]; }
+                    }
+                    rep(k, M) {
+                        ll score = 0;
+                        rep(l, STAMP_SIZE) {
+                            rep(m, STAMP_SIZE) {
+                                score +=
+                                    (board[i + l][j + m] + s[k][l][m]) % mod;
+                            }
+                        }
+                        if (max_score < score) {
+                            max_score = score;
+                            use = {k, i, j};
+                            updated = true;
+                        }
+                    }
+                }
+            }
+            if (updated) {
+                ans.insert(use);
+                auto [t, h, w] = use;
+                rep(i, STAMP_SIZE) {
+                    rep(j, STAMP_SIZE) {
+                        board[i + h][j + w] =
+                            (board[i + h][j + w] + s[t][i][j]) % mod;
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+    ll calc_score() {
+        ll score = 0;
+        rep(i, N) {
+            rep(j, N) {
+                assert(board[i][j] < mod);
+                score += board[i][j];
+            }
+        }
+        return score;
+    }
+    void print_ans() {
+        cout << ans.size() << endl;
+        for (auto use : ans) {
+            cout << get<0>(use) << " " << get<1>(use) << " " << get<2>(use)
+                 << endl;
+        }
+    }
 };
 
 void inpt() {
@@ -116,6 +177,10 @@ int main() {
 
     Grid best;
     best.init();
+    best.maximize();
+    best.print_ans();
+    cerr << best.calc_score() << endl;
+    return 0;
 
     // int loop = 0;
     // while (1) {
