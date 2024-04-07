@@ -187,6 +187,8 @@ struct Grid {
 
     void calc_score(int r_idx, int c_idx) {
         score = 0;
+        if (rest_use < 0)
+            return;
         if (r_idx != N - 3) {
             rep(i, r_idx + 1) {
                 if (i == r_idx && c_idx != N - 3) {
@@ -244,7 +246,7 @@ void inpt() {
     }
 }
 
-int beam_width = 100;
+int beam_width = 120;
 set<Grid> grids0, grids1;
 
 int main() {
@@ -262,18 +264,28 @@ int main() {
     base.init();
     base.calc_score(N - 3, N - 3);
     grids0.insert(base);
-    rep(i, N + 10) {
+    rep(i, N + 20) {
         rep(j, N - 2) {
             // cerr << i SP << j << endl;
             if ((i * (N - 2) + j) % 2 == 0) {
                 grids1.clear();
                 for (auto grid : grids0) {
+                    if (grid.rest_use == 0) {
+                        // cerr << "err" << endl;
+                        grids1.insert(grid);
+                        continue;
+                    }
                     rep(k, M + 1) {
                         Grid tmp = grid;
                         if (k != M) {
                             tmp.fill_rc(min(N - 3, i), j, k);
                         }
                         tmp.calc_score(min(N - 3, i), j);
+                        if (tmp.score < grid.score && rand(0, 2) == 0 &&
+                            grid.rest_use > 0) {
+                            tmp.fill_rc(min(N - 3, i), j, rand(0, M - 1));
+                            tmp.calc_score(min(N - 3, i), j);
+                        }
                         grids1.insert(tmp);
                         if (grids1.size() > beam_width) {
                             auto itr = grids1.begin();
@@ -284,12 +296,21 @@ int main() {
             } else {
                 grids0.clear();
                 for (auto grid : grids1) {
+                    if (grid.rest_use == 0) {
+                        grids0.insert(grid);
+                        continue;
+                    }
                     rep(k, M + 1) {
                         Grid tmp = grid;
                         if (k != M) {
                             tmp.fill_rc(min(N - 3, i), j, k);
                         }
                         tmp.calc_score(min(N - 3, i), j);
+                        if (tmp.score < grid.score && rand(0, 2) == 0 &&
+                            grid.rest_use > 0) {
+                            tmp.fill_rc(min(N - 3, i), j, rand(0, M - 1));
+                            tmp.calc_score(min(N - 3, i), j);
+                        }
                         grids0.insert(tmp);
                         if (grids0.size() > beam_width) {
                             auto itr = grids0.begin();
@@ -300,12 +321,24 @@ int main() {
             }
         }
     }
-    auto itr = grids1.rbegin();
-    Grid best = *itr;
-    best.maximize();
+    // auto itr = grids1.rbegin();
+    // Grid best = *itr;
+    // best.maximize();
+    // best.print_ans();
+    // best.calc_score(N - 3, N - 3);
+    // cerr << best.score << endl;
+
+    Grid best;
+    best.init();
+    auto itr = grids0.rbegin();
+    for (auto grid : grids1) {
+        grid.maximize();
+        grid.calc_score(N - 3, N - 3);
+        if (grid.score > best.score) {
+            best = grid;
+        }
+    }
     best.print_ans();
-    best.calc_score(N - 3, N - 3);
-    cerr << best.score << endl;
 
     // int loop = 0;
     // while (1) {
