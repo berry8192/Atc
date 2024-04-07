@@ -95,10 +95,12 @@ struct Grid {
     vector<vector<int>> board;
     multiset<tuple<int, int, int>> ans;
     int rest_use;
+    ll score;
 
     void init() {
         board = a;
         rest_use = K;
+        score = -1;
     }
 
     void maximize() {
@@ -113,15 +115,15 @@ struct Grid {
                         rep(m, STAMP_SIZE) { max_score += board[i + l][j + m]; }
                     }
                     rep(k, M) {
-                        ll score = 0;
+                        ll tmp_score = 0;
                         rep(l, STAMP_SIZE) {
                             rep(m, STAMP_SIZE) {
-                                score +=
+                                tmp_score +=
                                     (board[i + l][j + m] + s[k][l][m]) % mod;
                             }
                         }
-                        if (max_score < score) {
-                            max_score = score;
+                        if (max_score < tmp_score) {
+                            max_score = tmp_score;
                             use = {k, i, j};
                             updated = true;
                         }
@@ -170,16 +172,50 @@ struct Grid {
             }
         }
     }
-
-    ll calc_score() {
-        ll score = 0;
-        rep(i, N) {
-            rep(j, N) {
-                assert(board[i][j] < mod);
-                score += board[i][j];
+    void fill_rc(int r_idx, int c_idx, int s_idx) {
+        rep(l, STAMP_SIZE) {
+            rep(m, STAMP_SIZE) {
+                // score -= board[r_idx + l][c_idx + m];
+                board[r_idx + l][c_idx + m] =
+                    (board[r_idx + l][c_idx + m] + s[s_idx][l][m]) % mod;
+                // score += board[r_idx + l][c_idx + m];
             }
         }
-        return score;
+        ans.insert({s_idx, r_idx, c_idx});
+        rest_use--;
+    }
+
+    void calc_score(int r_idx, int c_idx) {
+        score = 0;
+        if (r_idx != N - 3) {
+            rep(i, r_idx + 1) {
+                if (i == r_idx && c_idx != N - 3) {
+                    rep(j, c_idx + 1) {
+                        assert(board[i][j] < mod);
+                        score += board[i][j];
+                    }
+                } else {
+                    rep(j, N) {
+                        assert(board[i][j] < mod);
+                        score += board[i][j];
+                    }
+                }
+            }
+        } else {
+            rep(i, N) {
+                if (i == r_idx && c_idx != N - 3) {
+                    rep(j, c_idx + 1) {
+                        assert(board[i][j] < mod);
+                        score += board[i][j];
+                    }
+                } else {
+                    rep(j, N) {
+                        assert(board[i][j] < mod);
+                        score += board[i][j];
+                    }
+                }
+            }
+        }
     }
     void print_ans() {
         cout << ans.size() << endl;
@@ -188,6 +224,10 @@ struct Grid {
                  << endl;
         }
     }
+
+    bool operator<(const Grid &in) const {
+        return score != in.score ? score < in.score : rest_use < in.rest_use;
+    };
 };
 
 void inpt() {
@@ -204,16 +244,68 @@ void inpt() {
     }
 }
 
+int beam_width = 100;
+set<Grid> grids0, grids1;
+
 int main() {
     inpt();
 
-    Grid best;
-    best.init();
-    best.ul();
+    // Grid best;
+    // best.init();
+    // best.ul();
+    // best.maximize();
+    // best.print_ans();
+    // cerr << best.calc_score() << endl;
+    // return 0;
+
+    Grid base;
+    base.init();
+    base.calc_score(N - 3, N - 3);
+    grids0.insert(base);
+    rep(i, N + 10) {
+        rep(j, N - 2) {
+            // cerr << i SP << j << endl;
+            if ((i * (N - 2) + j) % 2 == 0) {
+                grids1.clear();
+                for (auto grid : grids0) {
+                    rep(k, M + 1) {
+                        Grid tmp = grid;
+                        if (k != M) {
+                            tmp.fill_rc(min(N - 3, i), j, k);
+                        }
+                        tmp.calc_score(min(N - 3, i), j);
+                        grids1.insert(tmp);
+                        if (grids1.size() > beam_width) {
+                            auto itr = grids1.begin();
+                            grids1.erase(itr);
+                        }
+                    }
+                }
+            } else {
+                grids0.clear();
+                for (auto grid : grids1) {
+                    rep(k, M + 1) {
+                        Grid tmp = grid;
+                        if (k != M) {
+                            tmp.fill_rc(min(N - 3, i), j, k);
+                        }
+                        tmp.calc_score(min(N - 3, i), j);
+                        grids0.insert(tmp);
+                        if (grids0.size() > beam_width) {
+                            auto itr = grids0.begin();
+                            grids0.erase(itr);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    auto itr = grids1.rbegin();
+    Grid best = *itr;
     best.maximize();
     best.print_ans();
-    cerr << best.calc_score() << endl;
-    return 0;
+    best.calc_score(N - 3, N - 3);
+    cerr << best.score << endl;
 
     // int loop = 0;
     // while (1) {
@@ -230,7 +322,8 @@ int main() {
     //         best = grid;
     //         // cout<< "loop: " << loop <<endl;
     //         // best.print_ans();
-    //         // cout<< "score: " << space.score SP << space.score*25 <<endl;
+    //         // cout<< "score: " << space.score SP << space.score*25
+    //         <<endl;
     //     }
     // }
     // // cout<< space.score SP << space.score*25 <<endl;
