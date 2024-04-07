@@ -94,13 +94,17 @@ vector<vector<vector<int>>> s;
 struct Grid {
     vector<vector<int>> board;
     multiset<tuple<int, int, int>> ans;
+    int rest_use;
 
-    void init() { board = a; }
+    void init() {
+        board = a;
+        rest_use = K;
+    }
 
     void maximize() {
         bool updated;
         tuple<int, int, int> use;
-        rep(lp, K) {
+        while (rest_use) {
             updated = false;
             rep(i, N - 2) {
                 rep(j, N - 2) {
@@ -133,8 +137,36 @@ struct Grid {
                             (board[i + h][j + w] + s[t][i][j]) % mod;
                     }
                 }
+                rest_use--;
             } else {
                 break;
+            }
+        }
+    }
+    void ul() {
+        rep(i, N - 2) {
+            rep(j, N - 2) {
+                int best_score = board[i][j];
+                int best_type = -1;
+                rep(k, M) {
+                    int score = (board[i][j] + s[k][0][0]) % mod;
+                    if (best_score < score) {
+                        best_score = score;
+                        best_type = k;
+                    }
+                }
+                if (best_type != -1) {
+                    rep(l, STAMP_SIZE) {
+                        rep(m, STAMP_SIZE) {
+                            board[i + l][j + m] =
+                                (board[i + l][j + m] + s[best_type][l][m]) %
+                                mod;
+                        }
+                    }
+                    ans.insert({best_type, i, j});
+                    rest_use--;
+                    // cerr << board[i][j] << endl;
+                }
             }
         }
     }
@@ -177,6 +209,7 @@ int main() {
 
     Grid best;
     best.init();
+    best.ul();
     best.maximize();
     best.print_ans();
     cerr << best.calc_score() << endl;
