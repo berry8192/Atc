@@ -112,8 +112,6 @@ struct Graph {
     vector<vector<Edge>> g;
     vector<Edge> edges;
     vector<vector<ll>> dist;
-    vector<Edge> euler_e;
-    vector<int> euler_used;
 
     Graph(){};
 
@@ -233,30 +231,7 @@ struct Graph {
     bool has_cycle() { return false; }
     // 連結成分に分解
     void decomp(vector<Graph> vg) {}
-    void euler_tour(int x) {
-        if (euler_used[x])
-            return;
-        euler_used[x] = 1;
-        rep(i, g[x].size()) {
-            if (euler_used[g[x][i].to])
-                continue;
-            euler_e.push_back({g[x][i].to, x, g[x][i].cost});
-            euler_tour(g[x][i].to);
-            euler_e.push_back({x, g[x][i].to, g[x][i].cost});
-        }
-    }
-    ll calc_diameter() {
-        djikstra(0);
-        ll ma = 0;
-        int mai;
-        rep(i, n) {
-            ma = max(ma, dist[0][i]);
-            mai = i;
-        }
-        djikstra(mai);
-        rep(i, n) { ma = max(ma, dist[0][i]); }
-        return ma;
-    }
+    void euler_tour(int x) {}
 };
 
 // 長い文字列を数列として解釈してmodで抑えた整数にする
@@ -339,43 +314,20 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
-    int n, ans = 0;
-    vector<int> v;
+    int n, k, x, ans = 0;
+    vector<int> v, w;
 
-    cin >> n;
+    cin >> n >> k >> x;
     v.resize(n);
 
     rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
 
     rep(i, n) {
-        if (v[i])
-            ans++;
+        w.push_back(v[i]);
+        if (i + 1 == k) {
+            w.push_back(x);
+        }
     }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
-
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
-
+    PV(w);
     return 0;
 }

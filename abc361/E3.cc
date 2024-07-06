@@ -200,9 +200,10 @@ struct Graph {
     void djikstra(int startIndex) {
         dist.clear();
         dist.resize(n);
+        dist[startIndex].resize(n, lmax);
         dist[startIndex][startIndex] = 0;
         priority_queue<Edge, vector<Edge>, greater<Edge>> q;
-        q.emplace(0, 0, startIndex);
+        q.emplace(0, startIndex, -1);
 
         while (!q.empty()) {
             const long long distance = q.top().cost;
@@ -217,12 +218,12 @@ struct Graph {
             // 現在の頂点からの各辺について
             for (const auto &edge : g[from]) {
                 // to までの新しい距離
-                const long long d = (dist[startIndex][from] + edge.cost);
+                const long long d = (distance + edge.cost);
 
                 // d が現在の記録より小さければ更新
                 if (d < dist[startIndex][edge.to]) {
                     dist[startIndex][edge.to] = d;
-                    q.emplace(d, 0, edge.to);
+                    q.emplace(d, edge.to, -1);
                 }
             }
         }
@@ -250,11 +251,21 @@ struct Graph {
         ll ma = 0;
         int mai;
         rep(i, n) {
-            ma = max(ma, dist[0][i]);
-            mai = i;
+            // cout << dist[0][i] << endl;
+            if (dist[0][i] != lmax && ma < dist[0][i]) {
+                ma = dist[0][i];
+                mai = i;
+            }
         }
+
+        ma = 0;
         djikstra(mai);
-        rep(i, n) { ma = max(ma, dist[0][i]); }
+        rep(i, n) {
+            // cout << dist[mai][i] << endl;
+            if (dist[mai][i] != lmax) {
+                ma = max(ma, dist[mai][i]);
+            }
+        }
         return ma;
     }
 };
@@ -339,43 +350,17 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
-    int n, ans = 0;
-    vector<int> v;
-
+    int n;
     cin >> n;
-    v.resize(n);
-
-    rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
-
+    Graph graph;
+    graph.init(n, n - 1, true);
+    ll ans = 0;
     rep(i, n) {
-        if (v[i])
-            ans++;
+        rep(j, graph.g[i].size()) { ans += graph.g[i][j].cost; }
     }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
+    ans -= graph.calc_diameter();
 
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
+    cout << ans << endl;
 
     return 0;
 }

@@ -112,8 +112,6 @@ struct Graph {
     vector<vector<Edge>> g;
     vector<Edge> edges;
     vector<vector<ll>> dist;
-    vector<Edge> euler_e;
-    vector<int> euler_used;
 
     Graph(){};
 
@@ -233,30 +231,7 @@ struct Graph {
     bool has_cycle() { return false; }
     // 連結成分に分解
     void decomp(vector<Graph> vg) {}
-    void euler_tour(int x) {
-        if (euler_used[x])
-            return;
-        euler_used[x] = 1;
-        rep(i, g[x].size()) {
-            if (euler_used[g[x][i].to])
-                continue;
-            euler_e.push_back({g[x][i].to, x, g[x][i].cost});
-            euler_tour(g[x][i].to);
-            euler_e.push_back({x, g[x][i].to, g[x][i].cost});
-        }
-    }
-    ll calc_diameter() {
-        djikstra(0);
-        ll ma = 0;
-        int mai;
-        rep(i, n) {
-            ma = max(ma, dist[0][i]);
-            mai = i;
-        }
-        djikstra(mai);
-        rep(i, n) { ma = max(ma, dist[0][i]); }
-        return ma;
-    }
+    void euler_tour(int x) {}
 };
 
 // 長い文字列を数列として解釈してmodで抑えた整数にする
@@ -339,43 +314,70 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
     int n, ans = 0;
-    vector<int> v;
+    string s, t;
 
     cin >> n;
-    v.resize(n);
-
-    rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
-
-    rep(i, n) {
-        if (v[i])
-            ans++;
+    cin >> s;
+    cin >> t;
+    if (s == t) {
+        cout << 0 << endl;
+        return 0;
     }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
 
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
+    int sb = 0, tb = 0;
+    rep(i, n) {
+        if (s[i] == 'B')
+            sb++;
+        if (t[i] == 'B')
+            tb++;
+    }
+    if (sb != tb) {
+        cout << -1 << endl;
+        return 0;
+    }
+
+    s += "..";
+    t += "..";
+
+    set<string> seen;
+    queue<string> qs;
+    queue<int> dep;
+    qs.push(s);
+    dep.push(0);
+
+    while (!qs.empty()) {
+        string tmps = qs.front();
+        int tmpd = dep.front();
+        qs.pop();
+        dep.pop();
+        // cout << tmps SP << tmpd << endl;
+        if (tmps == t) {
+            cout << tmpd << endl;
+            return 0;
+        }
+        int bc;
+        rep(i, tmps.size() - 1) {
+            if (tmps[i] == '.') {
+                bc = i;
+                break;
+            }
+        }
+        rep(i, tmps.size() - 1) {
+            if (tmps[i] != '.' && tmps[i + 1] != '.') {
+                swap(tmps[i], tmps[bc]);
+                swap(tmps[i + 1], tmps[bc + 1]);
+                if (seen.find(tmps) == seen.end()) {
+                    qs.push(tmps);
+                    dep.push(tmpd + 1);
+                }
+                seen.insert(tmps);
+                swap(tmps[i], tmps[bc]);
+                swap(tmps[i + 1], tmps[bc + 1]);
+            }
+        }
+    }
+    cout << -1 << endl;
 
     return 0;
 }

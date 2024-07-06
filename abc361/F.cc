@@ -112,8 +112,6 @@ struct Graph {
     vector<vector<Edge>> g;
     vector<Edge> edges;
     vector<vector<ll>> dist;
-    vector<Edge> euler_e;
-    vector<int> euler_used;
 
     Graph(){};
 
@@ -233,30 +231,7 @@ struct Graph {
     bool has_cycle() { return false; }
     // 連結成分に分解
     void decomp(vector<Graph> vg) {}
-    void euler_tour(int x) {
-        if (euler_used[x])
-            return;
-        euler_used[x] = 1;
-        rep(i, g[x].size()) {
-            if (euler_used[g[x][i].to])
-                continue;
-            euler_e.push_back({g[x][i].to, x, g[x][i].cost});
-            euler_tour(g[x][i].to);
-            euler_e.push_back({x, g[x][i].to, g[x][i].cost});
-        }
-    }
-    ll calc_diameter() {
-        djikstra(0);
-        ll ma = 0;
-        int mai;
-        rep(i, n) {
-            ma = max(ma, dist[0][i]);
-            mai = i;
-        }
-        djikstra(mai);
-        rep(i, n) { ma = max(ma, dist[0][i]); }
-        return ma;
-    }
+    void euler_tour(int x) {}
 };
 
 // 長い文字列を数列として解釈してmodで抑えた整数にする
