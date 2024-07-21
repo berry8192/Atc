@@ -299,10 +299,10 @@ struct Prod {
     }
     int calc_score_yotei() {
         vector<int> c4(4);
-        c4[0] = calc_max_params_sum() * 75;
-        c4[1] = calc_center_score() * 2;
-        c4[2] = calc_center_max_params_sum() * 5;
-        c4[3] = calc_center_max_params_increase_sum() * 6;
+        c4[0] = calc_max_params_sum() * 80;
+        c4[1] = calc_center_score();
+        c4[2] = calc_center_max_params_sum() * 4;
+        c4[3] = calc_center_max_params_increase_sum() * 5;
         // cerr << c4[0] << " " << c4[1] << " " << c4[2] << " " << c4[3] <<
         // endl;
         return c4[0] + c4[1] + c4[2] + c4[3];
