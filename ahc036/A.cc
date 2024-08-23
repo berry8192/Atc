@@ -18,12 +18,13 @@ using namespace std;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
-// 	// rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
-// 	cout<< pvv[pvv.size()-1] <<endl;
-// }
+template <class T> void PV(T pvv) {
+    if (!pvv.size())
+        return;
+    rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
+    // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
+    cout << pvv[pvv.size() - 1] << endl;
+}
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
@@ -99,10 +100,7 @@ struct Edge {
 struct Graph {
     int n, m;
     vector<vector<Edge>> g;
-    vector<Edge> edges;
-    vector<vector<ll>> dist;
-    vector<Edge> euler_e;
-    vector<int> euler_used;
+    // vector<Edge> edges;
 
     Graph() {};
 
@@ -121,93 +119,49 @@ struct Graph {
                 ww = 1;
 
             g[uu].push_back({uu, vv, ww});
-            edges.push_back({uu, vv, ww}); // edges
+            // edges.push_back({uu, vv, ww}); // edges
             if (!directed) {
-                g[vv].push_back({uu, vv, ww});
-                edges.push_back({vv, uu, ww}); // edges
+                g[vv].push_back({vv, uu, ww});
+                // edges.push_back({vv, uu, ww}); // edges
             }
         }
     }
 
-    vector<int> bfs(int x) {
-        vector<int> rtn(n, imax);
-        rtn[x] = 0;
-        queue<int> que;
-        que.push(x);
-        while (!que.empty()) {
-            int y = que.front();
-            int d = rtn[x];
-            que.pop();
-            for (int i = 0; i < g[y].size(); i++) {
-                int to_x = g[y][i].to;
-                if (d + g[y][i].cost < rtn[to_x]) {
-                    rtn[to_x] = d + g[y][i].cost;
-                    que.push(to_x);
-                }
-            }
-        }
-        return rtn;
-    }
-    // ダイクストラ法
-    void djikstra(int startIndex) {
-        dist.clear();
-        dist.resize(n);
-        dist[startIndex][startIndex] = 0;
-        priority_queue<Edge, vector<Edge>, greater<Edge>> q;
-        q.emplace(0, 0, startIndex);
+    vector<int> shortest_path(int start, int goal) {
+        vector<int> dist(n, -1); // 距離を管理する配列、初期値は -1（未訪問）
+        vector<int> prev(n, -1); // 経路を復元するための前の頂点を記録する配列
+        queue<int> q;
+
+        dist[start] = 0;
+        q.push(start);
 
         while (!q.empty()) {
-            const long long distance = q.top().cost;
-            const int from = q.top().from;
+            int v = q.front();
             q.pop();
 
-            // 最短距離でなければ処理しない
-            if (dist[startIndex][from] < distance) {
-                continue;
-            }
+            if (v == goal)
+                break; // ゴールに到達したら探索終了
 
-            // 現在の頂点からの各辺について
-            for (const auto &edge : g[from]) {
-                // to までの新しい距離
-                const long long d = (dist[startIndex][from] + edge.cost);
-
-                // d が現在の記録より小さければ更新
-                if (d < dist[startIndex][edge.to]) {
-                    dist[startIndex][edge.to] = d;
-                    q.emplace(d, 0, edge.to);
+            for (auto &edge : g[v]) {
+                int to = edge.to;
+                if (dist[to] == -1) { // 未訪問の頂点のみ探索
+                    dist[to] = dist[v] + 1;
+                    prev[to] = v; // 前の頂点を記録
+                    q.push(to);
                 }
             }
         }
-    }
-    // ワーシャルフロイド法
-    void worshalfroid() {}
-    // 閉路検出
-    bool has_cycle() { return false; }
-    // 連結成分に分解
-    void decomp(vector<Graph> vg) {}
-    void euler_tour(int x) {
-        if (euler_used[x])
-            return;
-        euler_used[x] = 1;
-        rep(i, g[x].size()) {
-            if (euler_used[g[x][i].to])
-                continue;
-            euler_e.push_back({g[x][i].to, x, g[x][i].cost});
-            euler_tour(g[x][i].to);
-            euler_e.push_back({x, g[x][i].to, g[x][i].cost});
+
+        // 経路を復元
+        vector<int> path;
+        for (int v = goal; v != -1; v = prev[v]) {
+            path.push_back(v);
         }
-    }
-    ll calc_diameter() {
-        djikstra(0);
-        ll ma = 0;
-        int mai;
-        rep(i, n) {
-            ma = max(ma, dist[0][i]);
-            mai = i;
-        }
-        djikstra(mai);
-        rep(i, n) { ma = max(ma, dist[0][i]); }
-        return ma;
+        reverse(path.begin(), path.end());
+
+        if (path[0] == start)
+            return path; // 経路が見つかった場合
+        return {}; // 経路が見つからなかった場合（スタートからゴールに到達不可）
     }
 };
 
@@ -224,8 +178,18 @@ void inpt() {
     rep(i, T) cin >> t[i];
 }
 
+void simple_bfs_path() {
+    int pos = 0;
+    rep(i, 10) {
+        cout << pos SP << t[i] << endl;
+        PV(graph.shortest_path(pos, t[i]));
+        pos = t[i];
+    }
+}
+
 int main() {
     inpt();
+    simple_bfs_path();
 
     return 0;
 }
