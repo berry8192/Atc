@@ -48,7 +48,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 2900.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -58,114 +58,174 @@ double end_temp = 10000.0;
 int seed = 1;
 mt19937 mt(seed);
 
-int N;
-int HEIGHT, WIDTH;
-
 // 構造体
-struct Pos {
-    int h;
-    int w;
+struct Timer {
+    chrono::_V2::system_clock::time_point start;
 
-    Pos(){};
-    Pos(int hh, int ww) {
-        h = hh;
-        w = ww;
+    Timer() { start = chrono::system_clock::now(); }
+    double progress() {
+        chrono::_V2::system_clock::time_point current =
+            chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+                   .count() /
+               TIME_LIMIT;
+    }
+};
+Timer timer;
+
+struct Edge {
+    int from;
+    int to;
+    ll cost;
+
+    Edge() {};
+    Edge(int ifrom, int ito, ll icost) {
+        from = ifrom;
+        to = ito;
+        cost = icost;
     }
 
-    bool is_oob() {
-        // assert(0<=h);
-        // assert(h<n);
-        // assert(0<=w);
-        // assert(w<=h);
-        return !(0 <= h && h < HEIGHT && 0 <= w && w < WIDTH);
+    bool operator<(const Edge &in) const {
+        return cost != in.cost ? cost < in.cost
+               : to != in.to   ? to < in.to
+                               : from < in.from;
+    };
+    bool operator>(const Edge &in) const {
+        return cost != in.cost ? cost > in.cost
+               : to != in.to   ? to > in.to
+                               : from > in.from;
+    };
+};
+struct Graph {
+    int n, m;
+    vector<vector<Edge>> g;
+    vector<Edge> edges;
+    vector<vector<ll>> dist;
+    vector<Edge> euler_e;
+    vector<int> euler_used;
+
+    Graph() {};
+
+    void init(int nn, int mm, bool weight = false, bool directed = false) {
+        n = nn;
+        m = mm;
+        // n頂点、m辺、重み有無、有向無向
+        int uu, vv, ww;
+        g.resize(nn);
+
+        for (int i = 0; i < mm; i++) {
+            cin >> uu >> vv;
+            if (weight)
+                cin >> ww;
+            else
+                ww = 1;
+
+            g[uu].push_back({uu, vv, ww});
+            edges.push_back({uu, vv, ww}); // edges
+            if (!directed) {
+                g[vv].push_back({uu, vv, ww});
+                edges.push_back({vv, uu, ww}); // edges
+            }
+        }
     }
-    int manhattan(Pos pos) { return abs(h - pos.h) + abs(w - pos.w); }
-    int index() { return h * WIDTH + w; }
-    void print() { cout << "(" << h << ", " << w << ")" << endl; }
-    // 受け取った近傍でPosを作る
-    vector<Pos> around_pos(const vector<Pos> &dir) {
-        vector<Pos> rtn;
-        Pos new_pos;
-        for (int i = 0; i < dir.size(); i++) {
-            new_pos = {h + dir[i].h, w + dir[i].w};
-            if (!new_pos.is_oob())
-                rtn.emplace_back(new_pos);
+
+    vector<int> bfs(int x) {
+        vector<int> rtn(n, imax);
+        rtn[x] = 0;
+        queue<int> que;
+        que.push(x);
+        while (!que.empty()) {
+            int y = que.front();
+            int d = rtn[x];
+            que.pop();
+            for (int i = 0; i < g[y].size(); i++) {
+                int to_x = g[y][i].to;
+                if (d + g[y][i].cost < rtn[to_x]) {
+                    rtn[to_x] = d + g[y][i].cost;
+                    que.push(to_x);
+                }
+            }
         }
         return rtn;
     }
+    // ダイクストラ法
+    void djikstra(int startIndex) {
+        dist.clear();
+        dist.resize(n);
+        dist[startIndex][startIndex] = 0;
+        priority_queue<Edge, vector<Edge>, greater<Edge>> q;
+        q.emplace(0, 0, startIndex);
 
-    bool operator<(const Pos &in) const {
-        return h != in.h ? h < in.h : w < in.w;
-    };
-    bool operator==(const Pos &cpos) const {
-        return (h == cpos.h && w == cpos.w);
-    };
-    Pos operator+(const Pos pos) {
-        Pos rtn;
-        rtn.h = h + pos.h;
-        rtn.w = w + pos.w;
-        return rtn;
+        while (!q.empty()) {
+            const long long distance = q.top().cost;
+            const int from = q.top().from;
+            q.pop();
+
+            // 最短距離でなければ処理しない
+            if (dist[startIndex][from] < distance) {
+                continue;
+            }
+
+            // 現在の頂点からの各辺について
+            for (const auto &edge : g[from]) {
+                // to までの新しい距離
+                const long long d = (dist[startIndex][from] + edge.cost);
+
+                // d が現在の記録より小さければ更新
+                if (d < dist[startIndex][edge.to]) {
+                    dist[startIndex][edge.to] = d;
+                    q.emplace(d, 0, edge.to);
+                }
+            }
+        }
     }
-    Pos operator-(const Pos pos) {
-        Pos rtn;
-        rtn.h = h - pos.h;
-        rtn.w = w - pos.w;
-        return rtn;
+    // ワーシャルフロイド法
+    void worshalfroid() {}
+    // 閉路検出
+    bool has_cycle() { return false; }
+    // 連結成分に分解
+    void decomp(vector<Graph> vg) {}
+    void euler_tour(int x) {
+        if (euler_used[x])
+            return;
+        euler_used[x] = 1;
+        rep(i, g[x].size()) {
+            if (euler_used[g[x][i].to])
+                continue;
+            euler_e.push_back({g[x][i].to, x, g[x][i].cost});
+            euler_tour(g[x][i].to);
+            euler_e.push_back({x, g[x][i].to, g[x][i].cost});
+        }
+    }
+    ll calc_diameter() {
+        djikstra(0);
+        ll ma = 0;
+        int mai;
+        rep(i, n) {
+            ma = max(ma, dist[0][i]);
+            mai = i;
+        }
+        djikstra(mai);
+        rep(i, n) { ma = max(ma, dist[0][i]); }
+        return ma;
     }
 };
 
+int N, M, T, La, Lb;
+Graph graph;
+vector<int> t;
+
 struct Grid {};
 
-Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
-
-Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-
-void inpt() { cin >> N >> HEIGHT >> WIDTH; }
+void inpt() {
+    cin >> N >> M >> T >> La >> Lb;
+    graph.init(N, M);
+    t.resize(T);
+    rep(i, T) cin >> t[i];
+}
 
 int main() {
-    start = chrono::system_clock::now();
-
-    Grid best;
-
-    int loop = 0;
-    while (1) {
-        current = chrono::system_clock::now();
-        if (chrono::duration_cast<chrono::milliseconds>(current - start)
-                .count() > TIME_LIMIT) {
-            // break;
-        }
-        loop++;
-
-        Grid grid;
-
-        if (best.score < grid.score) {
-            best = space;
-            // cout<< "loop: " << loop <<endl;
-            // best.print_ans();
-            // cout<< "score: " << space.score SP << space.score*25 <<endl;
-        }
-    }
-    // cout<< space.score SP << space.score*25 <<endl;
-    best.print_ans();
+    inpt();
 
     return 0;
 }
-
-// ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
-// ふさがるマスが多いマスはあきらめる
-// 2通り以上アクセスする方法があるマスはどうしよう
-
-// 行き止まりに近いマスは長い区間の計画を使う
-// 迷路の形を何回か試す
-
-// ###
-// AB#
-// ###
-// のような形のとき、BがS=5, D=10なら
-// AがS=5, D=10なら最高
-// AがS=7, D=10ならAのplant_tを5以下にしてもよい
-// AがS=3, D=10ならBのplant_tを3以下にする必要がある
-// AがS=5, D=9ならまあ許せる
-// AがS=4, D=9ならBのplant_tを4以下にする必要がある
-// AがS=6, D=9ならAのplant_tを6以下にしてもよい
-// AがD=11なら無理
