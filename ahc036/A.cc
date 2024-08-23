@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-// std::ofstream outputFile("log.csv");
+std::ofstream outputFile("log.csv", std::ios::app);
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -171,11 +171,20 @@ vector<int> t;
 
 struct Grid {};
 
+int calc_visit_uniq() {
+    set<int> visit;
+    rep(i, T) { visit.insert(t[i]); }
+    return visit.size();
+}
+
 void inpt() {
     cin >> N >> M >> T >> La >> Lb;
     graph.init(N, M);
     t.resize(T);
     rep(i, T) cin >> t[i];
+
+    outputFile << calc_visit_uniq() << endl;
+    exit(0);
 }
 
 void simple_bfs_path() {
