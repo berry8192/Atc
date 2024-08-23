@@ -11,7 +11,7 @@
 using namespace std;
 // using namespace atcoder;
 
-std::ofstream outputFile("log.csv", std::ios::app);
+// std::ofstream outputFile("log.csv", std::ios::app);
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -21,7 +21,7 @@ std::ofstream outputFile("log.csv", std::ios::app);
 template <class T> void PV(T pvv) {
     if (!pvv.size())
         return;
-    rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
+    rep(i, pvv.size() - 1) cout << pvv[i] << " ";
     // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
     cout << pvv[pvv.size() - 1] << endl;
 }
@@ -183,16 +183,67 @@ void inpt() {
     t.resize(T);
     rep(i, T) cin >> t[i];
 
-    outputFile << calc_visit_uniq() << endl;
-    exit(0);
+    // outputFile << calc_visit_uniq() << endl;
+    // exit(0);
 }
 
 void simple_bfs_path() {
+    set<int> visit;
+    vector<int> a;
+
     int pos = 0;
-    rep(i, 10) {
-        cout << pos SP << t[i] << endl;
-        PV(graph.shortest_path(pos, t[i]));
+    int a_last = N;
+    vector<int> grand_path;
+    rep(i, T) {
+        vector<int> path = graph.shortest_path(pos, t[i]);
+        rep3(j, path.size(), 1) { grand_path.push_back(path[j]); }
+        rep(j, grand_path.size()) { visit.insert(grand_path[j]); }
         pos = t[i];
+    }
+    pos = 0;
+    rep(i, T) {
+        // cout << "# " << pos SP << t[i] << endl;
+        vector<int> path = graph.shortest_path(pos, t[i]);
+        rep3(j, path.size(), 1) {
+            // if (visit.find(path[j]) != visit.end()) {
+            //     cout << "# match" << endl;
+            // }
+            // cout << "# " << path[j] SP << La SP << int(a.size()) SP
+            // << visit.size() << endl;
+            if (La - int(a.size()) <= visit.size()) {
+                a_last = min(a_last, int(a.size()));
+                if (visit.find(path[j]) != visit.end()) {
+                    a.push_back(path[j]);
+                    visit.erase(path[j]);
+                }
+            } else {
+                a.push_back(path[j]);
+                visit.erase(path[j]);
+            }
+        }
+        pos = t[i];
+    }
+    while (a.size() < La)
+        a.push_back(0);
+    PV(a);
+
+    rep(i, grand_path.size()) {
+        if (a_last - i >= Lb) {
+            cout << "s" SP << Lb SP << i / Lb * Lb SP << 0 << endl;
+            rep(k, Lb) cout << "m " << grand_path[i + k] << endl;
+            i += Lb - 1;
+        } else {
+            // aの中でpath[j]となっている値のindexを線形探索で取ってくる
+            int idx = -1;
+            rep(k, a.size()) {
+                if (a[k] == grand_path[i]) {
+                    idx = k;
+                    break;
+                }
+            }
+            cout << "s" SP << 1 SP << idx SP << 0 << endl;
+            cout << "m " << grand_path[i] << endl;
+        }
     }
 }
 
