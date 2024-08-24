@@ -55,8 +55,8 @@ double start_temp = 10000000.0;
 double end_temp = 10000.0;
 
 // 乱数の準備
-// auto seed=(unsigned)time(NULL);
-int seed = 1;
+auto seed = (unsigned)time(NULL);
+// int seed = 1;
 mt19937 mt(seed);
 
 // 構造体
@@ -279,53 +279,91 @@ struct City {
         assert(v < N);
         cout << "m " << v << endl;
     }
-    void exec_path(int from, int to, bool dryrun) {
+    bool exec_path(int from, int to, bool dryrun, int &score) {
         cout << "# " << from << " " << to << endl;
+        set<int> passed;
         int pos = from;
         while (pos != to) {
             int min_dist = imax;
             int min_dist_La_id = -1;
-            multiset<int> possible_v;
             vector<int> best_path;
-            rep(i, Lb) { possible_v.insert(A[i]); }
-            rep3(i, La + 1, Lb) {
+            multiset<int> possible_v;
+            for (int i = 0; i + Lb < La; i += Lb) {
+                possible_v.clear();
+                rep3(j, i + Lb, i) { possible_v.insert(A[j]); }
                 vector<int> path;
                 int dist =
                     graph.closest_reachable_distance(pos, to, possible_v, path);
                 if (dist < min_dist) {
-                    min_dist = dist;
-                    min_dist_La_id = i - Lb;
-                    best_path = path;
+                    int flg = 1;
+                    rep(j, path.size()) {
+                        if (passed.find(path[j]) != passed.end()) {
+                            flg = 0;
+                            break;
+                        }
+                    }
+                    if (flg) {
+                        min_dist = dist;
+                        min_dist_La_id = i;
+                        best_path = path;
+                    }
                 }
-                if (i != La) {
-                    possible_v.insert(A[i]);
-                    auto itr = possible_v.find(A[i - Lb]);
-                    possible_v.erase(itr);
-                }
+            }
+            if (min_dist_La_id == -1) {
+                return false;
             }
             if (dryrun) {
                 cout << "# ";
             }
             out_s(Lb, min_dist_La_id, 0);
+            score++;
+
             rep(i, best_path.size()) {
                 if (dryrun) {
                     cout << "# ";
                 }
                 out_m(best_path[i]);
                 pos = best_path[i];
+                passed.insert(pos);
             }
         }
+        return true;
     }
-    void exec(bool dryrun = true) {
+    int exec(bool dryrun = true) {
         if (!dryrun) {
             rep(i, La) cout << A[i] SP;
             cout << endl;
         }
         int pos = 0;
+        int score = 0;
         rep(i, T) {
-            exec_path(pos, t[i], dryrun);
+            cout << "# exec " << i << endl;
+            if (!exec_path(pos, t[i], dryrun, score)) {
+                return imax;
+            }
             pos = t[i];
         }
+        return score;
+    }
+    void annering() {
+        int best_score = imax;
+        rep(lp, 100) {
+            cerr << "# anneal start " << lp << endl;
+            int idx1 = rand() % La;
+            int idx2 = rand() % La;
+
+            swap(A[idx1], A[idx2]);
+
+            int score = exec();
+            if (score < best_score) {
+                best_score = score;
+                cerr << "# anneal " << lp << " " << score << endl;
+            } else {
+                swap(A[idx1], A[idx2]);
+                cerr << "# anneal rejected " << lp << " " << score << endl;
+            }
+        }
+        exec(false);
     }
 };
 
@@ -442,7 +480,7 @@ int main() {
     inpt();
     City city;
     city.init();
-    city.exec(false);
+    city.annering();
 
     return 0;
 }
