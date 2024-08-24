@@ -177,6 +177,16 @@ struct City {
         A.resize(La);
         rep(i, La) A[i] = i % N;
     }
+
+    void exec_path(int from, int to, bool dryrun) {}
+    void exec(bool dryrun = true) {
+        if (!dryrun) {
+            rep(i, La) cout << A[i] SP;
+            cout << endl;
+        }
+        int pos = 0;
+        rep(i, T) { exec_path(pos, t[i], dryrun); }
+    }
 };
 
 void print_v(vector<int> v) {
