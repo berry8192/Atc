@@ -170,6 +170,8 @@ Graph graph;
 vector<int> t;
 vector<int> x, y;
 
+struct City {};
+
 void print_v(vector<int> v) {
     rep(i, La) {
         if (i < N)
@@ -184,8 +186,6 @@ void print_v(vector<int> v) {
         cout << "m " << v[i] << endl;
     }
 }
-
-struct City {};
 
 int calc_visit_uniq() {
     set<int> visit;
@@ -281,85 +281,9 @@ int calc_nearest_v(int ix, int iy) {
     return nearest_id;
 }
 
-void dfs(int v, int p, vector<vector<Edge>> &tree, vector<int> &tour) {
-    tour.push_back(v);
-    for (auto &edge : tree[v]) {
-        if (edge.to != p) {
-            dfs(edge.to, v, tree, tour);
-            tour.push_back(
-                v); // Return to the current node after visiting child
-        }
-    }
-}
-
-void center_tree() {
-    int center_id = 0;
-    set<int> visit(t.begin(), t.end());
-
-    // visit 集合の頂点を全て含む最小の連結部分グラフを作成する
-    vector<vector<Edge>> subgraph(N);
-    vector<Edge> mst_edges;
-
-    for (auto it1 = visit.begin(); it1 != visit.end(); ++it1) {
-        for (auto it2 = next(it1); it2 != visit.end(); ++it2) {
-            vector<int> path = graph.shortest_path(*it1, *it2);
-            for (int i = 0; i < path.size() - 1; i++) {
-                int u = path[i], v = path[i + 1];
-                ll cost = LLONG_MAX;
-                for (auto &edge : graph.g[u]) {
-                    if (edge.to == v) {
-                        cost = edge.cost;
-                        break;
-                    }
-                }
-                subgraph[u].push_back({u, v, cost});
-                subgraph[v].push_back({v, u, cost});
-                mst_edges.push_back({u, v, cost});
-            }
-        }
-    }
-
-    // クラスカル法で部分グラフからMSTを構築
-    sort(mst_edges.begin(), mst_edges.end());
-    vector<int> parent(N), rank(N, 0);
-    iota(parent.begin(), parent.end(), 0);
-
-    function<int(int)> find = [&](int v) {
-        return v == parent[v] ? v : parent[v] = find(parent[v]);
-    };
-
-    auto unite = [&](int a, int b) {
-        a = find(a);
-        b = find(b);
-        if (a != b) {
-            if (rank[a] < rank[b])
-                swap(a, b);
-            parent[b] = a;
-            if (rank[a] == rank[b])
-                rank[a]++;
-        }
-    };
-
-    vector<vector<Edge>> mst(N);
-    for (auto &edge : mst_edges) {
-        if (find(edge.from) != find(edge.to)) {
-            mst[edge.from].push_back(edge);
-            mst[edge.to].push_back({edge.to, edge.from, edge.cost});
-            unite(edge.from, edge.to);
-        }
-    }
-
-    // オイラーツアーを求める
-    vector<int> tour;
-    dfs(center_id, -1, mst, tour);
-
-    // 訪問順を出力
-    print_v(tour);
-}
-
 int main() {
     inpt();
-    center_tree();
+    simple_bfs_path();
 
     return 0;
 }
