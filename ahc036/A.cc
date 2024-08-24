@@ -100,6 +100,7 @@ struct Edge {
 struct Graph {
     int n, m;
     vector<vector<Edge>> g;
+    vector<vector<int>> dist;
     // vector<Edge> edges;
 
     Graph() {};
@@ -125,6 +126,7 @@ struct Graph {
                 // edges.push_back({vv, uu, ww}); // edges
             }
         }
+        calculate_all_pairs_shortest_paths();
     }
 
     vector<int> shortest_path(int start, int goal) {
@@ -163,6 +165,33 @@ struct Graph {
             return path; // 経路が見つかった場合
         return {}; // 経路が見つからなかった場合（スタートからゴールに到達不可）
     }
+    // 全頂点対の最短距離を計算し、distに保存する関数
+    void calculate_all_pairs_shortest_paths() {
+        dist.resize(n, vector<int>(n, imax));
+
+        // 自己ループの距離を0に設定
+        for (int i = 0; i < n; ++i) {
+            dist[i][i] = 0;
+        }
+
+        // グラフのエッジから距離を初期化
+        for (int i = 0; i < n; ++i) {
+            for (const auto &edge : g[i]) {
+                dist[edge.from][edge.to] = edge.cost;
+            }
+        }
+
+        // フロイド・ワーシャル法による全頂点対最短経路計算
+        for (int k = 0; k < n; ++k) {
+            for (int i = 0; i < n; ++i) {
+                for (int j = 0; j < n; ++j) {
+                    if (dist[i][k] < imax && dist[k][j] < imax) {
+                        dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+                    }
+                }
+            }
+        }
+    }
 };
 
 int N, M, T, La, Lb;
@@ -178,7 +207,9 @@ struct City {
         rep(i, La) A[i] = i % N;
     }
 
-    void exec_path(int from, int to, bool dryrun) {}
+    void exec_path(int from, int to, bool dryrun) {
+        rep(i, La - Lb + 1) {}
+    }
     void exec(bool dryrun = true) {
         if (!dryrun) {
             rep(i, La) cout << A[i] SP;
