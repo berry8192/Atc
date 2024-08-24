@@ -367,6 +367,21 @@ struct City {
     }
 };
 
+int calc_nearest_v(int ix, int iy) {
+    int nearest = imax;
+    int nearest_id;
+    rep(i, N) {
+        int dx = ix - x[i];
+        int dy = iy - y[i];
+        int d = dx * dx + dy * dy;
+        if (d < nearest) {
+            nearest = d;
+            nearest_id = i;
+        }
+    }
+    return nearest_id;
+}
+
 void print_v(vector<int> v) {
     rep(i, La) {
         if (i < N)
