@@ -192,6 +192,64 @@ struct Graph {
             }
         }
     }
+
+    // 現在の頂点から移動可能な頂点を辿って目的の頂点に最も近い距離を求める関数
+    int closest_reachable_distance(int current, int target,
+                                   const multiset<int> &possible_moves,
+                                   vector<int> &path) {
+        int cut = 1;
+        rep(i, g[current].size()) {
+            if (possible_moves.find(g[current][i].to) != possible_moves.end()) {
+                cut = 0;
+                break;
+            }
+        }
+        if (cut)
+            return imax;
+        vector<bool> visited(n, false); // 訪問済みチェック用
+        vector<int> parent(n, -1); // 各頂点の親（前の頂点）を記録
+        queue<int> q;
+        visited[current] = true;
+        q.push(current);
+
+        int min_distance = imax;
+        int min_distance_id = -1;
+
+        while (!q.empty()) {
+            int v = q.front();
+            q.pop();
+
+            // 隣接する頂点を探索
+            for (const auto &edge : g[v]) {
+                if (!visited[edge.to]) {
+                    visited[edge.to] = true;
+
+                    if (possible_moves.find(edge.to) != possible_moves.end()) {
+                        int distance = dist[edge.to][target];
+                        if (distance < min_distance) {
+                            parent[edge.to] = v; // 親として記録
+                            min_distance = distance;
+                            min_distance_id = edge.to;
+                        }
+
+                        q.push(edge.to);
+                    }
+                }
+            }
+        }
+
+        // 経路を復元（始点は含めずにpathに追加）
+        if (min_distance_id != -1) {
+            int v = min_distance_id;
+            while (v != current) {
+                path.push_back(v);
+                v = parent[v];
+            }
+            reverse(path.begin(), path.end());
+        }
+
+        return min_distance;
+    }
 };
 
 int N, M, T, La, Lb;
@@ -207,8 +265,56 @@ struct City {
         rep(i, La) A[i] = i % N;
     }
 
+    void out_s(int l, int Pa, int Pb) {
+        assert(1 <= l);
+        assert(l <= Lb);
+        assert(0 <= Pa);
+        assert(Pa <= La - l);
+        assert(0 <= Pb);
+        assert(Pb <= Lb - l);
+        cout << "s " << l SP << Pa SP << Pb << endl;
+    }
+    void out_m(int v) {
+        assert(0 <= v);
+        assert(v < N);
+        cout << "m " << v << endl;
+    }
     void exec_path(int from, int to, bool dryrun) {
-        rep(i, La - Lb + 1) {}
+        cout << "# " << from << " " << to << endl;
+        int pos = from;
+        while (pos != to) {
+            int min_dist = imax;
+            int min_dist_La_id = -1;
+            multiset<int> possible_v;
+            vector<int> best_path;
+            rep(i, Lb) { possible_v.insert(A[i]); }
+            rep3(i, La + 1, Lb) {
+                vector<int> path;
+                int dist =
+                    graph.closest_reachable_distance(pos, to, possible_v, path);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    min_dist_La_id = i - Lb;
+                    best_path = path;
+                }
+                if (i != La) {
+                    possible_v.insert(A[i]);
+                    auto itr = possible_v.find(A[i - Lb]);
+                    possible_v.erase(itr);
+                }
+            }
+            if (dryrun) {
+                cout << "# ";
+            }
+            out_s(Lb, min_dist_La_id, 0);
+            rep(i, best_path.size()) {
+                if (dryrun) {
+                    cout << "# ";
+                }
+                out_m(best_path[i]);
+                pos = best_path[i];
+            }
+        }
     }
     void exec(bool dryrun = true) {
         if (!dryrun) {
@@ -216,7 +322,10 @@ struct City {
             cout << endl;
         }
         int pos = 0;
-        rep(i, T) { exec_path(pos, t[i], dryrun); }
+        rep(i, T) {
+            exec_path(pos, t[i], dryrun);
+            pos = t[i];
+        }
     }
 };
 
@@ -331,7 +440,9 @@ int calc_nearest_v(int ix, int iy) {
 
 int main() {
     inpt();
-    simple_bfs_path();
+    City city;
+    city.init();
+    city.exec(false);
 
     return 0;
 }
