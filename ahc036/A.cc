@@ -126,15 +126,15 @@ struct Graph {
                 edges.push_back({vv, uu, ww}); // edges
             }
         }
-        calculate_all_pairs_shortest_paths();
+        // calculate_all_pairs_shortest_paths();
     }
 
     vector<int> shortest_path(int start, int goal) {
-        vector<int> dist(n, -1); // 距離を管理する配列、初期値は -1（未訪問）
+        vector<int> dists(n, -1); // 距離を管理する配列、初期値は -1（未訪問）
         vector<int> prev(n, -1); // 経路を復元するための前の頂点を記録する配列
         queue<int> q;
 
-        dist[start] = 0;
+        dists[start] = 0;
         q.push(start);
 
         while (!q.empty()) {
@@ -146,8 +146,8 @@ struct Graph {
 
             for (auto &edge : g[v]) {
                 int to = edge.to;
-                if (dist[to] == -1) { // 未訪問の頂点のみ探索
-                    dist[to] = dist[v] + 1;
+                if (dists[to] == -1) { // 未訪問の頂点のみ探索
+                    dists[to] = dists[v] + 1;
                     prev[to] = v; // 前の頂点を記録
                     q.push(to);
                 }
@@ -406,7 +406,7 @@ int calc_visit_uniq() {
 void calc_reduce_t() {}
 
 vector<int> simple_bfs_visit_path() {
-    vector<int> visit;
+    vector<int> visit(N);
 
     int pos = 0;
     rep(i, T) {
@@ -501,6 +501,8 @@ void inpt() {
 
 int main() {
     inpt();
+    PV(simple_bfs_visit_path());
+    return 0;
     City city;
     city.init();
 
