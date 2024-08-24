@@ -1,4 +1,4 @@
-#include <atcoder/all>
+// #include <atcoder/all>
 #include <bits/stdc++.h>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
@@ -9,9 +9,9 @@
 #define ll long long
 
 using namespace std;
-using namespace atcoder;
+// using namespace atcoder;
 
-std::ofstream outputFile("log.csv");
+// std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -403,21 +403,18 @@ int calc_visit_uniq() {
     return visit.size();
 }
 
-void inpt() {
-    cin >> N >> M >> T >> La >> Lb;
-    graph.init(N, M);
-    t.resize(T);
-    rev_t.resize(N);
-    rep(i, T) {
-        cin >> t[i];
-        rev_t[t[i]]++;
-    }
-    x.resize(N);
-    y.resize(N);
-    rep(i, N) cin >> x[i] >> y[i];
+void calc_reduce_t() {}
 
-    // outputFile << calc_visit_uniq() << endl;
-    // exit(0);
+vector<int> simple_bfs_visit_path() {
+    vector<int> visit;
+
+    int pos = 0;
+    rep(i, T) {
+        vector<int> path = graph.shortest_path(pos, t[i]);
+        rep3(j, path.size(), 1) { visit[path[j]]++; }
+        pos = t[i];
+    }
+    return visit;
 }
 
 void simple_bfs_path() {
@@ -481,7 +478,25 @@ void simple_bfs_path() {
             vis[grand_path[i]]++;
         }
     }
-    rep(i, N) { outputFile << x[i] << ", " << y[i] << ", " << vis[i] << endl; }
+    // rep(i, N) { outputFile << x[i] << ", " << y[i] << ", " << vis[i] << endl;
+    // }
+}
+
+void inpt() {
+    cin >> N >> M >> T >> La >> Lb;
+    graph.init(N, M);
+    t.resize(T);
+    rev_t.resize(N);
+    rep(i, T) {
+        cin >> t[i];
+        rev_t[t[i]]++;
+    }
+    x.resize(N);
+    y.resize(N);
+    rep(i, N) cin >> x[i] >> y[i];
+
+    // outputFile << calc_visit_uniq() << endl;
+    // exit(0);
 }
 
 int main() {
