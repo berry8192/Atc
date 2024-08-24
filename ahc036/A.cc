@@ -170,7 +170,14 @@ Graph graph;
 vector<int> t;
 vector<int> x, y;
 
-struct City {};
+struct City {
+    vector<int> A;
+
+    void init() {
+        A.resize(La);
+        rep(i, La) A[i] = i % N;
+    }
+};
 
 void print_v(vector<int> v) {
     rep(i, La) {
