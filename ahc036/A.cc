@@ -1,5 +1,5 @@
+#include <atcoder/all>
 #include <bits/stdc++.h>
-// #include <atcoder/all>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
@@ -9,9 +9,9 @@
 #define ll long long
 
 using namespace std;
-// using namespace atcoder;
+using namespace atcoder;
 
-// std::ofstream outputFile("log.csv", std::ios::app);
+std::ofstream outputFile("log.csv");
 
 // template <class T> void PV(T pvv) {
 // 	if(!pvv.size()) return;
@@ -101,7 +101,7 @@ struct Graph {
     int n, m;
     vector<vector<Edge>> g;
     vector<vector<int>> dist;
-    // vector<Edge> edges;
+    vector<Edge> edges;
 
     Graph() {};
 
@@ -120,10 +120,10 @@ struct Graph {
                 ww = 1;
 
             g[uu].push_back({uu, vv, ww});
-            // edges.push_back({uu, vv, ww}); // edges
+            edges.push_back({uu, vv, ww}); // edges
             if (!directed) {
                 g[vv].push_back({vv, uu, ww});
-                // edges.push_back({vv, uu, ww}); // edges
+                edges.push_back({vv, uu, ww}); // edges
             }
         }
         calculate_all_pairs_shortest_paths();
@@ -254,8 +254,9 @@ struct Graph {
 
 int N, M, T, La, Lb;
 Graph graph;
-vector<int> t;
+vector<int> t, rev_t;
 vector<int> x, y;
+vector<int> reduce_t;
 
 struct City {
     vector<int> A;
@@ -264,7 +265,6 @@ struct City {
         A.resize(La);
         rep(i, La) A[i] = i % N;
     }
-
     void out_s(int l, int Pa, int Pb) {
         assert(1 <= l);
         assert(l <= Lb);
@@ -347,7 +347,7 @@ struct City {
     }
     void annering() {
         int best_score = imax;
-        rep(lp, 100) {
+        rep(lp, 0) {
             cerr << "# anneal start " << lp << endl;
             int idx1 = rand() % La;
             int idx2 = rand() % La;
@@ -392,7 +392,11 @@ void inpt() {
     cin >> N >> M >> T >> La >> Lb;
     graph.init(N, M);
     t.resize(T);
-    rep(i, T) cin >> t[i];
+    rev_t.resize(N);
+    rep(i, T) {
+        cin >> t[i];
+        rev_t[t[i]]++;
+    }
     x.resize(N);
     y.resize(N);
     rep(i, N) cin >> x[i] >> y[i];
@@ -439,12 +443,14 @@ void simple_bfs_path() {
     }
     while (a.size() < La)
         a.push_back(0);
-    PV(a);
+    // PV(a);
 
+    vector<int> vis(N);
     rep(i, grand_path.size()) {
         if (a_last - i >= Lb) {
-            cout << "s" SP << Lb SP << i / Lb * Lb SP << 0 << endl;
-            rep(k, Lb) cout << "m " << grand_path[i + k] << endl;
+            // cout << "s" SP << Lb SP << i / Lb * Lb SP << 0 << endl;
+            // rep(k, Lb) cout << "m " << grand_path[i + k] << endl;
+            rep(k, Lb) vis[grand_path[i + k]]++;
             i += Lb - 1;
         } else {
             // aの中でpath[j]となっている値のindexを線形探索で取ってくる
@@ -455,32 +461,18 @@ void simple_bfs_path() {
                     break;
                 }
             }
-            cout << "s" SP << 1 SP << idx SP << 0 << endl;
-            cout << "m " << grand_path[i] << endl;
+            // cout << "s" SP << 1 SP << idx SP << 0 << endl;
+            // cout << "m " << grand_path[i] << endl;
+            vis[grand_path[i]]++;
         }
     }
-}
-
-int calc_nearest_v(int ix, int iy) {
-    int nearest = imax;
-    int nearest_id;
-    rep(i, N) {
-        int dx = ix - x[i];
-        int dy = iy - y[i];
-        int d = dx * dx + dy * dy;
-        if (d < nearest) {
-            nearest = d;
-            nearest_id = i;
-        }
-    }
-    return nearest_id;
+    rep(i, N) { outputFile << x[i] << ", " << y[i] << ", " << vis[i] << endl; }
 }
 
 int main() {
     inpt();
     City city;
     city.init();
-    city.annering();
 
     return 0;
 }
