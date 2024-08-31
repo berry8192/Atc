@@ -405,6 +405,23 @@ int calc_visit_uniq() {
 
 void calc_reduce_t() {}
 
+void printSortedMap(const std::map<std::string, int> &myMap) {
+    // mapの内容をペアのベクトルにコピー
+    std::vector<std::pair<std::string, int>> vec(myMap.begin(), myMap.end());
+
+    // ペアのベクトルをintの降順にソート
+    std::sort(vec.begin(), vec.end(),
+              [](const std::pair<std::string, int> &a,
+                 const std::pair<std::string, int> &b) {
+                  return b.second < a.second; // 降順ソート
+              });
+
+    // ソートされた結果を出力
+    for (const auto &pair : vec) {
+        std::cout << pair.first << ": " << pair.second << std::endl;
+    }
+}
+
 vector<int> simple_bfs_visit_path() {
     vector<int> visit(N);
 
@@ -414,6 +431,18 @@ vector<int> simple_bfs_visit_path() {
         rep3(j, path.size(), 1) { visit[path[j]]++; }
         pos = t[i];
     }
+    // map<string, int> used_edge;
+    // int pos = 0;
+    // rep(i, T) {
+    //     vector<int> path = graph.shortest_path(pos, t[i]);
+    //     rep3(j, path.size(), 1) {
+    //         used_edge[to_string(min(pos, path[j])) + "-" +
+    //                   to_string(max(pos, path[j]))]++;
+    //         pos = path[j];
+    //     }
+    // }
+    // printSortedMap(used_edge);
+
     return visit;
 }
 
