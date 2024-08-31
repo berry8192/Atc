@@ -575,6 +575,18 @@ struct Country {
         }
         center_v = calc_center_v(visit);
     }
+    void make_radial_path() {
+        // 8方向のweb
+        vector<int> x_ends = {0, 500, 1000, 1000, 1000, 500, 0, 0};
+        vector<int> y_ends = {0, 0, 0, 500, 1000, 1000, 1000, 500};
+    }
+    void make_circle_path() {
+        // 2つの同心円
+        vector<int> radius = {200, 400};
+    }
+    void make_gap_path() {}
+    void exec(bool dry_run = true) {}
+    void move_to(int to_v) {}
 };
 
 void inpt() {
