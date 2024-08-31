@@ -557,8 +557,7 @@ struct Country {
     int center_v;
     vector<int> visit;
     vector<int> target;
-
-    void init() { A.resize(La); }
+    vector<vector<int>> radial_paths;
 
     void calc_target() {
         target.resize(N);
@@ -575,10 +574,50 @@ struct Country {
         }
         center_v = calc_center_v(visit);
     }
+    int calc_nearest_v_only_target(int ix, int iy) {
+        int nearest = imax;
+        int nearest_id;
+        rep(i, N) {
+            if (target[i] == 0) {
+                continue;
+            }
+            int dx = ix - x[i];
+            int dy = iy - y[i];
+            int d = dx * dx + dy * dy;
+            if (d < nearest) {
+                nearest = d;
+                nearest_id = i;
+            }
+        }
+        return nearest_id;
+    }
     void make_radial_path() {
         // 8方向のweb
-        vector<int> x_ends = {0, 500, 1000, 1000, 1000, 500, 0, 0};
-        vector<int> y_ends = {0, 0, 0, 500, 1000, 1000, 1000, 500};
+        int WEB_SIZE = 8;
+        radial_paths.resize(WEB_SIZE / 2);
+        vector<int> X_ENDS = {0, 1000, 500, 500, 1000, 0, 1000, 0};
+        vector<int> Y_ENDS = {0, 1000, 0, 1000, 0, 1000, 500, 500};
+
+        // vector<int> tmp;
+        // vector<int> tmp2;
+        rep(i, WEB_SIZE) {
+            int end_v = calc_nearest_v_only_target(X_ENDS[i], Y_ENDS[i]);
+            // tmp.push_back(end_v);
+            if (i % 2 == 0) {
+                vector<int> path = graph.shortest_path(end_v, center_v);
+                rep(j, path.size() - 1) {
+                    radial_paths[i / 2].push_back(path[j]);
+                    // tmp2.push_back(path[j]);
+                }
+            } else {
+                vector<int> path = graph.shortest_path(center_v, end_v);
+                rep(j, path.size()) {
+                    radial_paths[i / 2].push_back(path[j]);
+                    // tmp2.push_back(path[j]);
+                }
+            }
+        }
+        // print_vs(tmp2);
     }
     void make_circle_path() {
         // 2つの同心円
@@ -608,10 +647,11 @@ void inpt() {
 
 int main() {
     inpt();
-    PV(simple_bfs_visit_path());
-    return 0;
-    City city;
-    city.init();
+
+    Country country;
+    country.calc_target();
+    country.calc_visit_path();
+    country.make_radial_path();
 
     return 0;
 }
