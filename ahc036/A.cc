@@ -409,8 +409,6 @@ int calc_visit_uniq() {
     return visit.size();
 }
 
-void calc_reduce_t() {}
-
 void printSortedMap(const std::map<std::string, int> &myMap) {
     // mapの内容をペアのベクトルにコピー
     std::vector<std::pair<std::string, int>> vec(myMap.begin(), myMap.end());
@@ -553,6 +551,14 @@ void simple_bfs_path() {
     // rep(i, N) { outputFile << x[i] << ", " << y[i] << ", " << vis[i] << endl;
     // }
 }
+
+struct Country {
+    vector<int> A;
+    int center_v;
+    vector<int> visit;
+
+    void init() { A.resize(La); }
+};
 
 void inpt() {
     cin >> N >> M >> T >> La >> Lb;
