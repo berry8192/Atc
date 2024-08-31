@@ -422,6 +422,12 @@ void printSortedMap(const std::map<std::string, int> &myMap) {
     }
 }
 
+void print_vs(vector<int> vs) {
+    rep(i, La) { cout << i % N SP; }
+    cout << endl;
+    rep(i, vs.size()) cout << "s 1 " << vs[i] << " 0" << endl;
+}
+
 vector<int> simple_bfs_visit_path() {
     vector<int> visit(N);
 
@@ -443,6 +449,19 @@ vector<int> simple_bfs_visit_path() {
     //     }
     // }
     // printSortedMap(used_edge);
+
+    // visitの最大値のindexを求める
+    // int max_visit = 0;
+    // int max_visit_index = -1;
+    // rep(i, visit.size()) {
+    //     if (max_visit < visit[i]) {
+    //         max_visit = visit[i];
+    //         max_visit_index = i;
+    //     }
+    // }
+    // print_vs({max_visit_index});
+    // cout << max_visit_index SP << x[max_visit_index] SP << y[max_visit_index]
+    //      << endl;
 
     return visit;
 }
