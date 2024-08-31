@@ -556,10 +556,15 @@ struct Country {
     vector<int> A;
     int center_v;
     vector<int> visit;
+    vector<int> target;
 
     void init() { A.resize(La); }
 
-    vector<int> calc_visit_path() {
+    void calc_target() {
+        target.resize(N);
+        rep(i, T) { target[t[i]]++; }
+    }
+    void calc_visit_path() {
         visit.resize(N);
 
         int pos = 0;
