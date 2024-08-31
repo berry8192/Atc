@@ -367,6 +367,12 @@ struct City {
     }
 };
 
+int calc_v_dist(int v_index, int ix, int iy) {
+    int dx = ix - x[v_index];
+    int dy = iy - y[v_index];
+    return sqrt(dx * dx + dy * dy);
+}
+
 int calc_nearest_v(int ix, int iy) {
     int nearest = imax;
     int nearest_id;
@@ -428,6 +434,21 @@ void print_vs(vector<int> vs) {
     rep(i, vs.size()) cout << "s 1 " << vs[i] << " 0" << endl;
 }
 
+int calc_center_v(vector<int> &visit) {
+    double max_centerity = 0.0;
+    int max_centrrity_v = -1;
+
+    rep(i, visit.size()) {
+        double centerity = 1.0 * visit[i] / (calc_v_dist(i, 500, 500) + 10);
+        // cout << i SP << centerity << endl;
+        if (max_centerity < centerity) {
+            max_centerity = centerity;
+            max_centrrity_v = i;
+        }
+    }
+    return max_centrrity_v;
+}
+
 vector<int> simple_bfs_visit_path() {
     vector<int> visit(N);
 
@@ -462,6 +483,8 @@ vector<int> simple_bfs_visit_path() {
     // print_vs({max_visit_index});
     // cout << max_visit_index SP << x[max_visit_index] SP << y[max_visit_index]
     //      << endl;
+    print_vs({calc_center_v(visit)});
+    exit(0);
 
     return visit;
 }
