@@ -438,6 +438,7 @@ vector<int> simple_bfs_visit_path() {
     //     rep3(j, path.size(), 1) {
     //         used_edge[to_string(min(pos, path[j])) + "-" +
     //                   to_string(max(pos, path[j]))]++;
+    //         visit[path[j]]++;
     //         pos = path[j];
     //     }
     // }
