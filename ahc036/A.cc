@@ -558,6 +558,18 @@ struct Country {
     vector<int> visit;
 
     void init() { A.resize(La); }
+
+    vector<int> calc_visit_path() {
+        visit.resize(N);
+
+        int pos = 0;
+        rep(i, T) {
+            vector<int> path = graph.shortest_path(pos, t[i]);
+            rep3(j, path.size(), 1) { visit[path[j]]++; }
+            pos = t[i];
+        }
+        center_v = calc_center_v(visit);
+    }
 };
 
 void inpt() {
