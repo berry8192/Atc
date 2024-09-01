@@ -714,17 +714,27 @@ struct Country {
                                 continue;
                             next_to_jointed[to] = tmp[i][j];
                         }
+                        A.push_back(tmp[i][j]);
                     }
                 } else {
+                    // rep(j, tmp[i].size()) {
+
+                    //     if (tmp[i].size() >= Lb) {
+                    //         break;
+                    //     }
+                    // }
                 }
             }
         }
     }
     void exec(bool dry_run = true) {
+        vector<string> ans;
         int pos = 0;
-        rep(i, T) { move_to(pos, t[i]); }
+        rep(i, T) { move_to(pos, t[i], ans); }
     }
-    void move_to(int from, int to_v) {}
+    void move_to(int from, int to_v, vector<string> &ans) {
+        int best_turn = imax;
+    }
 };
 
 void inpt() {
