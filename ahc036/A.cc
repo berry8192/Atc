@@ -1,4 +1,4 @@
-// #include <atcoder/all>
+#include <atcoder/all>
 #include <bits/stdc++.h>
 
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
@@ -9,7 +9,7 @@
 #define ll long long
 
 using namespace std;
-// using namespace atcoder;
+using namespace atcoder;
 
 // std::ofstream outputFile("log.csv");
 
@@ -558,10 +558,12 @@ struct Country {
     vector<int> visit;
     vector<int> target;
     vector<vector<int>> radial_paths, circle_paths;
+    dsu d;
 
     void calc_target() {
         target.resize(N);
         rep(i, T) { target[t[i]]++; }
+        d = dsu(N + 1);
     }
     void calc_visit_path() {
         visit.resize(N);
@@ -607,12 +609,14 @@ struct Country {
                 vector<int> path = graph.shortest_path(end_v, center_v);
                 rep(j, path.size() - 1) {
                     radial_paths[i / 2].push_back(path[j]);
+                    d.merge(N, path[j]);
                     // tmp2.push_back(path[j]);
                 }
             } else {
                 vector<int> path = graph.shortest_path(center_v, end_v);
                 rep(j, path.size()) {
                     radial_paths[i / 2].push_back(path[j]);
+                    d.merge(N, path[j]);
                     // tmp2.push_back(path[j]);
                 }
             }
@@ -642,12 +646,21 @@ struct Country {
                 vector<int> path = graph.shortest_path(
                     check_points[j],
                     check_points[(j + 1) % check_points.size()]);
-                rep(k, path.size() - 1) { circle_paths[i].push_back(path[k]); }
+                rep(k, path.size() - 1) {
+                    circle_paths[i].push_back(path[k]);
+                    d.merge(N, path[k]);
+                }
             }
         }
-        print_vs(circle_paths[0]);
+        // print_vs(circle_paths[0]);
     }
-    void make_gap_path() {}
+    void make_gap_path() {
+        rep(i, N) {
+            if (d.same(N, i)) {
+                // cout << i << endl;
+            }
+        }
+    }
     void exec(bool dry_run = true) {}
     void move_to(int to_v) {}
 };
@@ -677,6 +690,7 @@ int main() {
     country.calc_visit_path();
     country.make_radial_path();
     country.make_circle_path();
+    country.make_gap_path();
 
     return 0;
 }
