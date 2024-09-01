@@ -620,6 +620,10 @@ struct Country {
                     // tmp2.push_back(path[j]);
                 }
             }
+            // if (i % 2) {
+            //     cout << "radial: " << i SP << radial_paths[i / 2].size()
+            //          << endl;
+            // }
         }
         // print_vs(tmp2);
     }
@@ -651,16 +655,28 @@ struct Country {
                     d.merge(N, path[k]);
                 }
             }
+            // cout << "circle: " << i SP << circle_paths[i].size() << endl;
         }
         // print_vs(circle_paths[0]);
     }
-    void make_gap_path() {
+    void make_gap_inner_path() {
         rep(i, N) {
-            if (d.same(N, i)) {
+            if (target[i] && !d.same(N, i)) {
                 // cout << i << endl;
+                rep(j, graph.g[i].size()) {
+                    if (d.size(i) >= Lb) {
+                        break;
+                    }
+                    int to = graph.g[i][j].to;
+                    if (target[to] && !d.same(N, i) &&
+                        d.size(i) + d.size(to) <= Lb) {
+                        d.merge(i, to);
+                    }
+                }
             }
         }
     }
+    void make_gap_outer_path() {}
     void exec(bool dry_run = true) {}
     void move_to(int to_v) {}
 };
@@ -690,7 +706,13 @@ int main() {
     country.calc_visit_path();
     country.make_radial_path();
     country.make_circle_path();
-    country.make_gap_path();
+    country.make_gap_inner_path();
+    country.make_gap_outer_path();
+    // vector<vector<int>> tmp = country.d.groups();
+    // rep(i, tmp.size()) {
+    //     rep(j, tmp[i].size()) { cout << tmp[i][j] SP; }
+    //     cout << endl;
+    // }
 
     return 0;
 }
