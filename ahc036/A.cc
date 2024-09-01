@@ -557,7 +557,7 @@ struct Country {
     int center_v;
     vector<int> visit;
     vector<int> target;
-    vector<vector<int>> radial_paths;
+    vector<vector<int>> radial_paths, circle_paths;
 
     void calc_target() {
         target.resize(N);
@@ -621,7 +621,31 @@ struct Country {
     }
     void make_circle_path() {
         // 2つの同心円
-        vector<int> radius = {200, 400};
+        int CIRCLE_SIZE = 2;
+        int PATH_DIVISION = 6; // 半径200あたりの分割数
+        circle_paths.resize(CIRCLE_SIZE);
+        vector<double> radius = {200, 400};
+
+        rep(i, CIRCLE_SIZE) {
+            vector<int> check_points;
+            rep(j, PATH_DIVISION * radius[i] / 200) {
+                double theta =
+                    2.0 * M_PI * j / (PATH_DIVISION * radius[i] / 200);
+                int dx = radius[i] * cos(theta);
+                int dy = radius[i] * sin(theta);
+                int nx = 500 + dx;
+                int ny = 500 + dy;
+                int nearest = calc_nearest_v_only_target(nx, ny);
+                check_points.push_back(nearest);
+            }
+            rep(j, check_points.size()) {
+                vector<int> path = graph.shortest_path(
+                    check_points[j],
+                    check_points[(j + 1) % check_points.size()]);
+                rep(k, path.size() - 1) { circle_paths[i].push_back(path[k]); }
+            }
+        }
+        print_vs(circle_paths[0]);
     }
     void make_gap_path() {}
     void exec(bool dry_run = true) {}
@@ -652,6 +676,7 @@ int main() {
     country.calc_target();
     country.calc_visit_path();
     country.make_radial_path();
+    country.make_circle_path();
 
     return 0;
 }
