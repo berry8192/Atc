@@ -635,16 +635,16 @@ struct Country {
     }
     void make_circle_path() {
         // 2つの同心円
-        int CIRCLE_SIZE = 2;
-        int PATH_DIVISION = 6; // 半径200あたりの分割数
+        int CIRCLE_SIZE = 3;
+        int PATH_DIVISION = 6; // 半径150あたりの分割数
         circle_paths.resize(CIRCLE_SIZE);
-        vector<double> radius = {200, 400};
+        vector<double> radius = {150, 300, 450};
 
         rep(i, CIRCLE_SIZE) {
             vector<int> check_points;
-            rep(j, PATH_DIVISION * radius[i] / 200) {
+            rep(j, PATH_DIVISION * radius[i] / 150) {
                 double theta =
-                    2.0 * M_PI * j / (PATH_DIVISION * radius[i] / 200);
+                    2.0 * M_PI * j / (PATH_DIVISION * radius[i] / 150);
                 int dx = radius[i] * cos(theta);
                 int dy = radius[i] * sin(theta);
                 int nx = 500 + dx;
