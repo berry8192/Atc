@@ -559,6 +559,8 @@ struct Country {
     vector<int> target;
     vector<vector<int>> radial_paths, circle_paths;
     dsu d;
+    set<int> jointed;
+    map<int, int> next_to_jointed;
 
     void calc_target() {
         target.resize(N);
@@ -611,6 +613,8 @@ struct Country {
                     radial_paths[i / 2].push_back(path[j]);
                     d.merge(N, path[j]);
                     // tmp2.push_back(path[j]);
+                    A.push_back(path[j]);
+                    jointed.insert(path[j]);
                 }
             } else {
                 vector<int> path = graph.shortest_path(center_v, end_v);
@@ -618,6 +622,8 @@ struct Country {
                     radial_paths[i / 2].push_back(path[j]);
                     d.merge(N, path[j]);
                     // tmp2.push_back(path[j]);
+                    A.push_back(path[j]);
+                    jointed.insert(path[j]);
                 }
             }
             // if (i % 2) {
@@ -653,11 +659,23 @@ struct Country {
                 rep(k, path.size() - 1) {
                     circle_paths[i].push_back(path[k]);
                     d.merge(N, path[k]);
+                    A.push_back(path[k]);
+                    jointed.insert(path[k]);
                 }
             }
             // cout << "circle: " << i SP << circle_paths[i].size() << endl;
         }
         // print_vs(circle_paths[0]);
+    }
+    void calc_next_to_jointed() {
+        for (auto ver : jointed) {
+            rep(i, graph.g[ver].size()) {
+                int to = graph.g[ver][i].to;
+                if (jointed.find(to) != jointed.end())
+                    continue;
+                next_to_jointed[to] = ver;
+            }
+        }
     }
     void make_gap_inner_path() {
         rep(i, N) {
@@ -676,9 +694,37 @@ struct Country {
             }
         }
     }
-    void make_gap_outer_path() {}
-    void exec(bool dry_run = true) {}
-    void move_to(int to_v) {}
+    void make_gap_outer_path() {
+        vector<vector<int>> tmp = d.groups();
+        rep(i, tmp.size()) {
+            if (target[i] && !d.same(N, i)) {
+                int joint = 0;
+                rep(j, tmp[i].size()) {
+                    if (next_to_jointed.find(tmp[i][j]) !=
+                        next_to_jointed.end()) {
+                        joint = 1;
+                    }
+                }
+                if (joint) {
+                    rep(j, tmp[i].size()) { jointed.insert(tmp[i][j]); }
+                    rep(j, tmp[i].size()) {
+                        rep(k, graph.g[tmp[i][j]].size()) {
+                            int to = graph.g[tmp[i][j]][k].to;
+                            if (jointed.find(to) != jointed.end())
+                                continue;
+                            next_to_jointed[to] = tmp[i][j];
+                        }
+                    }
+                } else {
+                }
+            }
+        }
+    }
+    void exec(bool dry_run = true) {
+        int pos = 0;
+        rep(i, T) { move_to(pos, t[i]); }
+    }
+    void move_to(int from, int to_v) {}
 };
 
 void inpt() {
@@ -706,13 +752,10 @@ int main() {
     country.calc_visit_path();
     country.make_radial_path();
     country.make_circle_path();
+    country.calc_next_to_jointed();
     country.make_gap_inner_path();
     country.make_gap_outer_path();
-    // vector<vector<int>> tmp = country.d.groups();
-    // rep(i, tmp.size()) {
-    //     rep(j, tmp[i].size()) { cout << tmp[i][j] SP; }
-    //     cout << endl;
-    // }
+    print_vs(country.A);
 
     return 0;
 }
