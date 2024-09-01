@@ -727,13 +727,81 @@ struct Country {
             }
         }
     }
+    void fill_A() {
+        vector<int> rev_A(N);
+        rep(i, A.size()) { rev_A[A[i]]++; }
+        rep(i, 10) {
+            rep(j, N) {
+                if (A.size() >= La) {
+                    break;
+                }
+                if (rev_A[j] == i) {
+                    A.push_back(j);
+                }
+            }
+        }
+    }
     void exec(bool dry_run = true) {
         vector<string> ans;
         int pos = 0;
         rep(i, T) { move_to(pos, t[i], ans); }
+        if (dry_run) {
+            rep(i, La) cout << A[i] SP;
+            cout << endl;
+            rep(i, ans.size()) { cout << ans[i] << endl; }
+        }
     }
-    void move_to(int from, int to_v, vector<string> &ans) {
-        int best_turn = imax;
+    string to_str_s(int l, int Pa, int Pb) {
+        assert(1 <= l);
+        assert(l <= Lb);
+        assert(0 <= Pa);
+        assert(Pa <= La - l);
+        assert(0 <= Pb);
+        assert(Pb <= Lb - l);
+        return "s " + to_string(l) + " " + to_string(Pa) + " " + to_string(Pb);
+    }
+    string to_str_m(int v) {
+        assert(0 <= v);
+        assert(v < N);
+        return "m " + to_string(v);
+    }
+    void move_to(int from, int to, vector<string> &ans) {
+        set<int> passed;
+        int pos = from;
+        while (pos != to) {
+            int min_dist = imax;
+            int min_dist_La_id = -1;
+            vector<int> best_path;
+            multiset<int> possible_v;
+            for (int i = 0; i + Lb < La; i += Lb) {
+                possible_v.clear();
+                rep3(j, i + Lb, i) { possible_v.insert(A[j]); }
+                vector<int> path;
+                int dist =
+                    graph.closest_reachable_distance(pos, to, possible_v, path);
+                if (dist < min_dist) {
+                    int flg = 1;
+                    rep(j, path.size()) {
+                        if (passed.find(path[j]) != passed.end()) {
+                            flg = 0;
+                            break;
+                        }
+                    }
+                    if (flg) {
+                        min_dist = dist;
+                        min_dist_La_id = i;
+                        best_path = path;
+                    }
+                }
+            }
+            ans.push_back(to_str_s(Lb, min_dist_La_id, 0));
+
+            rep(i, best_path.size()) {
+                ans.push_back(to_str_m(best_path[i]));
+                pos = best_path[i];
+                passed.insert(pos);
+            }
+        }
     }
 };
 
@@ -765,7 +833,8 @@ int main() {
     country.calc_next_to_jointed();
     country.make_gap_inner_path();
     country.make_gap_outer_path();
-    print_vs(country.A);
+    country.fill_A();
+    country.exec(false);
 
     return 0;
 }
