@@ -126,7 +126,7 @@ struct Graph {
                 edges.push_back({vv, uu, ww}); // edges
             }
         }
-        // calculate_all_pairs_shortest_paths();
+        calculate_all_pairs_shortest_paths();
     }
 
     vector<int> shortest_path(int start, int goal) {
@@ -197,6 +197,7 @@ struct Graph {
     int closest_reachable_distance(int current, int target,
                                    const multiset<int> &possible_moves,
                                    vector<int> &path) {
+
         int cut = 1;
         rep(i, g[current].size()) {
             if (possible_moves.find(g[current][i].to) != possible_moves.end()) {
@@ -218,6 +219,7 @@ struct Graph {
         while (!q.empty()) {
             int v = q.front();
             q.pop();
+            cout << "v: " << v << endl;
 
             // 隣接する頂点を探索
             for (const auto &edge : g[v]) {
@@ -225,23 +227,29 @@ struct Graph {
                     visited[edge.to] = true;
 
                     if (possible_moves.find(edge.to) != possible_moves.end()) {
+                        // cout << "edge.to: " << edge.to << endl;
                         int distance = dist[edge.to][target];
-                        if (distance < min_distance) {
+                        if (distance + 1 < min_distance) {
+                            // cout << v << endl;
+                            // cout << "par " << edge.to SP << v << endl;
                             parent[edge.to] = v; // 親として記録
                             min_distance = distance;
                             min_distance_id = edge.to;
                         }
-
                         q.push(edge.to);
                     }
                 }
+                // cout << "edge.to: " << edge.to << endl;
             }
         }
 
         // 経路を復元（始点は含めずにpathに追加）
         if (min_distance_id != -1) {
             int v = min_distance_id;
+            cout << v << endl;
             while (v != current) {
+                if (v > 0)
+                    cout << v << endl;
                 path.push_back(v);
                 v = parent[v];
             }
@@ -732,14 +740,18 @@ struct Country {
         rep(i, A.size()) { rev_A[A[i]]++; }
         rep(i, 10) {
             rep(j, N) {
+                if (target[j] == 0)
+                    continue;
                 if (A.size() >= La) {
                     break;
                 }
                 if (rev_A[j] == i) {
                     A.push_back(j);
+                    rev_A[j]++;
                 }
             }
         }
+        PV(rev_A);
     }
     void exec(bool dry_run = true) {
         vector<string> ans;
@@ -752,6 +764,7 @@ struct Country {
         }
     }
     string to_str_s(int l, int Pa, int Pb) {
+        cout << "l,Pa,Pb: " << l SP << Pa SP << Pb << endl;
         assert(1 <= l);
         assert(l <= Lb);
         assert(0 <= Pa);
@@ -761,11 +774,13 @@ struct Country {
         return "s " + to_string(l) + " " + to_string(Pa) + " " + to_string(Pb);
     }
     string to_str_m(int v) {
+        cout << "v: " << v << endl;
         assert(0 <= v);
         assert(v < N);
         return "m " + to_string(v);
     }
     void move_to(int from, int to, vector<string> &ans) {
+        cout << "move " << from << " " << to << endl;
         set<int> passed;
         int pos = from;
         while (pos != to) {
@@ -773,12 +788,13 @@ struct Country {
             int min_dist_La_id = -1;
             vector<int> best_path;
             multiset<int> possible_v;
-            for (int i = 0; i + Lb < La; i += Lb) {
+            for (int i = 0; i + Lb < La; i++) {
                 possible_v.clear();
                 rep3(j, i + Lb, i) { possible_v.insert(A[j]); }
                 vector<int> path;
                 int dist =
                     graph.closest_reachable_distance(pos, to, possible_v, path);
+                // cout << "i: " << i << " dist: " << dist << endl;
                 if (dist < min_dist) {
                     int flg = 1;
                     rep(j, path.size()) {
@@ -798,8 +814,8 @@ struct Country {
 
             rep(i, best_path.size()) {
                 ans.push_back(to_str_m(best_path[i]));
-                pos = best_path[i];
                 passed.insert(pos);
+                pos = best_path[i];
             }
         }
     }
