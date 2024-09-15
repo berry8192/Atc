@@ -170,6 +170,12 @@ struct Graph {
             int added_index = AB.size() - 1;
             jointed_edges.push_back({sorted_edges[i].from, added_index});
             jointed_edges.push_back({added_index, sorted_edges[i].to});
+
+            // Pos joint_point2 = {A[sorted_edges[i].to],
+            // B[sorted_edges[i].from]}; AB.push_back(joint_point2); int
+            // added_index2 = AB.size() - 1;
+            // jointed_edges.push_back({sorted_edges[i].from, added_index2});
+            // jointed_edges.push_back({added_index2, sorted_edges[i].to});
         }
     }
     // void sort_lines() {
