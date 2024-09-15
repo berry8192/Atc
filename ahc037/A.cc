@@ -178,10 +178,11 @@ struct Graph {
     void reduce_edges() {
         rep(i, N + 1) {
             // もともと存在していた辺に対してのみ実行する
-            if (edges[i].size() >= 2) {
+            while (edges[i].size() >= 2) {
                 int pos1 = edges[i][edges[i].size() - 1].to;
                 int pos2 = edges[i][edges[i].size() - 2].to;
-                Pos mid_pos = {min(A[pos1], A[pos2]), min(B[pos1], B[pos2])};
+                Pos mid_pos = {min(AB[pos1].h, AB[pos2].h),
+                               min(AB[pos1].w, AB[pos2].w)};
                 AB.push_back(mid_pos);
                 int added_index = AB.size() - 1;
 
