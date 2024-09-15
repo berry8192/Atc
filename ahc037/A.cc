@@ -97,29 +97,47 @@ struct Pos {
 };
 vector<Pos> AB;
 
-struct Line {
-    Pos from;
-    Pos to;
+// struct Line {
+//     Pos from;
+//     Pos to;
 
-    Line() {};
-    Line(Pos from_pos, Pos to_pos) {
-        from = from_pos;
-        to = to_pos;
+//     Line() {};
+//     Line(Pos from_pos, Pos to_pos) {
+//         from = from_pos;
+//         to = to_pos;
+//     }
+
+//     void output_line() {
+//         cout << from.h << " " << from.w << " " << to.h << " " << to.w <<
+//         endl;
+//     }
+// };
+
+struct Edge {
+    int from;
+    int to;
+
+    Edge() {};
+    Edge(int from_index, int to_index) {
+        from = from_index;
+        to = to_index;
     }
 
-    void output_line() {
-        cout << from.h << " " << from.w << " " << to.h << " " << to.w << endl;
+    void output_edge() {
+        cout << AB[from].h << " " << AB[from].w << " " << AB[to].h << " "
+             << AB[to].w << endl;
     }
 };
 
 struct Graph {
-    vector<Line> lines;
-    vector<Line> sorted_lines;
+    // vector<Line> lines;
+    // vector<Line> sorted_lines;
+    vector<vector<Edge>> edges;
+    vector<Edge> sorted_edges;
 
-    Graph() {};
+    Graph() { edges.resize(5 * N); };
 
     void greed_mini_cost() {
-        cout << 1000 << endl;
         rep(i, N) {
             int min_cost = AB[i].manhattan({0, 0});
             int min_cost_index = N;
@@ -135,35 +153,48 @@ struct Graph {
                     min_cost_index = j;
                 }
             }
-            lines.push_back({AB[min_cost_index], AB[i]});
+            // lines.push_back({AB[min_cost_index], AB[i]});
+            edges[min_cost_index].push_back({min_cost_index, i});
         }
-        sort_lines();
-        print_lines();
+        // sort_lines();
+        // print_lines();
+        sort_edges(N);
+        print_edges();
     }
-    void sort_lines() {
-        set<Pos> connected;
-        connected.insert({0, 0});
-        vector<int> conn_lines(lines.size());
+    // void sort_lines() {
+    //     set<Pos> connected;
+    //     connected.insert({0, 0});
+    //     vector<int> conn_lines(lines.size());
 
-        while (1) {
-            int connect_count = 0;
-            rep(i, lines.size()) {
-                if (conn_lines[i])
-                    continue;
-                if (connected.find(lines[i].from) != connected.end()) {
-                    sorted_lines.push_back(lines[i]);
-                    connected.insert(lines[i].to);
-                    conn_lines[i] = 1;
-                    connect_count++;
-                }
-            }
-            if (connect_count == 0)
-                break;
+    //     while (1) {
+    //         int connect_count = 0;
+    //         rep(i, lines.size()) {
+    //             if (conn_lines[i])
+    //                 continue;
+    //             if (connected.find(lines[i].from) != connected.end()) {
+    //                 sorted_lines.push_back(lines[i]);
+    //                 connected.insert(lines[i].to);
+    //                 conn_lines[i] = 1;
+    //                 connect_count++;
+    //             }
+    //         }
+    //         if (connect_count == 0)
+    //             break;
+    //     }
+    // }
+    void sort_edges(int pos_index) {
+        rep(i, edges[pos_index].size()) {
+            sorted_edges.push_back(edges[pos_index][i]);
+            sort_edges(edges[pos_index][i].to);
         }
     }
 
-    void print_lines() {
-        rep(i, sorted_lines.size()) { sorted_lines[i].output_line(); }
+    // void print_lines() {
+    //     rep(i, sorted_lines.size()) { sorted_lines[i].output_line(); }
+    // }
+    void print_edges() {
+        cout << sorted_edges.size() << endl;
+        rep(i, sorted_edges.size()) { sorted_edges[i].output_edge(); }
     }
 };
 
