@@ -134,6 +134,7 @@ struct Graph {
     // vector<Line> sorted_lines;
     vector<vector<Edge>> edges;
     vector<Edge> sorted_edges;
+    vector<Edge> jointed_edges;
 
     Graph() { edges.resize(5 * N); };
 
@@ -159,7 +160,17 @@ struct Graph {
         // sort_lines();
         // print_lines();
         sort_edges(N);
+        joint_edges();
         print_edges();
+    }
+    void joint_edges() {
+        rep(i, sorted_edges.size()) {
+            Pos joint_point = {A[sorted_edges[i].from], B[sorted_edges[i].to]};
+            AB.push_back(joint_point);
+            int added_index = AB.size() - 1;
+            jointed_edges.push_back({sorted_edges[i].from, added_index});
+            jointed_edges.push_back({added_index, sorted_edges[i].to});
+        }
     }
     // void sort_lines() {
     //     set<Pos> connected;
@@ -193,8 +204,8 @@ struct Graph {
     //     rep(i, sorted_lines.size()) { sorted_lines[i].output_line(); }
     // }
     void print_edges() {
-        cout << sorted_edges.size() << endl;
-        rep(i, sorted_edges.size()) { sorted_edges[i].output_edge(); }
+        cout << jointed_edges.size() << endl;
+        rep(i, jointed_edges.size()) { jointed_edges[i].output_edge(); }
     }
 };
 
