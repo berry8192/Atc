@@ -141,7 +141,8 @@ struct Graph {
     // vector<Line> sorted_lines;
     vector<vector<Edge>> edges;
     vector<Edge> sorted_edges;
-    vector<Edge> jointed_edges;
+    vector<Edge> jointed_edges_r;
+    vector<Edge> jointed_edges_u;
 
     Graph() { edges.resize(5 * N); };
 
@@ -201,7 +202,8 @@ struct Graph {
         rep(i, sorted_edges.size()) {
             if (AB[sorted_edges[i].from].h == AB[sorted_edges[i].to].h ||
                 AB[sorted_edges[i].from].w == AB[sorted_edges[i].to].w) {
-                jointed_edges.push_back(sorted_edges[i]);
+                jointed_edges_r.push_back(sorted_edges[i]);
+                jointed_edges_u.push_back(sorted_edges[i]); // ねんのため
                 continue;
             }
 
@@ -209,15 +211,101 @@ struct Graph {
                                AB[sorted_edges[i].to].w};
             AB.push_back(joint_point);
             int added_index = AB.size() - 1;
-            jointed_edges.push_back({sorted_edges[i].from, added_index});
-            jointed_edges.push_back({added_index, sorted_edges[i].to});
+            jointed_edges_r.push_back({sorted_edges[i].from, added_index});
+            jointed_edges_r.push_back({added_index, sorted_edges[i].to});
 
             Pos joint_point2 = {AB[sorted_edges[i].to].h,
                                 AB[sorted_edges[i].from].w};
             AB.push_back(joint_point2);
             int added_index2 = AB.size() - 1;
-            jointed_edges.push_back({sorted_edges[i].from, added_index2});
-            jointed_edges.push_back({added_index2, sorted_edges[i].to});
+            jointed_edges_u.push_back({sorted_edges[i].from, added_index2});
+            jointed_edges_u.push_back({added_index2, sorted_edges[i].to});
+        }
+    }
+    void select_right_up() {
+        // 右と上ルートどちらを使わされているか
+        vector<char> right_up(sorted_edges.size());
+        rep(i, sorted_edges.size()) {
+            if (AB[sorted_edges[i].from].h == AB[sorted_edges[i].to].h ||
+                AB[sorted_edges[i].from].w == AB[sorted_edges[i].to].w) {
+                continue;
+            }
+            Pos joint_point = {AB[sorted_edges[i].from].h,
+                               AB[sorted_edges[i].to].w}; // u->r
+            Pos joint_point2 = {AB[sorted_edges[i].to].h,
+                                AB[sorted_edges[i].from].w}; // r->u
+            Edge to_l = search_nearest_edge(joint_point, 'l');
+            Edge to_d = search_nearest_edge(joint_point2, 'd');
+                }
+    }
+    Edge search_nearest_edge(Pos pos, char dir) {
+        int min_dist = imax;
+        int max_dist_jointed_edge_index;
+        char best_dir;
+        rep(i, jointed_edges_r.size()) {
+            Pos from = AB[jointed_edges_r[i].from];
+            Pos to = AB[jointed_edges_r[i].to];
+            if (dir == 'l' && from.w != to.w && from.h <= pos.h) {
+                if (from.h != to.h)
+                    continue;
+                if ((from.w <= pos.w && pos.w <= to.w) ||
+                    (to.w <= pos.w && pos.w <= from.w)) {
+                    int dist = abs(pos.h - from.h);
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        max_dist_jointed_edge_index = i;
+                        best_dir = 'r';
+                    }
+                }
+            }
+            if (dir == 'd' && from.h != to.h && from.w <= pos.w) {
+                if (from.w != to.w)
+                    continue;
+                if ((from.h <= pos.h && pos.h <= to.h) ||
+                    (to.h <= pos.h && pos.h <= from.h)) {
+                    int dist = abs(pos.w - from.w);
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        max_dist_jointed_edge_index = i;
+                        best_dir = 'r';
+                    }
+                }
+            }
+        }
+        rep(i, jointed_edges_u.size()) {
+            Pos from = AB[jointed_edges_u[i].from];
+            Pos to = AB[jointed_edges_u[i].to];
+            if (dir == 'l' && from.w != to.w && from.h <= pos.h) {
+                if (from.h != to.h)
+                    continue;
+                if ((from.w <= pos.w && pos.w <= to.w) ||
+                    (to.w <= pos.w && pos.w <= from.w)) {
+                    int dist = abs(pos.h - from.h);
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        max_dist_jointed_edge_index = i;
+                        best_dir = 'u';
+                    }
+                }
+            }
+            if (dir == 'd' && from.h != to.h && from.w <= pos.w) {
+                if (from.w != to.w)
+                    continue;
+                if ((from.h <= pos.h && pos.h <= to.h) ||
+                    (to.h <= pos.h && pos.h <= from.h)) {
+                    int dist = abs(pos.w - from.w);
+                    if (dist < min_dist) {
+                        min_dist = dist;
+                        max_dist_jointed_edge_index = i;
+                        best_dir = 'u';
+                    }
+                }
+            }
+        }
+        if (best_dir == 'r') {
+            return jointed_edges_r[max_dist_jointed_edge_index];
+        } else {
+            return jointed_edges_u[max_dist_jointed_edge_index];
         }
     }
     // void sort_lines() {
@@ -252,10 +340,10 @@ struct Graph {
     //     rep(i, sorted_lines.size()) { sorted_lines[i].output_line(); }
     // }
     void print_edges() {
-        // cout << sorted_edges.size() << endl;
-        // rep(i, sorted_edges.size()) { sorted_edges[i].output_edge(); }
-        cout << jointed_edges.size() << endl;
-        rep(i, jointed_edges.size()) { jointed_edges[i].output_edge(); }
+        cout << sorted_edges.size() << endl;
+        rep(i, sorted_edges.size()) { sorted_edges[i].output_edge(); }
+        // cout << jointed_edges_r.size() << endl;
+        // rep(i, jointed_edges_r.size()) { jointed_edges_r[i].output_edge(); }
     }
 };
 
