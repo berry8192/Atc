@@ -127,6 +127,13 @@ struct Edge {
         cout << AB[from].h << " " << AB[from].w << " " << AB[to].h << " "
              << AB[to].w << endl;
     }
+    double calc_dir() const {
+        double dx = AB[to].h - AB[from].h;
+        double dy = AB[to].w - AB[from].w;
+        return atan2(dy, dx);
+    }
+
+    bool operator<(const Edge &in) const { return calc_dir() < in.calc_dir(); };
 };
 
 struct Graph {
@@ -159,9 +166,35 @@ struct Graph {
         }
         // sort_lines();
         // print_lines();
-        sort_edges(N);
-        joint_edges();
+        dir_sort_edges();
+        reduce_edges();
+        sort_edges(N); // 0,0 からスタート
+        // joint_edges();
         print_edges();
+    }
+    void dir_sort_edges() {
+        rep(i, edges.size()) { sort(all(edges[i])); }
+    }
+    void reduce_edges() {
+        rep(i, N + 1) {
+            // もともと存在していた辺に対してのみ実行する
+            if (edges[i].size() >= 2) {
+                int pos1 = edges[i][edges[i].size() - 1].to;
+                int pos2 = edges[i][edges[i].size() - 2].to;
+                Pos mid_pos = {min(A[pos1], A[pos2]), min(B[pos1], B[pos2])};
+                AB.push_back(mid_pos);
+                int added_index = AB.size() - 1;
+
+                // iで削除と追加
+                edges[i].pop_back();
+                edges[i].pop_back();
+                edges[i].push_back({i, added_index});
+
+                // added_indexで追加
+                edges[added_index].push_back({added_index, pos1});
+                edges[added_index].push_back({added_index, pos2});
+            }
+        }
     }
     void joint_edges() {
         rep(i, sorted_edges.size()) {
@@ -210,8 +243,10 @@ struct Graph {
     //     rep(i, sorted_lines.size()) { sorted_lines[i].output_line(); }
     // }
     void print_edges() {
-        cout << jointed_edges.size() << endl;
-        rep(i, jointed_edges.size()) { jointed_edges[i].output_edge(); }
+        cout << sorted_edges.size() << endl;
+        rep(i, sorted_edges.size()) { sorted_edges[i].output_edge(); }
+        // cout << jointed_edges.size() << endl;
+        // rep(i, jointed_edges.size()) { jointed_edges[i].output_edge(); }
     }
 };
 
