@@ -97,6 +97,11 @@ struct Pos {
 
 struct Grid {};
 
+void all_zero() {
+    cout << 1000 << endl;
+    rep(i, N) { cout << 0 SP << 0 SP << A[i] SP << B[i] << endl; }
+}
+
 void inpt() {
     cin >> N;
     A.resize(N);
@@ -108,9 +113,6 @@ int main() {
     start = chrono::system_clock::now();
 
     inpt();
-
-    cout << 1000 << endl;
-    rep(i, N) { cout << 0 SP << 0 SP << A[i] SP << B[i] << endl; }
 
     return 0;
 }
