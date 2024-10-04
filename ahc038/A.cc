@@ -146,8 +146,103 @@ void inpt() {
     rep(i, N) { cin >> t[i]; }
 }
 
+void zero_tree() {
+    cout << 1 << endl;
+
+    rep(i, N) {
+        rep(j, N) {
+            if (s[i][j] == '1' && t[i][j] == '1') {
+                s[i][j] = '0';
+                t[i][j] = '0';
+            }
+        }
+    }
+    Pos pos;
+    rep(i, N) {
+        rep(j, N) {
+            if (s[i][j] == '1') {
+                pos = {i, j};
+                i = N;
+                break;
+            }
+        }
+    }
+    cout << pos.h SP << pos.w << endl;
+    s[pos.h][pos.w] = '0';
+    cout << ".P" << endl;
+    bool hold = true;
+    while (1) {
+        // if (hold) {
+        //     cout << "hold" << endl;
+        // } else {
+        //     cout << "not hold" << endl;
+        // }
+        int min_dist = imax;
+        Pos min_dist_pos;
+        rep(i, N) {
+            rep(j, N) {
+                if (hold) {
+                    if (t[i][j] == '1') {
+                        int tmp = pos.manhattan({i, j});
+                        if (tmp < min_dist) {
+                            min_dist = tmp;
+                            min_dist_pos = {i, j};
+                        }
+                    }
+                } else {
+                    if (s[i][j] == '1') {
+                        int tmp = pos.manhattan({i, j});
+                        if (tmp < min_dist) {
+                            min_dist = tmp;
+                            min_dist_pos = {i, j};
+                        }
+                    }
+                }
+            }
+        }
+        // cout << "min_dist_pos: "; //
+        // min_dist_pos.print(); //
+
+        if (hold) {
+            t[min_dist_pos.h][min_dist_pos.w] = '0';
+        } else {
+            s[min_dist_pos.h][min_dist_pos.w] = '0';
+        }
+
+        if (min_dist == imax) {
+            exit(0);
+        }
+        while (!(pos == min_dist_pos)) {
+            int min_dir_dist = imax;
+            int min_dir_dist_index;
+            Pos npos;
+            rep(i, 4) {
+                npos = pos + d4[i];
+                int tmp = npos.manhattan(min_dist_pos);
+                // cout << tmp << endl; //
+                if (tmp < min_dir_dist) {
+                    min_dir_dist = tmp;
+                    min_dir_dist_index = i;
+                }
+            }
+            pos = pos + d4[min_dir_dist_index];
+            // cout << "pos: "; //
+            // pos.print(); //
+            cout << dc[min_dir_dist_index];
+            if (pos == min_dist_pos) {
+                cout << 'P' << endl;
+            } else {
+                cout << '.' << endl;
+            }
+        }
+        hold = !hold;
+    }
+}
+
 int main() {
     start = chrono::system_clock::now();
+    inpt();
+    zero_tree();
 
     Grid best;
 
