@@ -134,6 +134,7 @@ struct Grid {};
 Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
 
 Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+string dc = "RULD";
 
 void inpt() {
     cin >> N >> M >> V;
