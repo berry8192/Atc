@@ -53,6 +53,20 @@ double TIME_LIMIT = 1900.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
 
+struct Timer {
+    chrono::_V2::system_clock::time_point start;
+
+    Timer() { start = chrono::system_clock::now(); }
+    double progress() {
+        chrono::_V2::system_clock::time_point current =
+            chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+                   .count() /
+               TIME_LIMIT;
+    }
+};
+Timer timer;
+
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
 int seed = 1;
@@ -66,7 +80,7 @@ struct Pos {
     int h;
     int w;
 
-    Pos(){};
+    Pos() {};
     Pos(int hh, int ww) {
         h = hh;
         w = ww;
@@ -150,22 +164,3 @@ int main() {
 
     return 0;
 }
-
-// ただし畑のマスが一斉に留守になるタイミングがあるならなんとかなる
-// ふさがるマスが多いマスはあきらめる
-// 2通り以上アクセスする方法があるマスはどうしよう
-
-// 行き止まりに近いマスは長い区間の計画を使う
-// 迷路の形を何回か試す
-
-// ###
-// AB#
-// ###
-// のような形のとき、BがS=5, D=10なら
-// AがS=5, D=10なら最高
-// AがS=7, D=10ならAのplant_tを5以下にしてもよい
-// AがS=3, D=10ならBのplant_tを3以下にする必要がある
-// AがS=5, D=9ならまあ許せる
-// AがS=4, D=9ならBのplant_tを4以下にする必要がある
-// AがS=6, D=9ならAのplant_tを6以下にしてもよい
-// AがD=11なら無理

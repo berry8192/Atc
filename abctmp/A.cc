@@ -89,7 +89,7 @@ struct Edge {
     int to;
     ll cost;
 
-    Edge(){};
+    Edge() {};
     Edge(int ifrom, int ito, ll icost) {
         from = ifrom;
         to = ito;
@@ -115,7 +115,7 @@ struct Graph {
     vector<Edge> euler_e;
     vector<int> euler_used;
 
-    Graph(){};
+    Graph() {};
 
     void init(int nn, int mm, bool weight = false, bool directed = false) {
         n = nn;
@@ -136,7 +136,7 @@ struct Graph {
             g[uu].push_back({uu, vv, ww});
             edges.push_back({uu, vv, ww}); // edges
             if (!directed) {
-                g[vv].push_back({uu, vv, ww});
+                g[vv].push_back({vv, uu, ww});
                 edges.push_back({vv, uu, ww}); // edges
             }
         }
