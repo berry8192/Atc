@@ -127,6 +127,12 @@ struct Pos {
         rtn.w = w - pos.w;
         return rtn;
     }
+    Pos operator*(const int x) {
+        Pos rtn;
+        rtn.h = h * x;
+        rtn.w = w * x;
+        return rtn;
+    }
 };
 
 struct Grid {};
@@ -239,33 +245,197 @@ void zero_tree() {
     }
 }
 
+void v_tree() {
+    rep(i, N) {
+        rep(j, N) {
+            if (s[i][j] == '1' && t[i][j] == '1') {
+                s[i][j] = '0';
+                t[i][j] = '0';
+            }
+        }
+    }
+    V = min(V, N / 2);
+    cout << V << endl;
+    // rep3(i, V, 1) { cout << 0 SP << i * ((N) / V) << endl; }
+    rep3(i, V, 1) { cout << 0 SP << i << endl; }
+
+    Pos pos;
+    rep(j, N - 1) {
+        rep(i, N) {
+            if (s[i][j + 1] == '0') {
+                pos = {i, j};
+                i = N;
+                break;
+            }
+        }
+    }
+    cout << pos.h SP << pos.w << endl;
+    vector<int> dirs(V);
+    vector<bool> hold(V);
+    // rep(j, 2) {
+    //     cout << ".R";
+    //     rep3(j, 2 * V, 2) cout << ".";
+    //     cout << endl;
+    // }
+    // dirs[1] = 2;
+    while (1) {
+        // if (hold) {
+        //     cout << "hold" << endl;
+        // } else {
+        //     cout << "not hold" << endl;
+        // }
+        int min_dist = imax;
+        Pos min_dist_pos = {imax, imax};
+        rep(i, N) {
+            rep(j, N) {
+                int tmp = (pos + d4[dirs[1]]).manhattan({i, j});
+                if (tmp < min_dist) {
+                    if ((t[i][j] == '1' && hold[1]) ||
+                        (s[i][j] == '1' && !hold[1])) {
+                        min_dist = tmp;
+                        min_dist_pos = {i, j};
+                    }
+                }
+            }
+        }
+        // cout << "min_dist_pos: "; //
+        // min_dist_pos.print(); //
+
+        if (min_dist != imax) {
+            assert(!min_dist_pos.is_oob());
+            if (hold[1]) {
+                t[min_dist_pos.h][min_dist_pos.w] = '0';
+            } else {
+                s[min_dist_pos.h][min_dist_pos.w] = '0';
+            }
+        }
+        while (!(pos + d4[dirs[1]] == min_dist_pos)) {
+            if (min_dist == imax) {
+                int flg = 1;
+                rep3(i, V, 2) {
+                    if (hold[i]) {
+                        flg = 0;
+                        break;
+                    }
+                }
+                if (flg) {
+                    return;
+                }
+            }
+            int min_dir_dist = (pos + d4[dirs[1]]).manhattan(min_dist_pos);
+            int min_dir_dist_index = -1;
+            Pos npos;
+            if (min_dist != imax) {
+                rep(i, 4) {
+                    npos = pos + d4[i];
+                    if (npos.is_oob()) {
+                        continue;
+                    }
+                    int tmp = (npos + d4[dirs[1]]).manhattan(min_dist_pos);
+                    // cout << tmp << endl; //
+                    if (tmp < min_dir_dist) {
+                        min_dir_dist = tmp;
+                        min_dir_dist_index = i;
+                    }
+                }
+            } else {
+                rep3(i, V, 2) {
+                    if (hold[i]) {
+                        min_dir_dist = imax;
+                        rep(j, 4) {
+                            npos = pos + d4[j];
+                            if (npos.is_oob()) {
+                                continue;
+                            }
+                            rep(k, N) {
+                                rep(l, N) {
+                                    if (t[k][l] == '1') {
+                                        int tmp = (npos + (d4[dirs[i]] * i))
+                                                      .manhattan({k, l});
+                                        if (tmp < min_dir_dist) {
+                                            min_dir_dist = tmp;
+                                            min_dir_dist_index = j;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            if (min_dir_dist_index != -1) {
+                pos = pos + d4[min_dir_dist_index];
+                cout << dc[min_dir_dist_index];
+            } else {
+                cout << '.';
+            }
+            if (pos + d4[dirs[1]] == min_dist_pos && min_dist != imax) {
+                cout << '.';
+            } else {
+                if ((pos.h < N / 2 && dirs[1] != 1) ||
+                    (N <= pos.h + N / 2 && dirs[1] != 3)) {
+                    cout << 'L';
+                    dirs[1] = (dirs[1] + 1) % 4;
+                } else {
+                    cout << '.';
+                }
+            }
+            rep3(i, V, 2) {
+                int best_dir = (mt() % 8) / 7;
+                for (int j = -1; j <= 1; j++) {
+                    Pos nvpos = pos + (d4[(dirs[i] + j) % 4] * i);
+                    if (nvpos.is_oob()) {
+                        continue;
+                    }
+                    if (t[nvpos.h][nvpos.w] == '1' && hold[i]) {
+                        best_dir = j;
+                        break;
+                    } else if (s[nvpos.h][nvpos.w] == '1' && !hold[i]) {
+                        best_dir = j;
+                        break;
+                    }
+                }
+                dirs[i] = (dirs[i] + best_dir) % 4;
+                if (best_dir == 1) {
+                    cout << "L";
+                } else if (best_dir == -1) {
+                    cout << "R";
+                } else {
+                    cout << ".";
+                }
+            }
+            cout << ".";
+            if (pos + d4[dirs[1]] == min_dist_pos && min_dist != imax) {
+                cout << 'P';
+            } else {
+                cout << '.';
+            }
+            rep3(i, V, 2) {
+                Pos nvpos = pos + (d4[dirs[i]] * i);
+                if (!nvpos.is_oob() && t[nvpos.h][nvpos.w] == '1' && hold[i]) {
+                    t[nvpos.h][nvpos.w] = '0';
+                    hold[i] = false;
+                    cout << 'P';
+                } else if (!nvpos.is_oob() && s[nvpos.h][nvpos.w] == '1' &&
+                           !hold[i]) {
+                    s[nvpos.h][nvpos.w] = '0';
+                    hold[i] = true;
+                    cout << 'P';
+                } else {
+                    cout << ".";
+                }
+            }
+            cout << endl;
+        }
+        hold[1] = !hold[1];
+    }
+}
+
 int main() {
     start = chrono::system_clock::now();
     inpt();
-    zero_tree();
-
-    Grid best;
-
-    int loop = 0;
-    while (1) {
-        current = chrono::system_clock::now();
-        if (chrono::duration_cast<chrono::milliseconds>(current - start)
-                .count() > TIME_LIMIT) {
-            // break;
-        }
-        loop++;
-
-        Grid grid;
-
-        // if (best.score < grid.score) {
-        // best = space;
-        // cout<< "loop: " << loop <<endl;
-        // best.print_ans();
-        // cout<< "score: " << space.score SP << space.score*25 <<endl;
-        // }
-    }
-    // cout<< space.score SP << space.score*25 <<endl;
-    // best.print_ans();
+    v_tree();
 
     return 0;
 }
