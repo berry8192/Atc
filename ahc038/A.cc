@@ -54,12 +54,11 @@ double start_temp = 10000000.0;
 double end_temp = 10000.0;
 
 struct Timer {
-    chrono::_V2::system_clock::time_point start;
+    chrono::system_clock::time_point start;
 
     Timer() { start = chrono::system_clock::now(); }
     double progress() {
-        chrono::_V2::system_clock::time_point current =
-            chrono::system_clock::now();
+        chrono::system_clock::time_point current = chrono::system_clock::now();
         return chrono::duration_cast<chrono::milliseconds>(current - start)
                    .count() /
                TIME_LIMIT;
@@ -69,8 +68,8 @@ Timer timer;
 
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
-int seed = 1;
-mt19937 mt(seed);
+random_device rd;
+mt19937 mt(rd());
 
 int N, M, V;
 vector<string> s, t;
