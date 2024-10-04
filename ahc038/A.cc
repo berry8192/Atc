@@ -138,6 +138,8 @@ string dc = "RULD";
 
 void inpt() {
     cin >> N >> M >> V;
+    HEIGHT = N;
+    WIDTH = N;
     s.resize(N);
     t.resize(N);
     rep(i, N) { cin >> s[i]; }
