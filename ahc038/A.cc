@@ -263,7 +263,7 @@ void v_tree() {
         rep(i, N) {
             if (s[i][j + 1] == '0') {
                 pos = {i, j};
-                i = N;
+                j = N;
                 break;
             }
         }
@@ -381,7 +381,7 @@ void v_tree() {
                 }
             }
             rep3(i, V, 2) {
-                int best_dir = (mt() % 8) / 7;
+                int best_dir = 0;
                 for (int j = -1; j <= 1; j++) {
                     Pos nvpos = pos + (d4[(dirs[i] + j) % 4] * i);
                     if (nvpos.is_oob()) {
@@ -428,6 +428,9 @@ void v_tree() {
             cout << endl;
         }
         hold[1] = !hold[1];
+        if (min_dist == imax) {
+            hold[1] = false;
+        }
     }
 }
 
