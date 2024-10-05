@@ -18,12 +18,13 @@ using namespace std;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
-// 	// rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
-// 	cout<< pvv[pvv.size()-1] <<endl;
-// }
+template <class T> void PV(T pvv) {
+    if (!pvv.size())
+        return;
+    rep(i, pvv.size() - 1) cout << pvv[i] << ", ";
+    // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
+    cout << pvv[pvv.size() - 1] << endl;
+}
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
@@ -134,7 +135,43 @@ struct Pos {
     }
 };
 
-struct Grid {};
+struct Grid {
+    vector<string> ss, tt;
+    vector<Pos> from, to;
+    vector<int> v;
+
+    Grid(const vector<string> &in_s, const vector<string> &in_t) {
+        ss = in_s;
+        tt = in_t;
+        rep(i, N) {
+            rep(j, N) {
+                if (ss[i][j] == '1' && tt[i][j] == '0') {
+                    from.emplace_back(i, j);
+                } else if (ss[i][j] == '0' && tt[i][j] == '1') {
+                    to.emplace_back(i, j);
+                }
+            }
+        }
+        assert(from.size() == to.size());
+        v.resize(V);
+        rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
+        debug_print_v();
+    }
+
+    void calc_step() {
+        rep(i, N / 2) {
+            rep(j, from.size()) {
+                rep(k, to.size()) {}
+            }
+        }
+    }
+
+    void debug_print_v() {
+        cout << v.size() << endl;
+        rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
+        cout << "0 0" << endl;
+    }
+};
 
 Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
 
@@ -437,7 +474,7 @@ void v_tree() {
 int main() {
     start = chrono::system_clock::now();
     inpt();
-    v_tree();
+    Grid grid(s, t);
 
     return 0;
 }
