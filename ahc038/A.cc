@@ -153,11 +153,13 @@ struct Grid {
             }
         }
         assert(from.size() == to.size());
-        v.resize(V);
-        rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
-        debug_print_v();
     }
 
+    void init_v() {
+        v.resize(V);
+        rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
+        // debug_print_v();
+    }
     void calc_step() {
         rep(i, N / 2) {
             rep(j, from.size()) {
