@@ -67,14 +67,31 @@ struct Timer {
 };
 Timer timer;
 
+unsigned int randxor() {
+    static unsigned int x = 123456789, y = 362436069, z = 521288629,
+                        w = 88675123;
+    unsigned int t;
+    t = (x ^ (x << 11));
+    x = y;
+    y = z;
+    z = w;
+    return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8)));
+}
+template <typename T> T rand(T a, T b) {
+    assert(a <= b);
+    ll len = (b - a + 1);
+    return randxor() % len + a;
+}
+
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
-random_device rd;
-mt19937 mt(rd());
+// random_device rd;
+// mt19937 mt(rd());
 
 int N, M, V;
 vector<string> s, t;
 int HEIGHT, WIDTH;
+vector<vector<bool>> def_masu(N, vector<bool>(N)), def_tako(N, vector<bool>(N));
 
 // 構造体
 struct Pos {
@@ -139,6 +156,10 @@ struct Grid {
     vector<string> ss, tt;
     vector<Pos> from, to;
     vector<int> v;
+    Pos pos;
+    vector<int> dir;
+    vector<bool> has;
+    vector<vector<bool>> tako;
 
     Grid(const vector<string> &in_s, const vector<string> &in_t) {
         ss = in_s;
@@ -153,6 +174,9 @@ struct Grid {
             }
         }
         assert(from.size() == to.size());
+        init_v();
+        init_pos();
+        tako = def_tako;
     }
 
     void init_v() {
@@ -160,6 +184,7 @@ struct Grid {
         rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
         // debug_print_v();
     }
+    void init_pos() { pos = {rand(0, N), rand(0, N)}; }
     void calc_step() {
         rep(i, N / 2) {
             rep(j, from.size()) {
@@ -188,6 +213,19 @@ void inpt() {
     t.resize(N);
     rep(i, N) { cin >> s[i]; }
     rep(i, N) { cin >> t[i]; }
+    calc_masu();
+}
+
+void calc_masu() {
+    rep(i, N) {
+        rep(j, N) {
+            if (s[i][j] == '1' && t[i][j] == '0') {
+                def_tako[i][j] = true;
+            } else if (s[i][j] == '0' && t[i][j] == '1') {
+                def_masu[i][j] = true;
+            }
+        }
+    }
 }
 
 void zero_tree() {
