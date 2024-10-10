@@ -90,7 +90,7 @@ template <typename T> T rand(T a, T b) {
 
 int N, M, V;
 vector<string> s, t;
-int HEIGHT, WIDTH;
+int rest_tako_masu;
 vector<vector<bool>> def_masu, def_tako;
 
 // 構造体
@@ -109,10 +109,10 @@ struct Pos {
         // assert(h<n);
         // assert(0<=w);
         // assert(w<=h);
-        return !(0 <= h && h < HEIGHT && 0 <= w && w < WIDTH);
+        return !(0 <= h && h < N && 0 <= w && w < N);
     }
     int manhattan(Pos pos) { return abs(h - pos.h) + abs(w - pos.w); }
-    int index() { return h * WIDTH + w; }
+    int index() { return h * N + w; }
     void print() { cout << "(" << h << ", " << w << ")" << endl; }
     // 受け取った近傍でPosを作る
     vector<Pos> around_pos(const vector<Pos> &dir) {
@@ -152,13 +152,23 @@ struct Pos {
     }
 };
 
+Pos itop(int idx) { return {idx / N, idx % N}; }
+
+Pos d5[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}, {0, 0}};
+string dir_char = "RULD.", dir_rot = "R.L";
+map<char, int> mdir_char = {{'R', 0}, {'U', 1}, {'L', 2}, {'D', 3}, {'.', 4}};
+map<char, int> mdir_rot = {{'R', -1}, {'.', 0}, {'L', 1}};
+
 struct Grid {
     vector<string> ss, tt;
     vector<int> v;
-    Pos pos;
+    Pos ipos, pos;
     vector<int> dir;
     vector<bool> has;
     vector<vector<bool>> tako;
+    vector<vector<bool>> masu;
+    vector<string> steps;
+    int rest;
 
     Grid(const vector<string> &in_s, const vector<string> &in_t) {
         ss = in_s;
@@ -166,8 +176,10 @@ struct Grid {
         init_v();
         init_pos();
         tako = def_tako;
+        masu = def_masu;
         dir.resize(V);
         has.resize(V);
+        rest = rest_tako_masu;
     }
 
     void init_v() {
@@ -175,19 +187,102 @@ struct Grid {
         rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
         // debug_print_v();
     }
-    void init_pos() { pos = {rand(0, N), rand(0, N)}; }
+    void init_pos() {
+        ipos = {rand(0, N - 1), rand(0, N - 1)};
+        pos = ipos;
+    }
+    char make_mov() {
+        // cout << "make_mov" << endl;
+        vector<int> tmp;
+        rep(i, 5) {
+            Pos npos = pos + d5[i];
+            if (!npos.is_oob()) {
+                tmp.push_back(i);
+            }
+        }
+        int sdir = tmp[rand(0, int(tmp.size() - 1))];
+        pos = pos + d5[sdir];
+        return dir_char[sdir];
+    }
+    Pos calc_leaf_pos(int idx, int add_dir = 0) {
+        // cout << "calc_leaf_pos " << (dir[idx] + add_dir + 4) % 4 << endl;
+        Pos dd = d5[(dir[idx] + add_dir + 4) % 4];
+        return pos + dd * v[idx];
+    }
+    string make_rot() {
+        // cout << "make_rot" << endl;
+        string rot;
+        rep3(i, V, 1) {
+            vector<char> tmp;
+            for (int j = -1; j <= 1; j++) {
+                Pos lpos = calc_leaf_pos(i, j);
+                if (!lpos.is_oob()) {
+                    tmp.push_back(j);
+                }
+            }
+            if (tmp.empty()) {
+                rot += 'L';
+                dir[i] = (dir[i] + 1) % 4;
+            } else {
+                char rdir = tmp[rand(0, int(tmp.size() - 1))];
+                rot += dir_rot[rdir + 1];
+                dir[i] = (dir[i] + rdir + 4) % 4;
+            }
+        }
+        return rot;
+    }
+    string make_P() {
+        // cout << "make_P" << endl;
+        string p = ".";
+        rep3(i, V, 1) {
+            Pos lpos = calc_leaf_pos(i);
+            if (!lpos.is_oob()) {
+                if (has[i]) {
+                    if (masu[lpos.h][lpos.w]) {
+                        p += 'P';
+                        masu[lpos.h][lpos.w] = false;
+                        has[i] = false;
+                        rest--;
+                    } else {
+                        p += '.';
+                    }
+                } else {
+                    if (tako[lpos.h][lpos.w]) {
+                        p += 'P';
+                        tako[lpos.h][lpos.w] = false;
+                        has[i] = true;
+                        rest--;
+                    } else {
+                        p += '.';
+                    }
+                }
+            } else {
+                p += '.';
+            }
+        }
+        return p;
+    }
+    void random_move() {
+        // cout << "random_move" << endl;
+        string step;
+        step += make_mov();
+        step += make_rot();
+        step += make_P();
+        steps.push_back(step);
+    }
 
+    void print_ans() {
+        cout << v.size() << endl;
+        rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
+        cout << ipos.h SP << ipos.w << endl;
+        rep(i, steps.size()) { cout << steps[i] << endl; }
+    }
     void debug_print_v() {
         cout << v.size() << endl;
         rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
         cout << "0 0" << endl;
     }
 };
-
-Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
-
-Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
-string dc = "RULD";
 
 void calc_masu() {
     def_tako.resize(N, vector<bool>(N, false));
@@ -196,8 +291,10 @@ void calc_masu() {
         rep(j, N) {
             if (s[i][j] == '1' && t[i][j] == '0') {
                 def_tako[i][j] = true;
+                rest_tako_masu++;
             } else if (s[i][j] == '0' && t[i][j] == '1') {
                 def_masu[i][j] = true;
+                rest_tako_masu++;
             }
         }
     }
@@ -205,8 +302,6 @@ void calc_masu() {
 
 void inpt() {
     cin >> N >> M >> V;
-    HEIGHT = N;
-    WIDTH = N;
     s.resize(N);
     t.resize(N);
     rep(i, N) { cin >> s[i]; }
@@ -284,8 +379,8 @@ void zero_tree() {
             int min_dir_dist = imax;
             int min_dir_dist_index;
             Pos npos;
-            rep(i, 4) {
-                npos = pos + d4[i];
+            rep(i, 5) {
+                npos = pos + d5[i];
                 int tmp = npos.manhattan(min_dist_pos);
                 // cout << tmp << endl; //
                 if (tmp < min_dir_dist) {
@@ -293,10 +388,10 @@ void zero_tree() {
                     min_dir_dist_index = i;
                 }
             }
-            pos = pos + d4[min_dir_dist_index];
+            pos = pos + d5[min_dir_dist_index];
             // cout << "pos: "; //
             // pos.print(); //
-            cout << dc[min_dir_dist_index];
+            cout << dir_char[min_dir_dist_index];
             if (pos == min_dist_pos) {
                 cout << 'P' << endl;
             } else {
@@ -350,7 +445,7 @@ void v_tree() {
         Pos min_dist_pos = {imax, imax};
         rep(i, N) {
             rep(j, N) {
-                int tmp = (pos + d4[dirs[1]]).manhattan({i, j});
+                int tmp = (pos + d5[dirs[1]]).manhattan({i, j});
                 if (tmp < min_dist) {
                     if ((t[i][j] == '1' && hold[1]) ||
                         (s[i][j] == '1' && !hold[1])) {
@@ -371,7 +466,7 @@ void v_tree() {
                 s[min_dist_pos.h][min_dist_pos.w] = '0';
             }
         }
-        while (!(pos + d4[dirs[1]] == min_dist_pos)) {
+        while (!(pos + d5[dirs[1]] == min_dist_pos)) {
             if (min_dist == imax) {
                 int flg = 1;
                 rep3(i, V, 2) {
@@ -384,16 +479,16 @@ void v_tree() {
                     return;
                 }
             }
-            int min_dir_dist = (pos + d4[dirs[1]]).manhattan(min_dist_pos);
+            int min_dir_dist = (pos + d5[dirs[1]]).manhattan(min_dist_pos);
             int min_dir_dist_index = -1;
             Pos npos;
             if (min_dist != imax) {
                 rep(i, 4) {
-                    npos = pos + d4[i];
+                    npos = pos + d5[i];
                     if (npos.is_oob()) {
                         continue;
                     }
-                    int tmp = (npos + d4[dirs[1]]).manhattan(min_dist_pos);
+                    int tmp = (npos + d5[dirs[1]]).manhattan(min_dist_pos);
                     // cout << tmp << endl; //
                     if (tmp < min_dir_dist) {
                         min_dir_dist = tmp;
@@ -405,14 +500,14 @@ void v_tree() {
                     if (hold[i]) {
                         min_dir_dist = imax;
                         rep(j, 4) {
-                            npos = pos + d4[j];
+                            npos = pos + d5[j];
                             if (npos.is_oob()) {
                                 continue;
                             }
                             rep(k, N) {
                                 rep(l, N) {
                                     if (t[k][l] == '1') {
-                                        int tmp = (npos + (d4[dirs[i]] * i))
+                                        int tmp = (npos + (d5[dirs[i]] * i))
                                                       .manhattan({k, l});
                                         if (tmp < min_dir_dist) {
                                             min_dir_dist = tmp;
@@ -427,12 +522,12 @@ void v_tree() {
                 }
             }
             if (min_dir_dist_index != -1) {
-                pos = pos + d4[min_dir_dist_index];
-                cout << dc[min_dir_dist_index];
+                pos = pos + d5[min_dir_dist_index];
+                cout << dir_char[min_dir_dist_index];
             } else {
                 cout << '.';
             }
-            if (pos + d4[dirs[1]] == min_dist_pos && min_dist != imax) {
+            if (pos + d5[dirs[1]] == min_dist_pos && min_dist != imax) {
                 cout << '.';
             } else {
                 if ((pos.h < N / 2 && dirs[1] != 1) ||
@@ -446,7 +541,7 @@ void v_tree() {
             rep3(i, V, 2) {
                 int best_dir = 0;
                 for (int j = -1; j <= 1; j++) {
-                    Pos nvpos = pos + (d4[(dirs[i] + j) % 4] * i);
+                    Pos nvpos = pos + (d5[(dirs[i] + j) % 4] * i);
                     if (nvpos.is_oob()) {
                         continue;
                     }
@@ -468,13 +563,13 @@ void v_tree() {
                 }
             }
             cout << ".";
-            if (pos + d4[dirs[1]] == min_dist_pos && min_dist != imax) {
+            if (pos + d5[dirs[1]] == min_dist_pos && min_dist != imax) {
                 cout << 'P';
             } else {
                 cout << '.';
             }
             rep3(i, V, 2) {
-                Pos nvpos = pos + (d4[dirs[i]] * i);
+                Pos nvpos = pos + (d5[dirs[i]] * i);
                 if (!nvpos.is_oob() && t[nvpos.h][nvpos.w] == '1' && hold[i]) {
                     t[nvpos.h][nvpos.w] = '0';
                     hold[i] = false;
@@ -501,6 +596,13 @@ int main() {
     start = chrono::system_clock::now();
     inpt();
     Grid grid(s, t);
+    rep(i, 100000) {
+        grid.random_move();
+        if (grid.rest == 0) {
+            break;
+        }
+    }
+    grid.print_ans();
 
     return 0;
 }
