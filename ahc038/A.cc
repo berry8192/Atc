@@ -187,17 +187,6 @@ Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
 Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 string dc = "RULD";
 
-void inpt() {
-    cin >> N >> M >> V;
-    HEIGHT = N;
-    WIDTH = N;
-    s.resize(N);
-    t.resize(N);
-    rep(i, N) { cin >> s[i]; }
-    rep(i, N) { cin >> t[i]; }
-    calc_masu();
-}
-
 void calc_masu() {
     rep(i, N) {
         rep(j, N) {
@@ -208,6 +197,17 @@ void calc_masu() {
             }
         }
     }
+}
+
+void inpt() {
+    cin >> N >> M >> V;
+    HEIGHT = N;
+    WIDTH = N;
+    s.resize(N);
+    t.resize(N);
+    rep(i, N) { cin >> s[i]; }
+    rep(i, N) { cin >> t[i]; }
+    calc_masu();
 }
 
 void zero_tree() {
