@@ -91,7 +91,7 @@ template <typename T> T rand(T a, T b) {
 int N, M, V;
 vector<string> s, t;
 int HEIGHT, WIDTH;
-vector<vector<bool>> def_masu(N, vector<bool>(N)), def_tako(N, vector<bool>(N));
+vector<vector<bool>> def_masu, def_tako;
 
 // 構造体
 struct Pos {
@@ -166,6 +166,8 @@ struct Grid {
         init_v();
         init_pos();
         tako = def_tako;
+        dir.resize(V);
+        has.resize(V);
     }
 
     void init_v() {
@@ -188,6 +190,8 @@ Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 string dc = "RULD";
 
 void calc_masu() {
+    def_tako.resize(N, vector<bool>(N, false));
+    def_masu.resize(N, vector<bool>(N, false));
     rep(i, N) {
         rep(j, N) {
             if (s[i][j] == '1' && t[i][j] == '0') {
