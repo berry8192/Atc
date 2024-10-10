@@ -154,7 +154,6 @@ struct Pos {
 
 struct Grid {
     vector<string> ss, tt;
-    vector<Pos> from, to;
     vector<int> v;
     Pos pos;
     vector<int> dir;
@@ -164,16 +163,6 @@ struct Grid {
     Grid(const vector<string> &in_s, const vector<string> &in_t) {
         ss = in_s;
         tt = in_t;
-        rep(i, N) {
-            rep(j, N) {
-                if (ss[i][j] == '1' && tt[i][j] == '0') {
-                    from.emplace_back(i, j);
-                } else if (ss[i][j] == '0' && tt[i][j] == '1') {
-                    to.emplace_back(i, j);
-                }
-            }
-        }
-        assert(from.size() == to.size());
         init_v();
         init_pos();
         tako = def_tako;
@@ -185,13 +174,6 @@ struct Grid {
         // debug_print_v();
     }
     void init_pos() { pos = {rand(0, N), rand(0, N)}; }
-    void calc_step() {
-        rep(i, N / 2) {
-            rep(j, from.size()) {
-                rep(k, to.size()) {}
-            }
-        }
-    }
 
     void debug_print_v() {
         cout << v.size() << endl;
