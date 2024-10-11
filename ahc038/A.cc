@@ -49,7 +49,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 2700.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -595,14 +595,26 @@ void v_tree() {
 int main() {
     start = chrono::system_clock::now();
     inpt();
-    Grid grid(s, t);
-    rep(i, 100000) {
-        grid.random_move();
-        if (grid.rest == 0) {
-            break;
+    Grid best(s, t);
+    int best_score = imax;
+
+    int lp = 0;
+    while (timer.progress() < 1) {
+        lp++;
+        Grid grid(s, t);
+        rep(i, min(100000, best_score)) {
+            grid.random_move();
+            if (grid.rest == 0) {
+                if (i + 1 < best_score) {
+                    best_score = i + 1;
+                    best = grid;
+                    cerr << lp SP << i + 1 << endl;
+                }
+                break;
+            }
         }
     }
-    grid.print_ans();
+    best.print_ans();
 
     return 0;
 }
