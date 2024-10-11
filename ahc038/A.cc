@@ -187,6 +187,20 @@ struct Grid {
         rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
         // debug_print_v();
     }
+    void init_v_random() {
+        v.resize(V);
+        vector<int> len(N);
+        len[0] = imax;
+        rep(i, V - 1) {
+            int l = 0;
+            while (len[l] > 1) {
+                l = rand(1, N - 1);
+            }
+            len[l]++;
+            v[i + 1] = l;
+        }
+        debug_print_v();
+    }
     void init_pos() {
         ipos = {rand(0, N - 1), rand(0, N - 1)};
         pos = ipos;
@@ -281,6 +295,7 @@ struct Grid {
         cout << v.size() << endl;
         rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
         cout << "0 0" << endl;
+        exit(0);
     }
 };
 
@@ -608,7 +623,7 @@ int main() {
                 if (i + 1 < best_score) {
                     best_score = i + 1;
                     best = grid;
-                    cerr << lp SP << i + 1 << endl;
+                    // cerr << lp SP << i + 1 << endl;
                 }
                 break;
             }
