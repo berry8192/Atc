@@ -162,8 +162,8 @@ map<char, int> mdir_rot = {{'R', -1}, {'.', 0}, {'L', 1}};
 struct Grid {
     vector<string> ss, tt;
     vector<int> v;
-    Pos ipos, pos;
-    vector<int> dir;
+    Pos ipos, pos, npos;
+    vector<int> dir, ndir;
     vector<bool> has;
     vector<vector<bool>> tako;
     vector<vector<bool>> masu;
@@ -178,6 +178,7 @@ struct Grid {
         tako = def_tako;
         masu = def_masu;
         dir.resize(V);
+        ndir.resize(V);
         has.resize(V);
         rest = rest_tako_masu;
     }
@@ -208,64 +209,80 @@ struct Grid {
     char make_mov() {
         // cout << "make_mov" << endl;
         vector<int> tmp;
-        rep(i, 5) {
-            Pos npos = pos + d5[i];
+        rep(i, 4) {
+            npos = pos + d5[i];
             if (!npos.is_oob()) {
                 tmp.push_back(i);
             }
         }
         int sdir = tmp[rand(0, int(tmp.size() - 1))];
-        pos = pos + d5[sdir];
+        // pos = pos + d5[sdir];
+        npos = pos + d5[sdir];
         return dir_char[sdir];
     }
-    Pos calc_leaf_pos(int idx, int add_dir = 0) {
+    Pos calc_leaf_pos(int idx) {
         // cout << "calc_leaf_pos " << (dir[idx] + add_dir + 4) % 4 << endl;
+        return pos + d5[dir[idx]] * v[idx];
+    }
+    Pos calc_leaf_npos(int idx, int add_dir = 0) {
+        // cout << "calc_leaf_npos " << (dir[idx] + add_dir + 4) % 4 << endl;
         Pos dd = d5[(dir[idx] + add_dir + 4) % 4];
-        return pos + dd * v[idx];
+        return npos + dd * v[idx];
+    }
+    Pos calc_leaf_npos_ndir(int idx) {
+        // cout << "calc_leaf_npos_ndir " << (dir[idx] + add_dir + 4) % 4 <<
+        // endl;
+        return npos + d5[ndir[idx]] * v[idx];
     }
     string make_rot() {
         // cout << "make_rot" << endl;
         string rot;
         rep3(i, V, 1) {
-            vector<char> tmp;
+            vector<int> tmp;
             for (int j = -1; j <= 1; j++) {
-                Pos lpos = calc_leaf_pos(i, j);
+                Pos lpos = calc_leaf_npos(i, j);
                 if (!lpos.is_oob()) {
                     tmp.push_back(j);
                 }
             }
             if (tmp.empty()) {
                 rot += 'L';
-                dir[i] = (dir[i] + 1) % 4;
+                // dir[i] = (dir[i] + 1) % 4;
+                ndir[i] = (dir[i] + 1) % 4;
             } else {
-                char rdir = tmp[rand(0, int(tmp.size() - 1))];
+                int rdir = tmp[rand(0, int(tmp.size() - 1))];
                 rot += dir_rot[rdir + 1];
-                dir[i] = (dir[i] + rdir + 4) % 4;
+                // dir[i] = (dir[i] + rdir + 4) % 4;
+                ndir[i] = (dir[i] + rdir + 4) % 4;
             }
         }
         return rot;
     }
-    string make_P() {
+    string make_P(set<int> &prog_pos) {
         // cout << "make_P" << endl;
         string p = ".";
         rep3(i, V, 1) {
-            Pos lpos = calc_leaf_pos(i);
+            Pos lpos = calc_leaf_npos_ndir(i);
             if (!lpos.is_oob()) {
                 if (has[i]) {
-                    if (masu[lpos.h][lpos.w]) {
+                    if (masu[lpos.h][lpos.w] &&
+                        prog_pos.find(lpos.index()) == prog_pos.end()) {
                         p += 'P';
-                        masu[lpos.h][lpos.w] = false;
-                        has[i] = false;
-                        rest--;
+                        // masu[lpos.h][lpos.w] = false;
+                        // has[i] = false;
+                        // rest--;
+                        prog_pos.insert(lpos.index());
                     } else {
                         p += '.';
                     }
                 } else {
-                    if (tako[lpos.h][lpos.w]) {
+                    if (tako[lpos.h][lpos.w] &&
+                        prog_pos.find(lpos.index()) == prog_pos.end()) {
                         p += 'P';
-                        tako[lpos.h][lpos.w] = false;
-                        has[i] = true;
-                        rest--;
+                        // tako[lpos.h][lpos.w] = false;
+                        // has[i] = true;
+                        // rest--;
+                        prog_pos.insert(lpos.index());
                     } else {
                         p += '.';
                     }
@@ -278,11 +295,41 @@ struct Grid {
     }
     void random_move() {
         // cout << "random_move" << endl;
-        string step;
-        step += make_mov();
-        step += make_rot();
-        step += make_P();
-        steps.push_back(step);
+        int best_prog = -1;
+        string best_step;
+        rep(i, 2 * V) {
+            set<int> prog_pos;
+            string step;
+            step += make_mov();
+            step += make_rot();
+            step += make_P(prog_pos);
+            int tmp = prog_pos.size();
+            if (best_prog < tmp) {
+                best_prog = tmp;
+                best_step = step;
+            }
+        }
+        exec_move(best_step);
+        steps.push_back(best_step);
+    }
+    void exec_move(string step) {
+        // cout << "exec_move " << step << endl;
+        pos = pos + d5[mdir_char[step[0]]];
+        rep3(i, V, 1) { dir[i] = (dir[i] + mdir_rot[step[i]] + 4) % 4; }
+        rep3(i, V, 1) {
+            Pos lpos = calc_leaf_pos(i);
+            if (step[i + V] == 'P') {
+                if (has[i]) {
+                    masu[lpos.h][lpos.w] = false;
+                    has[i] = false;
+                } else {
+                    tako[lpos.h][lpos.w] = false;
+                    has[i] = true;
+                }
+                rest--;
+            }
+        }
+        // cout << "exec move end" << endl;
     }
 
     void print_ans() {
