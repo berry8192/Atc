@@ -154,10 +154,26 @@ struct Pos {
 
 Pos itop(int idx) { return {idx / N, idx % N}; }
 
-Pos d5[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}, {0, 0}};
+vector<Pos> d5 = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}, {0, 0}};
+vector<Pos> d2 = {{0, 0},  {0, 1},   {-1, 0}, {0, -1}, {1, 0}, {0, 2}, {-1, 1},
+                  {-2, 0}, {-1, -1}, {0, -2}, {1, -1}, {2, 0}, {1, 1}};
+vector<Pos> d3 = {{0, 0},  {0, 1},  {-1, 0},  {0, -1},  {1, 0},
+                  {0, 2},  {-1, 1}, {-2, 0},  {-1, -1}, {0, -2},
+                  {1, -1}, {2, 0},  {1, 1},   {0, 3},   {-1, 2},
+                  {-2, 1}, {-3, 0}, {-2, -1}, {-1, -2}, {0, -3},
+                  {1, -2}, {2, -1}, {3, 0},   {2, 1},   {1, 2}};
+vector<Pos> d4 = {{0, 0},   {0, 1},   {-1, 0},  {0, -1}, {1, 0},  {0, 2},
+                  {-1, 1},  {-2, 0},  {-1, -1}, {0, -2}, {1, -1}, {2, 0},
+                  {1, 1},   {0, 3},   {-1, 2},  {-2, 1}, {-3, 0}, {-2, -1},
+                  {-1, -2}, {0, -3},  {1, -2},  {2, -1}, {3, 0},  {2, 1},
+                  {1, 2},   {0, 4},   {-1, 3},  {-2, 2}, {-3, 1}, {-4, 0},
+                  {-3, -1}, {-2, -2}, {-1, -3}, {0, -4}, {1, -3}, {2, -2},
+                  {3, -1},  {4, 0},   {3, 1},   {2, 2},  {1, 3}};
+
 string dir_char = "RULD.", dir_rot = "R.L";
 map<char, int> mdir_char = {{'R', 0}, {'U', 1}, {'L', 2}, {'D', 3}, {'.', 4}};
 map<char, int> mdir_rot = {{'R', -1}, {'.', 0}, {'L', 1}};
+string base_str;
 
 struct Grid {
     vector<string> ss, tt;
@@ -186,7 +202,6 @@ struct Grid {
     void init_v() {
         v.resize(V);
         rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
-        // debug_print_v();
     }
     void init_v_random() {
         v.resize(V);
@@ -205,6 +220,7 @@ struct Grid {
     void init_pos() {
         ipos = {rand(0, N - 1), rand(0, N - 1)};
         pos = ipos;
+        debug_print_v(); //
     }
     char make_mov() {
         // cout << "make_mov" << endl;
@@ -293,6 +309,57 @@ struct Grid {
         }
         return p;
     }
+    int calc_prog(int idx, Pos cpos) {
+        // cout << "calc_prog" << endl;
+        int rtn = 0;
+        rep(i, d3.size()) {
+            Pos lpos = cpos + d3[i];
+            if (!lpos.is_oob()) {
+                if ((has[idx] && masu[lpos.h][lpos.w]) ||
+                    (!has[idx] && tako[lpos.h][lpos.w])) {
+                    rtn++;
+                }
+            }
+        }
+        return rtn;
+    }
+    string just_move() {
+        // cout << "just_move" << endl;
+        int need_masu = 0;
+        rep3(i, V, 1) {
+            if (has[i]) {
+                need_masu++;
+            }
+        }
+        int need_tako = V - 1 - need_masu;
+        vector<int> prog(4);
+        rep(i, 4) {
+            rep3(j, V, 1) {
+                Pos lpos = pos + (d5[i] * v[j]);
+                prog[i] += calc_prog(j, lpos);
+            }
+        }
+        int best_prog = 0;
+        int best_prog_dir = rand(0, 3);
+        rep(i, 4) {
+            Pos npos = pos + d5[i];
+            if (npos.is_oob()) {
+                continue;
+            }
+            if (best_prog < prog[i]) {
+                best_prog = prog[i];
+                best_prog_dir = i;
+            }
+        }
+        if (best_prog == 0) {
+            while ((pos + d5[best_prog_dir]).is_oob()) {
+                best_prog_dir = rand(0, 3);
+            }
+        }
+        string rtn(2 * V, '.');
+        rtn[0] = dir_char[best_prog_dir];
+        return rtn;
+    }
     void random_move() {
         // cout << "random_move" << endl;
         int best_prog = -1;
@@ -309,7 +376,11 @@ struct Grid {
                 best_step = step;
             }
         }
+        if (best_prog == 0) {
+            best_step = just_move();
+        }
         exec_move(best_step);
+        cout << best_step << endl;
         steps.push_back(best_step);
     }
     void exec_move(string step) {
@@ -341,8 +412,7 @@ struct Grid {
     void debug_print_v() {
         cout << v.size() << endl;
         rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
-        cout << "0 0" << endl;
-        exit(0);
+        cout << ipos.h SP << ipos.w << endl;
     }
 };
 
