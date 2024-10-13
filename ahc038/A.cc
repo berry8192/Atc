@@ -53,6 +53,7 @@ double TIME_LIMIT = 2700.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
+// int global_cnt = 0; //
 
 struct Timer {
     chrono::system_clock::time_point start;
@@ -187,6 +188,7 @@ struct Grid {
     int rest;
 
     Grid(const vector<string> &in_s, const vector<string> &in_t) {
+        // cout << "Grid" << endl;
         ss = in_s;
         tt = in_t;
         init_v();
@@ -201,7 +203,8 @@ struct Grid {
 
     void init_v() {
         v.resize(V);
-        rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
+        // rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
+        rep(i, V - 1) { v[i + 1] = N / 2; }
     }
     void init_v_random() {
         v.resize(V);
@@ -220,17 +223,18 @@ struct Grid {
     void init_pos() {
         ipos = {rand(0, N - 1), rand(0, N - 1)};
         pos = ipos;
-        debug_print_v(); //
+        // debug_print_v(); //
     }
     char make_mov() {
         // cout << "make_mov" << endl;
         vector<int> tmp;
-        rep(i, 4) {
+        rep(i, 5) {
             npos = pos + d5[i];
             if (!npos.is_oob()) {
                 tmp.push_back(i);
             }
         }
+        assert(tmp.size() > 0);
         int sdir = tmp[rand(0, int(tmp.size() - 1))];
         // pos = pos + d5[sdir];
         npos = pos + d5[sdir];
@@ -325,39 +329,55 @@ struct Grid {
     }
     string just_move() {
         // cout << "just_move" << endl;
-        int need_masu = 0;
-        rep3(i, V, 1) {
-            if (has[i]) {
-                need_masu++;
+        // int need_masu = 0;
+        // rep3(i, V, 1) {
+        //     if (has[i]) {
+        //         need_masu++;
+        //     }
+        // }
+        // int need_tako = V - 1 - need_masu;
+        Pos nearest_pos = {-1, -1};
+        int nearest_pos_dist = imax;
+        // global_cnt++; //
+        // cout << global_cnt << endl;
+        rep(i, N) {
+            rep(j, N) {
+                if (tako[i][j] || masu[i][j]) {
+                    rep3(k, V, 1) {
+                        if (tako[i][j] == !has[k] || masu[i][j] == has[k]) {
+                            rep(l, 4) {
+                                // 目指すべき根の位置
+                                Pos mpos = Pos(i, j) - (d5[l] * v[k]);
+                                if (mpos.is_oob()) {
+                                    continue;
+                                }
+                                // 任意の方向を向いた時の葉の位置
+                                Pos lpos = pos + (d5[l] * v[k]);
+                                int dist = lpos.manhattan({i, j});
+                                if (dist < nearest_pos_dist) {
+                                    nearest_pos = mpos;
+                                    nearest_pos_dist = dist;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
-        int need_tako = V - 1 - need_masu;
-        vector<int> prog(4);
-        rep(i, 4) {
-            rep3(j, V, 1) {
-                Pos lpos = pos + (d5[i] * v[j]);
-                prog[i] += calc_prog(j, lpos);
-            }
-        }
-        int best_prog = 0;
-        int best_prog_dir = rand(0, 3);
-        rep(i, 4) {
-            Pos npos = pos + d5[i];
-            if (npos.is_oob()) {
-                continue;
-            }
-            if (best_prog < prog[i]) {
-                best_prog = prog[i];
-                best_prog_dir = i;
-            }
-        }
-        if (best_prog == 0) {
-            while ((pos + d5[best_prog_dir]).is_oob()) {
-                best_prog_dir = rand(0, 3);
+        assert(nearest_pos.h != -1);
+        int best_dir = -1;
+        int best_dir_dist = imax;
+        rep(i, 5) {
+            Pos lpos = pos + d5[i];
+            int tmp = lpos.manhattan(nearest_pos);
+            if (tmp < best_dir_dist) {
+                best_dir = i;
+                best_dir_dist = tmp;
             }
         }
         string rtn(2 * V, '.');
-        rtn[0] = dir_char[best_prog_dir];
+        rtn[0] = dir_char[best_dir];
+        rep3(i, V, 1) { rtn[i] = 'L'; }
         return rtn;
     }
     void random_move() {
@@ -380,7 +400,7 @@ struct Grid {
             best_step = just_move();
         }
         exec_move(best_step);
-        cout << best_step << endl;
+        // cout << best_step << endl; //
         steps.push_back(best_step);
     }
     void exec_move(string step) {
@@ -410,6 +430,7 @@ struct Grid {
         rep(i, steps.size()) { cout << steps[i] << endl; }
     }
     void debug_print_v() {
+        // cout << "debug_print_v" << endl;
         cout << v.size() << endl;
         rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
         cout << ipos.h SP << ipos.w << endl;
@@ -745,6 +766,7 @@ int main() {
                 break;
             }
         }
+        break;
     }
     best.print_ans();
 
