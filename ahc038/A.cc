@@ -204,7 +204,7 @@ struct Grid {
     void init_v() {
         v.resize(V);
         // rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
-        rep(i, V - 1) { v[i + 1] = N / 2; }
+        rep(i, V - 1) { v[i + 1] = rand(1, N / 2); }
     }
     void init_v_random() {
         v.resize(V);
@@ -766,8 +766,8 @@ int main() {
                 break;
             }
         }
-        break;
     }
+    // cerr << lp << endl;
     best.print_ans();
 
     return 0;
