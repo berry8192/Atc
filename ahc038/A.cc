@@ -179,8 +179,8 @@ string base_str;
 struct Grid {
     vector<string> ss, tt;
     vector<int> v;
-    Pos ipos, pos, npos;
-    vector<int> dir, ndir;
+    Pos ipos, pos;
+    vector<int> dir;
     vector<bool> has;
     vector<vector<bool>> tako;
     vector<vector<bool>> masu;
@@ -196,7 +196,6 @@ struct Grid {
         tako = def_tako;
         masu = def_masu;
         dir.resize(V);
-        ndir.resize(V);
         has.resize(V);
         rest = rest_tako_masu;
     }
@@ -205,6 +204,15 @@ struct Grid {
         v.resize(V);
         // rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
         rep(i, V - 1) { v[i + 1] = rand(1, N / 2); }
+    }
+    void init_v_with_joint(int joint_len) {
+        // v.resize(V);
+        // vp.resize(V);
+        // v[1] = joint_len;
+        // rep3(i, V, 2) {
+        //     v[i] = rand(1, N / 2);
+        //     vp[i] = 1;
+        // }
     }
     void init_v_random() {
         v.resize(V);
@@ -229,15 +237,14 @@ struct Grid {
         // cout << "make_mov" << endl;
         vector<int> tmp;
         rep(i, 5) {
-            npos = pos + d5[i];
+            Pos npos = pos + d5[i];
             if (!npos.is_oob()) {
                 tmp.push_back(i);
             }
         }
         assert(tmp.size() > 0);
         int sdir = tmp[rand(0, int(tmp.size() - 1))];
-        // pos = pos + d5[sdir];
-        npos = pos + d5[sdir];
+        pos = pos + d5[sdir];
         return dir_char[sdir];
     }
     Pos calc_leaf_pos(int idx) {
@@ -247,12 +254,7 @@ struct Grid {
     Pos calc_leaf_npos(int idx, int add_dir = 0) {
         // cout << "calc_leaf_npos " << (dir[idx] + add_dir + 4) % 4 << endl;
         Pos dd = d5[(dir[idx] + add_dir + 4) % 4];
-        return npos + dd * v[idx];
-    }
-    Pos calc_leaf_npos_ndir(int idx) {
-        // cout << "calc_leaf_npos_ndir " << (dir[idx] + add_dir + 4) % 4 <<
-        // endl;
-        return npos + d5[ndir[idx]] * v[idx];
+        return pos + dd * v[idx];
     }
     string make_rot() {
         // cout << "make_rot" << endl;
@@ -267,42 +269,37 @@ struct Grid {
             }
             if (tmp.empty()) {
                 rot += 'L';
-                // dir[i] = (dir[i] + 1) % 4;
-                ndir[i] = (dir[i] + 1) % 4;
+                dir[i] = (dir[i] + 1) % 4;
             } else {
                 int rdir = tmp[rand(0, int(tmp.size() - 1))];
                 rot += dir_rot[rdir + 1];
                 // dir[i] = (dir[i] + rdir + 4) % 4;
-                ndir[i] = (dir[i] + rdir + 4) % 4;
+                dir[i] = (dir[i] + rdir + 4) % 4;
             }
         }
         return rot;
     }
-    string make_P(set<int> &prog_pos) {
+    string make_P() {
         // cout << "make_P" << endl;
         string p = ".";
         rep3(i, V, 1) {
-            Pos lpos = calc_leaf_npos_ndir(i);
+            Pos lpos = calc_leaf_pos(i);
             if (!lpos.is_oob()) {
                 if (has[i]) {
-                    if (masu[lpos.h][lpos.w] &&
-                        prog_pos.find(lpos.index()) == prog_pos.end()) {
+                    if (masu[lpos.h][lpos.w]) {
                         p += 'P';
-                        // masu[lpos.h][lpos.w] = false;
-                        // has[i] = false;
-                        // rest--;
-                        prog_pos.insert(lpos.index());
+                        masu[lpos.h][lpos.w] = false;
+                        has[i] = false;
+                        rest--;
                     } else {
                         p += '.';
                     }
                 } else {
-                    if (tako[lpos.h][lpos.w] &&
-                        prog_pos.find(lpos.index()) == prog_pos.end()) {
+                    if (tako[lpos.h][lpos.w]) {
                         p += 'P';
-                        // tako[lpos.h][lpos.w] = false;
-                        // has[i] = true;
-                        // rest--;
-                        prog_pos.insert(lpos.index());
+                        tako[lpos.h][lpos.w] = false;
+                        has[i] = true;
+                        rest--;
                     } else {
                         p += '.';
                     }
@@ -312,20 +309,6 @@ struct Grid {
             }
         }
         return p;
-    }
-    int calc_prog(int idx, Pos cpos) {
-        // cout << "calc_prog" << endl;
-        int rtn = 0;
-        rep(i, d3.size()) {
-            Pos lpos = cpos + d3[i];
-            if (!lpos.is_oob()) {
-                if ((has[idx] && masu[lpos.h][lpos.w]) ||
-                    (!has[idx] && tako[lpos.h][lpos.w])) {
-                    rtn++;
-                }
-            }
-        }
-        return rtn;
     }
     string just_move() {
         // cout << "just_move" << endl;
@@ -382,26 +365,102 @@ struct Grid {
     }
     void random_move() {
         // cout << "random_move" << endl;
-        int best_prog = -1;
-        string best_step;
-        rep(i, 2 * V) {
-            set<int> prog_pos;
-            string step;
-            step += make_mov();
-            step += make_rot();
-            step += make_P(prog_pos);
-            int tmp = prog_pos.size();
-            if (best_prog < tmp) {
-                best_prog = tmp;
-                best_step = step;
+
+        int i1, i2, j1, j2;
+        vector<int> step_score(25);
+        vector<string> step1(25, string(2 * V, '.'));
+        vector<string> step2(25, string(2 * V, '.'));
+        set<int> used;
+        for (i1 = 0; i1 < 5; i1++) {
+            Pos pos1 = pos + d5[i1];
+            if (pos1.is_oob()) {
+                continue;
+            }
+            for (i2 = 0; i2 < 5; i2++) {
+                Pos pos2 = pos1 + d5[i2];
+                if (pos2.is_oob()) {
+                    continue;
+                }
+                step1[i1 + i2 * 5][0] = dir_char[i1];
+                step2[i1 + i2 * 5][0] = dir_char[i2];
+                rep3(i, V, 1) {
+                    int best_prog = 0;
+                    int best_dir1 = -1;
+                    int best_dir2 = -1;
+                    bool best_prog1 = false;
+                    bool best_prog2 = false;
+                    for (j1 = -1; j1 <= 1; j1++) {
+                        Pos lpos1 = pos1 + (d5[(dir[i] + j1 + 4) % 4] * v[i]);
+                        bool prog1 = false;
+                        if (!lpos1.is_oob() &&
+                            ((has[i] && masu[lpos1.h][lpos1.w]) ||
+                             (!has[i] && tako[lpos1.h][lpos1.w]))) {
+                            int hash =
+                                i1 + i2 * 5 + lpos1.h * 25 + lpos1.w * 750;
+                            if (used.find(hash) == used.end()) {
+                                used.insert(hash);
+                                prog1 = true;
+                            }
+                        }
+                        for (j2 = -1; j2 <= 1; j2++) {
+                            Pos lpos2 =
+                                pos2 + (d5[(dir[i] + j1 + j2 + 4) % 4] * v[i]);
+                            bool prog2 = false;
+                            if (!lpos2.is_oob() &&
+                                (((prog1 ^ has[i]) && masu[lpos2.h][lpos2.w]) ||
+                                 ((prog1 ^ !has[i]) &&
+                                  tako[lpos2.h][lpos2.w]))) {
+                                int hash =
+                                    i1 + i2 * 5 + lpos2.h * 25 + lpos2.w * 750;
+                                if (used.find(hash) == used.end()) {
+                                    used.insert(hash);
+                                    prog2 = true;
+                                }
+                            }
+                            if (best_prog < int(prog1 + prog2)) {
+                                best_prog = int(prog1 + prog2);
+                                best_dir1 = j1;
+                                best_dir2 = j2;
+                                best_prog1 = prog1;
+                                best_prog2 = prog2;
+                            }
+                        }
+                    }
+                    step_score[i1 + i2 * 5] += best_prog;
+                    step1[i1 + i2 * 5][i] = dir_rot[best_dir1 + 1];
+                    if (best_prog1) {
+                        step1[i1 + i2 * 5][i + V] = 'P';
+                    }
+                    step2[i1 + i2 * 5][i] = dir_rot[best_dir2 + 1];
+                    if (best_prog2) {
+                        step2[i1 + i2 * 5][i + V] = 'P';
+                    }
+                }
             }
         }
-        if (best_prog == 0) {
-            best_step = just_move();
+        string best_step1, best_step2;
+        int best_score = 0;
+        rep(i, 25) {
+            if (step_score[i] > best_score) {
+                best_score = step_score[i];
+                best_step1 = step1[i];
+                best_step2 = step2[i];
+            }
         }
-        exec_move(best_step);
-        // cout << best_step << endl; //
-        steps.push_back(best_step);
+        if (best_score == 0) {
+            // cout << "just_move" << endl;
+            string step = just_move();
+            exec_move(step);
+            // cout << step << endl; //
+            steps.push_back(step);
+        } else {
+            exec_move(best_step1);
+            exec_move(best_step2);
+            // cout << best_step1 << endl; //
+            // cout << best_step2 << endl; //
+            steps.push_back(best_step1);
+            steps.push_back(best_step2);
+        }
     }
     void exec_move(string step) {
         // cout << "exec_move " << step << endl;
@@ -422,6 +481,23 @@ struct Grid {
         }
         // cout << "exec move end" << endl;
     }
+    void revert_move(string step) {
+        rep3(i, V, 1) {
+            Pos lpos = calc_leaf_pos(i);
+            if (step[i + V] == 'P') {
+                if (!has[i]) {
+                    masu[lpos.h][lpos.w] = true;
+                    has[i] = true;
+                } else {
+                    tako[lpos.h][lpos.w] = true;
+                    has[i] = false;
+                }
+                rest++;
+            }
+        }
+        rep3(i, V, 1) { dir[i] = (dir[i] - mdir_rot[step[i]] + 4) % 4; }
+        pos = pos - d5[mdir_char[step[0]]];
+    }
 
     void print_ans() {
         cout << v.size() << endl;
@@ -434,6 +510,13 @@ struct Grid {
         cout << v.size() << endl;
         rep3(i, v.size(), 1) { cout << "0 " << v[i] << endl; }
         cout << ipos.h SP << ipos.w << endl;
+    }
+    void debug_print_info() {
+        cout << "debug_print_info" << endl;
+        debug_print_v();
+        pos.print();
+        PV(dir);
+        PV(has);
     }
 };
 
