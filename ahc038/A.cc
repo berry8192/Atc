@@ -183,12 +183,8 @@ struct Grid {
     vector<bool> has;
     vector<vector<bool>> tako;
     vector<vector<bool>> masu;
-    set<Pos> tako_pos, masu_pos;
     vector<string> steps;
     int rest;
-    bool move_mode;
-    Pos move_to;
-    bool move_to_tako;
 
     Grid(const vector<string> &in_s, const vector<string> &in_t) {
         ss = in_s;
@@ -201,7 +197,6 @@ struct Grid {
         ndir.resize(V);
         has.resize(V);
         rest = rest_tako_masu;
-        move_mode = false;
     }
 
     void init_v() {
@@ -364,42 +359,6 @@ struct Grid {
         string rtn(2 * V, '.');
         rtn[0] = dir_char[best_prog_dir];
         return rtn;
-    }
-    void set_move_to() {
-        int have_cnt = 0;
-        rep3(i, V, 1) {
-            if (has[i]) {
-                have_cnt++;
-            }
-        }
-        int not_have_cnt = V - 1 - have_cnt;
-        Pos tmp = {rand(0, N - 1), rand(0, N - 1)};
-        if (not_have_cnt <= have_cnt) {
-            // 置き場所を探す
-            auto itr = masu_pos.lower_bound(tmp);
-            if (itr == masu_pos.end()) {
-                itr = masu_pos.begin();
-            }
-            move_to = *itr;
-            move_to_tako = false;
-        } else {
-            // たこ焼きを探す
-            auto itr = tako_pos.lower_bound(tmp);
-            if (itr == tako_pos.end()) {
-                itr = tako_pos.begin();
-            }
-            move_to = *itr;
-            move_to_tako = true;
-        }
-    }
-    string step_from_move_to() {
-        // 進むべき場所と回るべき方向を求める
-        rep3(i, V, 1) {
-            if (has[i] == move_to_tako) {
-                continue;
-            }
-            rep(j, 4) {}
-        }
     }
     void random_move() {
         // cout << "random_move" << endl;
