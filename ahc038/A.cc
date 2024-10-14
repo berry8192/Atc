@@ -92,7 +92,6 @@ template <typename T> T rand(T a, T b) {
 int N, M, V;
 vector<string> s, t;
 int rest_tako_masu;
-vector<vector<bool>> def_masu, def_tako;
 
 // 構造体
 struct Pos {
@@ -175,26 +174,32 @@ string dir_char = "RULD.", dir_rot = "R.L";
 map<char, int> mdir_char = {{'R', 0}, {'U', 1}, {'L', 2}, {'D', 3}, {'.', 4}};
 map<char, int> mdir_rot = {{'R', -1}, {'.', 0}, {'L', 1}};
 string base_str;
+set<Pos> def_tako, def_masu;
 
 struct Grid {
-    vector<string> ss, tt;
-    vector<int> v;
+    vector<int> v, vp;
     Pos ipos, pos;
     vector<int> dir;
     vector<bool> has;
-    vector<vector<bool>> tako;
-    vector<vector<bool>> masu;
+    set<Pos> tako;
+    set<Pos> masu;
     vector<string> steps;
     int rest;
 
-    Grid(const vector<string> &in_s, const vector<string> &in_t) {
+    Grid(int joint_len) {
         // cout << "Grid" << endl;
-        ss = in_s;
-        tt = in_t;
-        init_v();
+        if (joint_len > 0) {
+            init_v_with_joint(joint_len);
+        } else {
+            init_v();
+        }
         init_pos();
-        tako = def_tako;
-        masu = def_masu;
+        for (auto dt : def_tako) {
+            tako.insert(dt);
+        }
+        for (auto dm : def_masu) {
+            masu.insert(dm);
+        }
         dir.resize(V);
         has.resize(V);
         rest = rest_tako_masu;
@@ -202,17 +207,18 @@ struct Grid {
 
     void init_v() {
         v.resize(V);
+        vp.resize(V);
         // rep(i, V - 1) { v[i + 1] = (i * N / (V * 2)) + 1; }
         rep(i, V - 1) { v[i + 1] = rand(1, N / 2); }
     }
     void init_v_with_joint(int joint_len) {
-        // v.resize(V);
-        // vp.resize(V);
-        // v[1] = joint_len;
-        // rep3(i, V, 2) {
-        //     v[i] = rand(1, N / 2);
-        //     vp[i] = 1;
-        // }
+        v.resize(V);
+        vp.resize(V);
+        v[1] = joint_len;
+        rep3(i, V, 2) {
+            v[i] = rand(1, N / 2);
+            vp[i] = 1;
+        }
     }
     void init_v_random() {
         v.resize(V);
@@ -249,9 +255,15 @@ struct Grid {
     }
     Pos calc_leaf_pos(int idx) {
         // cout << "calc_leaf_pos " << (dir[idx] + add_dir + 4) % 4 << endl;
-        return pos + d5[dir[idx]] * v[idx];
+        if (vp[idx] == 0) {
+            return pos + d5[dir[idx]] * v[idx];
+        } else {
+            return pos + (d5[dir[1]] * v[1]) +
+                   (d5[(dir[1] + dir[idx]) % 4] * v[idx]);
+        }
     }
     Pos calc_leaf_npos(int idx, int add_dir = 0) {
+        assert(vp[idx] == 0);
         // cout << "calc_leaf_npos " << (dir[idx] + add_dir + 4) % 4 << endl;
         Pos dd = d5[(dir[idx] + add_dir + 4) % 4];
         return pos + dd * v[idx];
@@ -280,34 +292,34 @@ struct Grid {
         return rot;
     }
     string make_P() {
-        // cout << "make_P" << endl;
+        // // cout << "make_P" << endl;
         string p = ".";
-        rep3(i, V, 1) {
-            Pos lpos = calc_leaf_pos(i);
-            if (!lpos.is_oob()) {
-                if (has[i]) {
-                    if (masu[lpos.h][lpos.w]) {
-                        p += 'P';
-                        masu[lpos.h][lpos.w] = false;
-                        has[i] = false;
-                        rest--;
-                    } else {
-                        p += '.';
-                    }
-                } else {
-                    if (tako[lpos.h][lpos.w]) {
-                        p += 'P';
-                        tako[lpos.h][lpos.w] = false;
-                        has[i] = true;
-                        rest--;
-                    } else {
-                        p += '.';
-                    }
-                }
-            } else {
-                p += '.';
-            }
-        }
+        // rep3(i, V, 1) {
+        //     Pos lpos = calc_leaf_pos(i);
+        //     if (!lpos.is_oob()) {
+        //         if (has[i]) {
+        //             if (masu[lpos.h][lpos.w]) {
+        //                 p += 'P';
+        //                 masu[lpos.h][lpos.w] = false;
+        //                 has[i] = false;
+        //                 rest--;
+        //             } else {
+        //                 p += '.';
+        //             }
+        //         } else {
+        //             if (tako[lpos.h][lpos.w]) {
+        //                 p += 'P';
+        //                 tako[lpos.h][lpos.w] = false;
+        //                 has[i] = true;
+        //                 rest--;
+        //             } else {
+        //                 p += '.';
+        //             }
+        //         }
+        //     } else {
+        //         p += '.';
+        //     }
+        // }
         return p;
     }
     string just_move() {
@@ -323,20 +335,90 @@ struct Grid {
         int nearest_pos_dist = imax;
         // global_cnt++; //
         // cout << global_cnt << endl;
-        rep(i, N) {
-            rep(j, N) {
-                if (tako[i][j] || masu[i][j]) {
-                    rep3(k, V, 1) {
-                        if (tako[i][j] == !has[k] || masu[i][j] == has[k]) {
-                            rep(l, 4) {
-                                // 目指すべき根の位置
-                                Pos mpos = Pos(i, j) - (d5[l] * v[k]);
+        // rep(i, N) {
+        //     rep(j, N) {
+        //         if (tako[i][j] || masu[i][j]) {
+        //             rep3(k, V, 1) {
+        //                 if (tako[i][j] == !has[k] || masu[i][j] == has[k]) {
+        //                     rep(l, 4) {
+        //                         // 目指すべき根の位置
+        //                         Pos mpos = Pos(i, j) - (d5[l] * v[k]);
+        //                         if (mpos.is_oob()) {
+        //                             continue;
+        //                         }
+        //                         // 任意の方向を向いた時の葉の位置
+        //                         Pos lpos = pos + (d5[l] * v[k]);
+        //                         int dist = lpos.manhattan({i, j});
+        //                         if (dist < nearest_pos_dist) {
+        //                             nearest_pos = mpos;
+        //                             nearest_pos_dist = dist;
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        if (vp[2] == 0) {
+            rep3(i, V, 1) {
+                rep(j, 4) {
+                    Pos rpos = d5[j] * v[i];
+                    if (has[i]) {
+                        for (auto mp : masu) {
+                            Pos mpos = mp - rpos;
+                            if (mpos.is_oob()) {
+                                continue;
+                            }
+                            Pos lpos = pos + rpos;
+                            int dist = lpos.manhattan(mp);
+                            if (dist < nearest_pos_dist) {
+                                nearest_pos = mpos;
+                                nearest_pos_dist = dist;
+                            }
+                        }
+                    } else {
+                        for (auto tp : tako) {
+                            Pos mpos = tp - rpos;
+                            if (mpos.is_oob()) {
+                                continue;
+                            }
+                            Pos lpos = pos + rpos;
+                            int dist = lpos.manhattan(tp);
+                            if (dist < nearest_pos_dist) {
+                                nearest_pos = mpos;
+                                nearest_pos_dist = dist;
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            rep(i, 4) {
+                rep3(j, V, 2) {
+                    rep(k, 4) {
+                        Pos rpos =
+                            (d5[dir[1]] * v[1]) + (d5[dir[1] + dir[j]] * v[j]);
+                        if (has[i]) {
+                            for (auto mp : masu) {
+                                Pos mpos = mp - rpos;
                                 if (mpos.is_oob()) {
                                     continue;
                                 }
-                                // 任意の方向を向いた時の葉の位置
-                                Pos lpos = pos + (d5[l] * v[k]);
-                                int dist = lpos.manhattan({i, j});
+                                Pos lpos = pos + rpos;
+                                int dist = lpos.manhattan(mp);
+                                if (dist < nearest_pos_dist) {
+                                    nearest_pos = mpos;
+                                    nearest_pos_dist = dist;
+                                }
+                            }
+                        } else {
+                            for (auto tp : tako) {
+                                Pos mpos = tp - rpos;
+                                if (mpos.is_oob()) {
+                                    continue;
+                                }
+                                Pos lpos = pos + rpos;
+                                int dist = lpos.manhattan(tp);
                                 if (dist < nearest_pos_dist) {
                                     nearest_pos = mpos;
                                     nearest_pos_dist = dist;
@@ -360,13 +442,13 @@ struct Grid {
         }
         string rtn(2 * V, '.');
         rtn[0] = dir_char[best_dir];
-        rep3(i, V, 1) { rtn[i] = 'L'; }
+        rep3(i, V, 1) { rtn[i] = 'R'; }
         return rtn;
     }
     void random_move() {
         // cout << "random_move" << endl;
 
-        int i1, i2, j1, j2;
+        int i1, i2, j1, j2, j01, j02;
         vector<int> step_score(25);
         vector<string> step1(25, string(2 * V, '.'));
         vector<string> step2(25, string(2 * V, '.'));
@@ -383,58 +465,137 @@ struct Grid {
                 }
                 step1[i1 + i2 * 5][0] = dir_char[i1];
                 step2[i1 + i2 * 5][0] = dir_char[i2];
-                rep3(i, V, 1) {
-                    int best_prog = 0;
-                    int best_dir1 = -1;
-                    int best_dir2 = -1;
-                    bool best_prog1 = false;
-                    bool best_prog2 = false;
-                    for (j1 = -1; j1 <= 1; j1++) {
-                        Pos lpos1 = pos1 + (d5[(dir[i] + j1 + 4) % 4] * v[i]);
-                        bool prog1 = false;
-                        if (!lpos1.is_oob() &&
-                            ((has[i] && masu[lpos1.h][lpos1.w]) ||
-                             (!has[i] && tako[lpos1.h][lpos1.w]))) {
-                            int hash =
-                                i1 + i2 * 5 + lpos1.h * 25 + lpos1.w * 750;
-                            if (used.find(hash) == used.end()) {
-                                used.insert(hash);
-                                prog1 = true;
-                            }
-                        }
-                        for (j2 = -1; j2 <= 1; j2++) {
-                            Pos lpos2 =
-                                pos2 + (d5[(dir[i] + j1 + j2 + 4) % 4] * v[i]);
-                            bool prog2 = false;
-                            if (!lpos2.is_oob() &&
-                                (((prog1 ^ has[i]) && masu[lpos2.h][lpos2.w]) ||
-                                 ((prog1 ^ !has[i]) &&
-                                  tako[lpos2.h][lpos2.w]))) {
+                if (vp[2] == 0) {
+                    rep3(i, V, 1) {
+                        int best_prog = 0;
+                        int best_dir1 = -1;
+                        int best_dir2 = -1;
+                        bool best_prog1 = false;
+                        bool best_prog2 = false;
+                        for (j1 = -1; j1 <= 1; j1++) {
+                            Pos lpos1 =
+                                pos1 + (d5[(dir[i] + j1 + 4) % 4] * v[i]);
+                            bool prog1 = false;
+                            if (((has[i] && masu.find(lpos1) != masu.end()) ||
+                                 (!has[i] && tako.find(lpos1) != tako.end()))) {
                                 int hash =
-                                    i1 + i2 * 5 + lpos2.h * 25 + lpos2.w * 750;
+                                    i1 + i2 * 5 + lpos1.h * 25 + lpos1.w * 750;
                                 if (used.find(hash) == used.end()) {
                                     used.insert(hash);
-                                    prog2 = true;
+                                    prog1 = true;
                                 }
                             }
-                            if (best_prog < int(prog1 + prog2)) {
-                                best_prog = int(prog1 + prog2);
-                                best_dir1 = j1;
-                                best_dir2 = j2;
-                                best_prog1 = prog1;
-                                best_prog2 = prog2;
+                            for (j2 = -1; j2 <= 1; j2++) {
+                                Pos lpos2 =
+                                    pos2 +
+                                    (d5[(dir[i] + j1 + j2 + 4) % 4] * v[i]);
+                                bool prog2 = false;
+                                if ((((prog1 ^ has[i]) &&
+                                      masu.find(lpos2) != masu.end()) ||
+                                     ((prog1 ^ !has[i]) &&
+                                      tako.find(lpos2) != tako.end()))) {
+                                    int hash = i1 + i2 * 5 + lpos2.h * 25 +
+                                               lpos2.w * 750;
+                                    if (used.find(hash) == used.end()) {
+                                        used.insert(hash);
+                                        prog2 = true;
+                                    }
+                                }
+                                if (best_prog < int(prog1 + prog2)) {
+                                    best_prog = int(prog1 + prog2);
+                                    best_dir1 = j1;
+                                    best_dir2 = j2;
+                                    best_prog1 = prog1;
+                                    best_prog2 = prog2;
+                                }
                             }
                         }
+                        step_score[i1 + i2 * 5] += best_prog;
+                        step1[i1 + i2 * 5][i] = dir_rot[best_dir1 + 1];
+                        if (best_prog1) {
+                            step1[i1 + i2 * 5][i + V] = 'P';
+                        }
+                        step2[i1 + i2 * 5][i] = dir_rot[best_dir2 + 1];
+                        if (best_prog2) {
+                            step2[i1 + i2 * 5][i + V] = 'P';
+                        }
                     }
-                    step_score[i1 + i2 * 5] += best_prog;
-                    step1[i1 + i2 * 5][i] = dir_rot[best_dir1 + 1];
-                    if (best_prog1) {
-                        step1[i1 + i2 * 5][i + V] = 'P';
-                    }
-                    step2[i1 + i2 * 5][i] = dir_rot[best_dir2 + 1];
-                    if (best_prog2) {
-                        step2[i1 + i2 * 5][i + V] = 'P';
-                    }
+                    // } else {
+                    //     int best_prog = 0;
+                    //     int best_dir1 = -1;
+                    //     int best_dir2 = -1;
+                    //     int best_j01 = -1;
+                    //     bool best_prog1 = false;
+                    //     bool best_prog2 = false;
+                    //     for (j01 = -1; j01 <= 1; j01++) {
+                    //         Pos bvec = d5[(dir[1] + j01 + 4) % 4] * v[1];
+                    //         step1[1] = dir_rot[j01 + 1];
+                    //         rep3(i, V, 2) {
+                    //             for (j1 = -1; j1 <= 1; j1++) {
+                    //                 Pos lpos1 =
+                    //                     pos1 + bvec +
+                    //                     (d5[(dir[1] + j01 + dir[i] + j1 + 4)
+                    //                     % 4] *
+                    //                      v[i]);
+                    //                 bool prog1 = false;
+                    //                 if (((has[i] &&
+                    //                       masu.find(lpos1) != masu.end()) ||
+                    //                      (!has[i] &&
+                    //                       tako.find(lpos1) != tako.end()))) {
+                    //                     int hash = i1 + i2 * 5 + lpos1.h * 25
+                    //                     +
+                    //                                lpos1.w * 750 + (j01 + 1)
+                    //                                * 22500;
+                    //                     if (used.find(hash) == used.end()) {
+                    //                         used.insert(hash);
+                    //                         prog1 = true;
+                    //                     }
+                    //                 }
+                    //                 for (j2 = -1; j2 <= 1; j2++) {
+                    //                     Pos lpos2 = pos2 + bvec +
+                    //                                 (d5[(dir[1] + j01 +
+                    //                                 dir[i] + j1 +
+                    //                                      j2 + 4) %
+                    //                                     4] *
+                    //                                  v[i]);
+                    //                     bool prog2 = false;
+                    //                     if ((((prog1 ^ has[i]) &&
+                    //                           masu.find(lpos2) != masu.end())
+                    //                           ||
+                    //                          ((prog1 ^ !has[i]) &&
+                    //                           tako.find(lpos2) !=
+                    //                           tako.end()))) {
+                    //                         int hash = i1 + i2 * 5 + lpos2.h
+                    //                         * 25 +
+                    //                                    lpos2.w * 750 +
+                    //                                    (j01 + 1) * 22500;
+                    //                         if (used.find(hash) ==
+                    //                         used.end()) {
+                    //                             used.insert(hash);
+                    //                             prog2 = true;
+                    //                         }
+                    //                     }
+                    //                     if (best_prog < int(prog1 + prog2)) {
+                    //                         best_prog = int(prog1 + prog2);
+                    //                         best_dir1 = j1;
+                    //                         best_dir2 = j2;
+                    //                         best_j01 = j01;
+                    //                         best_prog1 = prog1;
+                    //                         best_prog2 = prog2;
+                    //                     }
+                    //                 }
+                    //             }
+                    //             step_score[i1 + i2 * 5] += best_prog;
+                    //             step1[i1 + i2 * 5][i] = dir_rot[best_dir1 +
+                    //             1]; if (best_prog1) {
+                    //                 step1[i1 + i2 * 5][i + V] = 'P';
+                    //             }
+                    //             step2[i1 + i2 * 5][i] = dir_rot[best_dir2 +
+                    //             1]; if (best_prog2) {
+                    //                 step2[i1 + i2 * 5][i + V] = 'P';
+                    //             }
+                    //         }
+                    //     }
                 }
             }
         }
@@ -455,12 +616,16 @@ struct Grid {
             steps.push_back(step);
         } else {
             exec_move(best_step1);
-            exec_move(best_step2);
             // cout << best_step1 << endl; //
-            // cout << best_step2 << endl; //
             steps.push_back(best_step1);
+            if (rest == 0) {
+                return;
+            }
+            exec_move(best_step2);
+            // cout << best_step2 << endl; //
             steps.push_back(best_step2);
         }
+        // cout << "random move end" << endl;
     }
     void exec_move(string step) {
         // cout << "exec_move " << step << endl;
@@ -470,10 +635,14 @@ struct Grid {
             Pos lpos = calc_leaf_pos(i);
             if (step[i + V] == 'P') {
                 if (has[i]) {
-                    masu[lpos.h][lpos.w] = false;
+                    auto itr = masu.find(lpos);
+                    assert(itr != masu.end());
+                    masu.erase(itr);
                     has[i] = false;
                 } else {
-                    tako[lpos.h][lpos.w] = false;
+                    auto itr = tako.find(lpos);
+                    assert(itr != tako.end());
+                    tako.erase(itr);
                     has[i] = true;
                 }
                 rest--;
@@ -482,21 +651,21 @@ struct Grid {
         // cout << "exec move end" << endl;
     }
     void revert_move(string step) {
-        rep3(i, V, 1) {
-            Pos lpos = calc_leaf_pos(i);
-            if (step[i + V] == 'P') {
-                if (!has[i]) {
-                    masu[lpos.h][lpos.w] = true;
-                    has[i] = true;
-                } else {
-                    tako[lpos.h][lpos.w] = true;
-                    has[i] = false;
-                }
-                rest++;
-            }
-        }
-        rep3(i, V, 1) { dir[i] = (dir[i] - mdir_rot[step[i]] + 4) % 4; }
-        pos = pos - d5[mdir_char[step[0]]];
+        // rep3(i, V, 1) {
+        //     Pos lpos = calc_leaf_pos(i);
+        //     if (step[i + V] == 'P') {
+        //         if (!has[i]) {
+        //             masu[lpos.h][lpos.w] = true;
+        //             has[i] = true;
+        //         } else {
+        //             tako[lpos.h][lpos.w] = true;
+        //             has[i] = false;
+        //         }
+        //         rest++;
+        //     }
+        // }
+        // rep3(i, V, 1) { dir[i] = (dir[i] - mdir_rot[step[i]] + 4) % 4; }
+        // pos = pos - d5[mdir_char[step[0]]];
     }
 
     void print_ans() {
@@ -521,15 +690,13 @@ struct Grid {
 };
 
 void calc_masu() {
-    def_tako.resize(N, vector<bool>(N, false));
-    def_masu.resize(N, vector<bool>(N, false));
     rep(i, N) {
         rep(j, N) {
             if (s[i][j] == '1' && t[i][j] == '0') {
-                def_tako[i][j] = true;
+                def_tako.insert(Pos(i, j));
                 rest_tako_masu++;
             } else if (s[i][j] == '0' && t[i][j] == '1') {
-                def_masu[i][j] = true;
+                def_masu.insert(Pos(i, j));
                 rest_tako_masu++;
             }
         }
@@ -831,13 +998,13 @@ void v_tree() {
 int main() {
     start = chrono::system_clock::now();
     inpt();
-    Grid best(s, t);
+    Grid best(0);
     int best_score = imax;
 
     int lp = 0;
     while (timer.progress() < 1) {
         lp++;
-        Grid grid(s, t);
+        Grid grid(0);
         rep(i, min(100000, best_score)) {
             grid.random_move();
             if (grid.rest == 0) {
