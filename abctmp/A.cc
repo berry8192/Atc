@@ -108,7 +108,7 @@ struct Edge {
     };
 };
 struct Graph {
-    int n, m;
+    int n, m, h, w;
     vector<vector<Edge>> g;
     vector<Edge> edges;
     vector<vector<ll>> dist;
@@ -141,35 +141,45 @@ struct Graph {
             }
         }
     }
-    void board_init(vector<string> &bb) {
-        // #.形式のboardを想定
-        // 頂点番号は2重forの順に0から
-        int hei = bb.size();
-        int wid = bb[0].size();
-        g.resize(hei * wid);
+    void board_init(int hh, int ww, int &sh, int &sw, int &gh, int &gw) {
+        // void board_init(int h, int w) {
+        h = hh;
+        w = ww;
+        g.resize(h * w);
 
-        // まだちゃんと書けていない
-        for (int i = 0; i < hei - 1; i++) {
-            for (int j = 0; j < wid; j++) {
-                if (bb[i][j] == '.' && bb[i + 1][j] == '.') {
-                    int ww = 1;
-                    g[i * wid + j].push_back(
-                        {i * wid + j, (i + 1) * wid + j, ww});
-                    g[(i + 1) * wid + j].push_back(
-                        {(i + 1) * wid + j, i * wid + j, ww});
+        vector<string> s(h);
+        rep(i, h) { cin >> s[i]; }
+
+        // for (int i = 0; i < h; i++) {
+        //     for (int j = 0; j < w; j++) {
+        //         if (s[i][j] == 'S') {
+        //             sh = i;
+        //             sw = j;
+        //         }
+        //         if (s[i][j] == 'G') {
+        //             gh = i;
+        //             gw = j;
+        //         }
+        //     }
+        // }
+        for (int i = 0; i < h - 1; i++) {
+            for (int j = 0; j < w; j++) {
+                if (s[i][j] != '#' && s[i + 1][j] != '#') {
+                    int wei = 1;
+                    g[i * w + j].push_back({i * w + j, (i + 1) * w + j, wei});
+                    g[(i + 1) * w + j].push_back(
+                        {(i + 1) * w + j, i * w + j, wei});
                     // edges.push_back({i*wid+j, (i+1)*wid+j, 1}); // edges
                     // edges.push_back({(i+1)*wid+j, i*wid+j, 1}); // edges
                 }
             }
         }
-        for (int i = 0; i < hei; i++) {
-            for (int j = 0; j < wid - 1; j++) {
-                if (bb[i][j] == '.' && bb[i][j + 1] == '.') {
-                    int ww = 1;
-                    g[i * wid + j].push_back(
-                        {i * wid + j, i * wid + j + 1, ww});
-                    g[i * wid + j + 1].push_back(
-                        {i * wid + j + 1, i * wid + j, ww});
+        for (int i = 0; i < h; i++) {
+            for (int j = 0; j < w - 1; j++) {
+                if (s[i][j] != '#' && s[i][j + 1] != '#') {
+                    int wei = 1;
+                    g[i * w + j].push_back({i * w + j, i * w + j + 1, wei});
+                    g[i * w + j + 1].push_back({i * w + j + 1, i * w + j, wei});
                     // edges.push_back({i*wid+j, (i+1)*wid+j, 1}); // edges
                     // edges.push_back({(i+1)*wid+j, i*wid+j, 1}); // edges
                 }
@@ -184,7 +194,7 @@ struct Graph {
         que.push(x);
         while (!que.empty()) {
             int y = que.front();
-            int d = rtn[x];
+            int d = rtn[y];
             que.pop();
             for (int i = 0; i < g[y].size(); i++) {
                 int to_x = g[y][i].to;
