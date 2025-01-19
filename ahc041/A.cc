@@ -50,8 +50,8 @@ long long llimax = 9223372036854775807;
 chrono::system_clock::time_point start, current;
 double TIME_LIMIT = 1900.0;
 // double TIME_LIMIT=190.0;
-double start_temp = 10000000.0;
-double end_temp = 10000.0;
+double start_temp = 100.0;
+double end_temp = 10.0;
 int DEPTH_LIMIT = 10;
 
 struct Timer {
@@ -319,20 +319,28 @@ Graph graph;
 struct Grid {
     vector<set<int>> g;
     vector<int> parent;
+    int current_score;
 
     void init() {
         g.resize(N);
         parent.resize(N, imax);
+        current_score = -1;
     }
 
     void donyoku() {
         queue<int> que, dep;
+        vector<int> perm(N);
+        rep(i, N) { perm[i] = i; }
+        shuffle(all(perm), mt);
+
         rep(i, N) {
-            if (parent[i] != imax) {
+            int idx = perm[i];
+
+            if (parent[idx] != imax) {
                 continue;
             }
-            parent[i] = -1;
-            que.push(i);
+            parent[idx] = -1;
+            que.push(idx);
             dep.push(0);
             while (!que.empty()) {
                 int from = que.front();
@@ -343,18 +351,21 @@ struct Grid {
                 rep(j, graph.g[from].size()) {
                     int to = graph.g[from][j].to;
                     // cout << to SP << A[to] << endl;
-                    if (parent[to] != imax || d >= 10 ||
-                        (A[to] - 50) / 10 > d - 2) {
+                    if (parent[to] != imax || d >= 10) {
                         continue;
-                    } else {
-                        g[from].insert(to);
-                        parent[to] = from;
-                        que.push(to);
-                        dep.push(d + 1);
                     }
+                    // if ((A[to] - 50) / 10 > d - 1 - mt() % 2) {
+                    //     continue;
+                    // }
+
+                    g[from].insert(to);
+                    parent[to] = from;
+                    que.push(to);
+                    dep.push(d + 1);
                 }
             }
         }
+        current_score = score();
     }
     void destroy_root(int idx) {
         vector<int> destroy_list;
@@ -368,19 +379,58 @@ struct Grid {
         }
     }
     void annering() {
+        int loop = 0;
         while (timer.progress() < 1.0) {
+            loop++;
             int type = mt() % 100;
 
-            int idx;
             if (type <= 50) {
                 // rootを減らす
-                idx = mt() % N;
+                vector<set<int>> copy_g = g;
+                vector<int> copy_parent = parent;
+                int idx;
+                do {
+                    idx = mt() % N;
+                } while (parent[idx] != -1);
                 parent[idx] = imax;
+                int before_score = current_score;
                 destroy_root(idx);
+                donyoku();
+                // cout << current_score << endl;
+                if (loop % 10 == 0) {
+                    print_ans();
+                }
+                double temp =
+                    start_temp + (end_temp - start_temp) * timer.progress();
+                double prob = exp((current_score - before_score) / temp);
+                // cout << current_score - before_score SP << prob << endl;
+                if (prob < (mt() % imax) / (double)imax) {
+                    current_score = before_score;
+                    g = copy_g;
+                    parent = copy_parent;
+                }
             } else {
                 // 木を回転させる
             }
         }
+    }
+    void score_dfs(int idx, int dep, int &sco) {
+        sco += A[idx] * (dep + 1);
+        for (auto v : g[idx]) {
+            score_dfs(v, dep + 1, sco);
+        }
+    }
+    int score() {
+        int sco = 1;
+        rep(i, N) {
+            if (parent[i] == -1) {
+                sco += A[i] * 1;
+                for (auto v : g[i]) {
+                    score_dfs(v, 1, sco);
+                }
+            }
+        }
+        return sco;
     }
 
     void print_ans() {
@@ -417,6 +467,8 @@ int main() {
     Grid grid;
     grid.init();
     grid.donyoku();
+    // cout << grid.score() << endl;
+    grid.annering();
     grid.print_ans();
     return 0;
 
