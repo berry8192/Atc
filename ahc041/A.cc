@@ -342,7 +342,9 @@ struct Grid {
                 dep.pop();
                 rep(j, graph.g[from].size()) {
                     int to = graph.g[from][j].to;
-                    if (parent[to] != imax || d >= 10) {
+                    // cout << to SP << A[to] << endl;
+                    if (parent[to] != imax || d >= 10 ||
+                        (A[to] - 50) / 10 > d - 2) {
                         continue;
                     } else {
                         g[from].insert(to);
