@@ -356,6 +356,32 @@ struct Grid {
             }
         }
     }
+    void destroy_root(int idx) {
+        vector<int> destroy_list;
+        for (auto s : g[idx]) {
+            destroy_list.push_back(s);
+        }
+        g[idx].clear();
+        rep(i, destroy_list.size()) {
+            parent[destroy_list[i]] = imax;
+            destroy_root(destroy_list[i]);
+        }
+    }
+    void annering() {
+        while (timer.progress() < 1.0) {
+            int type = mt() % 100;
+
+            int idx;
+            if (type <= 50) {
+                // rootを減らす
+                idx = mt() % N;
+                parent[idx] = imax;
+                destroy_root(idx);
+            } else {
+                // 木を回転させる
+            }
+        }
+    }
 
     void print_ans() {
         rep(i, N) { cout << parent[i] SP; }
@@ -396,11 +422,6 @@ int main() {
 
     int loop = 0;
     while (1) {
-        current = chrono::system_clock::now();
-        if (chrono::duration_cast<chrono::milliseconds>(current - start)
-                .count() > TIME_LIMIT) {
-            // break;
-        }
         loop++;
     }
     // cout<< space.score SP << space.score*25 <<endl;
