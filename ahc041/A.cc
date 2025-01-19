@@ -48,7 +48,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 1950.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 100.0;
 double end_temp = 10.0;
@@ -70,7 +70,7 @@ Timer timer;
 
 // 乱数の準備
 // auto seed=(unsigned)time(NULL);
-int seed = 1;
+int seed = 20250119;
 mt19937 mt(seed);
 
 int N, M, H;
@@ -315,6 +315,14 @@ struct Pos {
 vector<Pos> XY;
 vector<pair<int, int>> beautiful;
 
+void calc_beautiful() {
+    rep(i, A.size()) {
+        beautiful[i].first = A[i] + (mt() * 100 + 50);
+        beautiful[i].second = i;
+    }
+    sort(all(beautiful));
+}
+
 Graph graph;
 struct Grid {
     vector<set<int>> g;
@@ -329,13 +337,14 @@ struct Grid {
 
     void donyoku() {
         queue<int> que, dep;
-        vector<int> perm(N);
-        rep(i, N) { perm[i] = i; }
-        shuffle(all(perm), mt);
+        // vector<int> perm(N);
+        // rep(i, N) { perm[i] = i; }
+        // shuffle(all(perm), mt);
+        calc_beautiful();
 
         rep(i, N) {
-            int idx = perm[i];
-
+            // int idx = perm[i];
+            int idx = beautiful[i].second;
             if (parent[idx] != imax) {
                 continue;
             }
@@ -354,9 +363,9 @@ struct Grid {
                     if (parent[to] != imax || d >= 10) {
                         continue;
                     }
-                    // if ((A[to] - 50) / 10 > d - 1 - mt() % 2) {
-                    //     continue;
-                    // }
+                    if ((A[to] - 50) / 10 > d - 2) {
+                        continue;
+                    }
 
                     g[from].insert(to);
                     parent[to] = from;
@@ -366,6 +375,13 @@ struct Grid {
             }
         }
         current_score = score();
+    }
+    void destroy_single() {
+        rep(i, N) {
+            if (parent[i] == -1 && g[i].empty()) {
+                parent[i] = imax;
+            }
+        }
     }
     void destroy_root(int idx) {
         vector<int> destroy_list;
@@ -382,36 +398,41 @@ struct Grid {
         int loop = 0;
         while (timer.progress() < 1.0) {
             loop++;
-            int type = mt() % 100;
+            // int type = mt() % 100;
 
-            if (type <= 50) {
-                // rootを減らす
-                vector<set<int>> copy_g = g;
-                vector<int> copy_parent = parent;
-                int idx;
-                do {
-                    idx = mt() % N;
-                } while (parent[idx] != -1);
-                parent[idx] = imax;
-                int before_score = current_score;
-                destroy_root(idx);
-                donyoku();
-                // cout << current_score << endl;
-                if (loop % 10 == 0) {
-                    print_ans();
-                }
-                double temp =
-                    start_temp + (end_temp - start_temp) * timer.progress();
-                double prob = exp((current_score - before_score) / temp);
-                // cout << current_score - before_score SP << prob << endl;
-                if (prob < (mt() % imax) / (double)imax) {
-                    current_score = before_score;
-                    g = copy_g;
-                    parent = copy_parent;
-                }
-            } else {
-                // 木を回転させる
+            // if (type <= 50) {
+            // rootを減らす
+            vector<set<int>> copy_g = g;
+            vector<int> copy_parent = parent;
+            int idx;
+            do {
+                idx = mt() % N;
+            } while (parent[idx] != -1);
+            parent[idx] = imax;
+            int before_score = current_score;
+            // int des = mt() % 3 + 1;
+            // rep(i, des) { destroy_root(idx); }
+            destroy_root(idx);
+            if (mt() % 2 == 0) {
+                destroy_single();
             }
+            donyoku();
+            // cout << current_score << endl;
+            // if (loop % 10 == 0) {
+            //     print_ans();
+            // }
+            double temp =
+                start_temp + (end_temp - start_temp) * timer.progress();
+            double prob = exp((current_score - before_score) / temp);
+            // cout << current_score - before_score SP << prob << endl;
+            if (prob < (mt() % imax) / (double)imax) {
+                current_score = before_score;
+                g = copy_g;
+                parent = copy_parent;
+            }
+            // } else {
+            //     // 木を回転させる
+            // }
         }
     }
     void score_dfs(int idx, int dep, int &sco) {
@@ -444,11 +465,6 @@ void inpt() {
     A.resize(N);
     rep(i, N) { cin >> A[i]; }
     beautiful.resize(N);
-    rep(i, A.size()) {
-        beautiful[i].first = -A[i];
-        beautiful[i].second = i;
-    }
-    sort(all(beautiful));
     graph.init(N, M);
     rep(i, N) {
         int x, y;
@@ -462,8 +478,27 @@ void gutyoku() {
     exit(0);
 }
 
+void rantaku() {
+    int best_score = -1;
+    Grid best_grid;
+
+    while (timer.progress() < 1.0) {
+        Grid grid;
+        grid.init();
+        grid.donyoku();
+        int score = grid.score();
+        if (best_score < score) {
+            best_score = score;
+            best_grid = grid;
+        }
+    }
+    best_grid.print_ans();
+    exit(0);
+}
+
 int main() {
     inpt();
+    rantaku();
     Grid grid;
     grid.init();
     grid.donyoku();
