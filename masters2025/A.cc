@@ -126,6 +126,7 @@ struct Pos {
     }
 };
 Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
+string itod = "RULD-";
 
 struct Attend {
     int direction;
@@ -138,16 +139,30 @@ struct Attend {
     }
 };
 
+struct Hand {
+    int type;
+    int direction;
+
+    Hand() {};
+    Hand(int t, int d) {
+        type = t;
+        direction = d;
+    }
+};
+
 struct Cave {
-    vector<string> borad;
+    vector<string> board;
     Pos hole;
     Pos player;
     vector<Pos> gems;
-    vector<Pos> rocks;
+    // vector<Pos> rocks;
     vector<vector<Attend>> attend;
+    vector<Hand> ans;
+    int remain;
 
     void init(int NN, vector<string> &C) {
-        borad = C;
+        remain = 2 * N;
+        board = C;
         rep(i, N) {
             rep(j, N) {
                 if (C[i][j] == 'a') {
@@ -156,7 +171,7 @@ struct Cave {
                     hole = {i, j};
                     player = {i, j};
                 } else if (C[i][j] == '@') {
-                    rocks.emplace_back(i, j);
+                    // rocks.emplace_back(i, j);
                 }
             }
         }
@@ -165,8 +180,9 @@ struct Cave {
     void calc_attend() {
         // cerr << "Cal" << endl;
         attend.clear();
-        attend.resize(N, vector<Attend>(N));
+        attend.resize(N, vector<Attend>(N, {4, false}));
         vector<vector<int>> dist(N, vector<int>(N, imax));
+        dist[hole.h][hole.w] = 0;
         queue<Pos> pos_q;
         queue<int> dis_q;
         pos_q.push(hole);
@@ -177,31 +193,150 @@ struct Cave {
             int dis = dis_q.front();
             pos_q.pop();
             dis_q.pop();
-            if (dist[pos.h][pos.w] >= dis) {
+            // pos.print();
+            // cout << dis << endl;
+            if (dist[pos.h][pos.w] < dis) {
                 continue;
             }
             rep(i, 4) {
                 int lp = 1;
                 Pos npos = pos + d4[i] * lp;
-                while (!npos.is_oob() && borad[npos.h][npos.w] != '@' &&
-                       borad[npos.h][npos.w] != 'a') {
+                // cout << "npos ";
+                // npos.print();
+                if (!npos.is_oob() && dist[npos.h][npos.w] > dis + 1 &&
+                    board[pos.h][pos.w] != '@' && board[pos.h][pos.w] != 'a') {
+                    dist[npos.h][npos.w] = dis + 1;
+                    pos_q.push(npos);
+                    dis_q.push(dis + 1);
+                    attend[npos.h][npos.w] = Attend((i + 2) % 4, false);
+                }
+                lp = 2;
+                npos = pos + d4[i] * lp;
+                bool touched = false;
+                // 転がりを止めるストッパーが必要
+                if (!(pos == hole)) {
+                    Pos rpos = pos + d4[(i + 2) % 4];
+                    if (rpos.is_oob() || (board[rpos.h][rpos.w] != '@' &&
+                                          board[rpos.h][rpos.w] != 'a')) {
+                        continue;
+                    }
+                }
+                while (!npos.is_oob() && !touched) {
+                    touched = board[npos.h][npos.w] == '@' ||
+                              board[npos.h][npos.w] == 'a';
                     if (dist[npos.h][npos.w] > dis + 1) {
                         dist[npos.h][npos.w] = dis + 1;
                         pos_q.push(npos);
                         dis_q.push(dis + 1);
-                        attend[npos.h][npos.w] = Attend(i, true);
+                        attend[npos.h][npos.w] = Attend((i + 2) % 4, true);
                     }
                     lp++;
                     npos = pos + d4[i] * lp;
                 }
-                npos = pos + d4[i];
-                if (!npos.is_oob() && dist[npos.h][npos.w] > dis + 1) {
-                    dist[npos.h][npos.w] = dis + 1;
-                    pos_q.push(npos);
-                    dis_q.push(dis + 1);
-                    attend[npos.h][npos.w] = Attend(i, false);
+            }
+        }
+        // PVV(dist);
+    }
+    void move_player(int dir) {
+        Pos npos = player + d4[dir];
+        assert(!npos.is_oob());
+        player = npos;
+        ans.emplace_back(1, dir);
+    }
+    void move_player_to(Pos pos) {
+        while (!(player == pos)) {
+            if (player.h < pos.h) {
+                move_player(3);
+            } else if (player.h > pos.h) {
+                move_player(1);
+            } else if (player.w < pos.w) {
+                move_player(0);
+            } else if (player.w > pos.w) {
+                move_player(2);
+            }
+        }
+    }
+    void carry_object(Pos pos, int dir) {
+        Pos npos = pos + d4[dir];
+        player = npos;
+        if (npos == hole) {
+            remain--;
+            board[pos.h][pos.w] = '.';
+            return;
+        }
+        assert(board[npos.h][npos.w] != '@' && board[npos.h][npos.w] != 'a');
+        board[npos.h][npos.w] = board[pos.h][pos.w];
+        board[pos.h][pos.w] = '.';
+        ans.emplace_back(2, dir);
+    }
+    void roll_object(Pos pos, int dir) {
+        int lp = 1;
+        Pos npos = pos + d4[dir] * lp;
+        if (npos == hole) {
+            remain--;
+            board[pos.h][pos.w] = '.';
+            return;
+        }
+        while (!npos.is_oob() || board[npos.h][npos.w] == '@' ||
+               board[npos.h][npos.w] == 'a') {
+            lp++;
+            npos = pos + d4[dir] * lp;
+        }
+        assert(lp > 1);
+        Pos cpos = pos + d4[dir] * (lp - 1);
+        board[cpos.h][cpos.w] = board[pos.h][pos.w];
+        board[pos.h][pos.w] = '.';
+        ans.emplace_back(3, dir);
+    }
+    void move_object(Pos pos) {
+        move_player_to(pos);
+        int dir = attend[pos.h][pos.w].direction;
+        bool roll = attend[pos.h][pos.w].rollable;
+        int type = roll ? 3 : 2;
+        if (type == 3) {
+            roll_object(pos, dir);
+        } else {
+            carry_object(pos, dir);
+        }
+    }
+    void progress() {
+        calc_attend();
+        rep(i, gems.size()) {
+            cerr << i << endl;
+            if (i == 4) {
+                print_ans();
+                exit(0);
+            }
+            move_object(gems[i]);
+        }
+    }
+
+    void print_ans() {
+        rep(i, ans.size()) {
+            cout << ans[i].type << " " << itod[ans[i].direction] << endl;
+        }
+    }
+    void print_attend() {
+        rep(i, N) {
+            rep(j, N) { cout << itod[attend[i][j].direction]; }
+            cout << endl;
+        }
+        cout << "-----" << endl;
+        rep(i, N) {
+            rep(j, N) {
+                if (attend[i][j].rollable) {
+                    cout << "#";
+                } else {
+                    cout << ".";
                 }
             }
+            cout << endl;
+        }
+    }
+    void PVV(vector<vector<int>> &v) {
+        rep(i, N) {
+            rep(j, N) { cout << v[i][j] << " "; }
+            cout << endl;
         }
     }
 };
@@ -213,7 +348,7 @@ int main() {
 
     Cave cave;
     cave.init(N, S);
-    cave.calc_attend();
+    cave.progress();
 
     return 0;
 }
