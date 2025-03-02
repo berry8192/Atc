@@ -258,18 +258,42 @@ struct Cave {
         }
         // PVV(dist);
     }
+    void move_player_carry(int dir) {
+        Pos npos = player + d4[dir];
+        assert(!npos.is_oob());
+        player = npos;
+        ans.emplace_back(1, dir);
+        cout << 2 << " " << itod[dir] << endl;
+        // cerr << "player " << player.h << " " << player.w << endl;
+    }
     void move_player(int dir) {
         Pos npos = player + d4[dir];
         assert(!npos.is_oob());
         player = npos;
         ans.emplace_back(1, dir);
         cout << 1 << " " << itod[dir] << endl;
-        cerr << "player " << player.h << " " << player.w << endl;
+        // cerr << "player " << player.h << " " << player.w << endl;
+    }
+    void move_player_with_carry(Pos pos) {
+        // cerr << "move_player_to" << endl;
+        // cerr << "player " << player.h << " " << player.w << endl;
+        // cerr << "pos " << pos.h << " " << pos.w << endl;
+        while (!(player == pos)) {
+            if (player.h < pos.h) {
+                move_player_carry(3);
+            } else if (player.h > pos.h) {
+                move_player_carry(1);
+            } else if (player.w < pos.w) {
+                move_player_carry(0);
+            } else if (player.w > pos.w) {
+                move_player_carry(2);
+            }
+        }
     }
     void move_player_to(Pos pos) {
-        cerr << "move_player_to" << endl;
-        cerr << "player " << player.h << " " << player.w << endl;
-        cerr << "pos " << pos.h << " " << pos.w << endl;
+        // cerr << "move_player_to" << endl;
+        // cerr << "player " << player.h << " " << player.w << endl;
+        // cerr << "pos " << pos.h << " " << pos.w << endl;
         while (!(player == pos)) {
             if (player.h < pos.h) {
                 move_player(3);
@@ -404,6 +428,106 @@ struct Cave {
             cout << endl;
         }
     }
+    void make_cross() {
+        rep(i, 4) {
+            int cnt = 0;
+            while (1) {
+                Pos npos = player + d4[i];
+                if (npos.is_oob()) {
+                    rep(j, cnt) {
+                        cout << "1 " << itod[(i + 2) % 4] << endl;
+                        player = player + d4[(i + 2) % 4];
+                    }
+                    break;
+                }
+                cout << "1 " << itod[i] << endl;
+                player = npos;
+                cnt++;
+                if (board[npos.h][npos.w] == '@' ||
+                    board[npos.h][npos.w] == 'a') {
+                    cout << "3 " << itod[(i + 2) % 4] << endl;
+                    if (board[npos.h][npos.w] == 'a') {
+                        remain--;
+                    }
+                    board[npos.h][npos.w] = '.';
+                }
+            }
+        }
+    }
+    void poi(Pos pos) {
+        int near_h = abs(hole.h - pos.h);
+        int near_w = abs(hole.w - pos.w);
+        if (near_h >= near_w) {
+            if (pos.w < hole.w) {
+                for (int i = hole.w; i != pos.w; i--) {
+                    if (board[pos.h][i] == '@' || board[pos.h][i] == 'a') {
+                        poi({pos.h, i});
+                    }
+                }
+                move_player_to(pos);
+                move_player_with_carry({pos.h, hole.w});
+                if (pos.h > hole.h) {
+                    cout << "3 U" << endl;
+                } else {
+                    cout << "3 D" << endl;
+                }
+            } else {
+                for (int i = hole.w; i != pos.w; i++) {
+                    if (board[pos.h][i] == '@' || board[pos.h][i] == 'a') {
+                        poi({pos.h, i});
+                    }
+                }
+                move_player_to(pos);
+                move_player_with_carry({pos.h, hole.w});
+
+                if (pos.h > hole.h) {
+                    cout << "3 U" << endl;
+                } else {
+                    cout << "3 D" << endl;
+                }
+            }
+        } else {
+            if (pos.h < hole.h) {
+                for (int i = hole.h; i != pos.h; i--) {
+                    if (board[i][pos.w] == '@' || board[i][pos.w] == 'a') {
+                        poi({i, pos.w});
+                    }
+                }
+                move_player_to(pos);
+                move_player_with_carry({hole.h, pos.w});
+                if (pos.w > hole.w) {
+                    cout << "3 L" << endl;
+                } else {
+                    cout << "3 R" << endl;
+                }
+            } else {
+                for (int i = hole.h; i != pos.h; i++) {
+                    if (board[i][pos.w] == '@' || board[i][pos.w] == 'a') {
+                        poi({i, pos.w});
+                    }
+                }
+                move_player_to(pos);
+                move_player_with_carry({hole.h, pos.w});
+
+                if (pos.w > hole.w) {
+                    cout << "3 L" << endl;
+                } else {
+                    cout << "3 R" << endl;
+                }
+            }
+        }
+        if (board[pos.h][pos.w] == 'a') {
+            remain--;
+        }
+        board[pos.h][pos.w] = '.';
+    }
+    void poipoi() {
+        make_cross();
+        while (remain) {
+            Pos npos = nearest_gem_pos();
+            poi(npos);
+        }
+    }
 };
 
 int main() {
@@ -413,8 +537,7 @@ int main() {
 
     Cave cave;
     cave.init(N, S);
-    cave.progress();
-    cave.print_ans();
+    cave.poipoi();
 
     return 0;
 }
