@@ -133,6 +133,19 @@ struct Touban {
         rep(i, N) { p_cleaned.push_back({cleaned[i], i}); }
         sort(all(p_cleaned));
     }
+    void rough_calc_cleaned(int div) {
+        // cerr << "calc_cleaned" << endl;
+        cleaned.clear();
+        cleaned.resize(N);
+        int cur = 0;
+        rep(i, L / div) {
+            bool is_odd = cleaned[cur] & 1;
+            cleaned[cur] += div;
+            cur = is_odd ? b[cur] : a[cur];
+        }
+        rep(i, N) { p_cleaned.push_back({cleaned[i], i}); }
+        sort(all(p_cleaned));
+    }
     void match_all_clean() {
         for (int i = N - 1; i >= 1; i--) {
             match_clean(i);
@@ -201,6 +214,18 @@ struct Touban {
         rep(i, N) { sco -= abs(T[i] - cleaned[i]); }
         score = sco;
     }
+    void rough_calc_score(int div) {
+        int sco = 1000000;
+        vector<int> cleaned(N);
+        int cur = 0;
+        rep(i, L / div) {
+            bool is_odd = cleaned[cur] & 1;
+            cleaned[cur] += div;
+            cur = is_odd ? b[cur] : a[cur];
+        }
+        rep(i, N) { sco -= abs(T[i] - cleaned[i]); }
+        score = sco;
+    }
 
     void print_ans() { rep(i, N) cout << a[i] SP << b[i] << endl; }
 };
@@ -229,12 +254,18 @@ int main() {
         loop++;
         Touban touban;
         touban.k_random();
-        touban.calc_cleaned();
+        touban.rough_calc_cleaned(101);
+        // touban.calc_cleaned();
         touban.match_all_clean();
-        touban.calc_score();
+        touban.rough_calc_score(101);
+        // touban.calc_score();
+        // cerr << loop SP << touban.score << endl;
         if (touban.score > best.score) {
-            best = touban;
-            cerr << loop SP << best.score << endl;
+            touban.calc_score();
+            if (touban.score > best.score) {
+                best = touban;
+                cerr << loop SP << best.score << endl;
+            }
         }
     }
     best.print_ans();
