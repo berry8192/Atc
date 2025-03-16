@@ -110,7 +110,7 @@ struct Touban {
         rep3(i, N / 3, 1) { tmp.push_back(i); }
         rep3(i, 2 * N / 3 + 1, N / 3) { rep(j, 2) tmp.push_back(i); }
         rep3(i, N, 2 * N / 3 + 1) { rep(j, 3) tmp.push_back(i); }
-        cerr << tmp.size() << endl;
+        // cerr << tmp.size() << endl;
         // rep(i, tmp.size()) { cout << tmp[i] << endl; }
         // exit(0);
         shuffle(all(tmp), mt);
