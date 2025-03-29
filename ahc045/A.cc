@@ -1,90 +1,67 @@
-#include <bits/stdc++.h>
+#include <algorithm>
+#include <atcoder/dsu>
+#include <climits>
+#include <cmath>
+#include <iostream>
+#include <vector>
+
 using namespace std;
+using namespace atcoder;
 
 struct Point {
-    int id, lx, rx, ly, ry;
+    int lx, rx, ly, ry, id;
 };
 
 struct Edge {
-    int u, v;
-    int weight;
-    bool operator<(const Edge &other) const { return weight < other.weight; }
+    int u, v, weight;
 };
 
-struct UnionFind {
-    vector<int> parent, rank;
-
-    UnionFind(int n) : parent(n), rank(n, 0) {
-        for (int i = 0; i < n; ++i)
-            parent[i] = i;
-    }
-
-    int find(int x) {
-        if (parent[x] == x)
-            return x;
-        return parent[x] = find(parent[x]);
-    }
-
-    bool unite(int x, int y) {
-        int xr = find(x), yr = find(y);
-        if (xr == yr)
-            return false;
-        if (rank[xr] < rank[yr])
-            parent[xr] = yr;
-        else if (rank[xr] > rank[yr])
-            parent[yr] = xr;
-        else {
-            parent[yr] = xr;
-            rank[xr]++;
-        }
-        return true;
-    }
-};
-
-int euclidean_distance(Point &a, Point &b) {
+int euclidean_distance(const Point &a, const Point &b) {
     int dx = max(0, max(a.lx - b.rx, b.lx - a.rx));
     int dy = max(0, max(a.ly - b.ry, b.ly - a.ry));
     return dx * dx + dy * dy;
 }
 
-vector<Edge> build_edges(vector<Point> &cities) {
+vector<Edge> build_edges(const vector<Point> &points) {
     vector<Edge> edges;
-    int n = cities.size();
+    int n = points.size();
     for (int i = 0; i < n; ++i) {
         for (int j = i + 1; j < n; ++j) {
-            int weight = euclidean_distance(cities[i], cities[j]);
-            edges.push_back({cities[i].id, cities[j].id, weight});
+            int weight = euclidean_distance(points[i], points[j]);
+            edges.push_back({points[i].id, points[j].id, weight});
         }
     }
     return edges;
 }
 
+bool compare_edges(const Edge &a, const Edge &b) { return a.weight < b.weight; }
+
 vector<Edge> kruskal(int n, vector<Edge> &edges) {
-    sort(edges.begin(), edges.end());
-    UnionFind uf(n);
     vector<Edge> mst;
-    for (auto &e : edges) {
-        if (uf.unite(e.u, e.v)) {
+    dsu d(n);
+    sort(edges.begin(), edges.end(), compare_edges);
+
+    for (const Edge &e : edges) {
+        if (!d.same(e.u, e.v)) {
+            d.merge(e.u, e.v);
             mst.push_back(e);
-            if (mst.size() == n - 1)
-                break;
         }
     }
     return mst;
 }
 
-void output(vector<vector<int>> &groups, vector<vector<Edge>> &mst_edges) {
+void output(const vector<vector<int>> &groups,
+            const vector<vector<Edge>> &mst_edges) {
     cout << "!" << endl;
-    for (int i = 0; i < groups.size(); ++i) {
-        for (int j = 0; j < groups[i].size(); ++j) {
-            if (j > 0)
-                cout << " ";
-            cout << groups[i][j];
-        }
-        cout << endl;
-        for (auto &e : mst_edges[i]) {
+    for (size_t i = 0; i < groups.size(); ++i) {
+        for (int id : groups[i])
+            cout << id << " ";
+        cout << "-1" << endl;
+
+        for (const auto &e : mst_edges[i]) {
             cout << e.u << " " << e.v << endl;
         }
+        cout << "-1 -1" << endl;
     }
 }
 
@@ -101,6 +78,7 @@ int main() {
         cin >> cities[i].lx >> cities[i].rx >> cities[i].ly >> cities[i].ry;
         cities[i].id = i;
     }
+
     vector<Edge> edges = build_edges(cities);
     vector<Edge> mst = kruskal(N, edges);
 
@@ -121,28 +99,28 @@ int main() {
 
     output(groups, mst_edges);
 
-    int queries_used = 0;
-    UnionFind global_uf(N);
-
+    dsu global_dsu(N);
     for (auto &e : mst) {
-        global_uf.unite(e.u, e.v);
+        global_dsu.merge(e.u, e.v);
     }
 
+    int queries_used = 0;
     while (queries_used < Q) {
         int u, v;
         cin >> u >> v;
-        if (global_uf.find(u) == global_uf.find(v)) {
+        if (global_dsu.same(u, v)) {
             cout << "0" << endl;
         } else {
             int min_distance = INT_MAX;
             for (auto &e : edges) {
-                if (global_uf.find(e.u) != global_uf.find(e.v)) {
+                if (!global_dsu.same(e.u, e.v)) {
                     min_distance = min(min_distance, e.weight);
                 }
             }
             cout << min_distance << endl;
-            queries_used++;
+            global_dsu.merge(u, v);
         }
+        queries_used++;
     }
 
     return 0;
