@@ -40,10 +40,14 @@ struct Link {
     int ci, cj;
     vector<string> actions;
     vector<bool> reached_goal;
+    int density_grad, fixed_density;
 
     Link(int si, int sj)
         : ci(si), cj(sj), block(N, vector<bool>(N, false)),
-          reached_goal(M, false) {}
+          reached_goal(M, false) {
+        density_grad = mt() % 20;
+        fixed_density = mt() % 100;
+    }
 
     bool is_in(int i, int j) const {
         return 0 <= i && i < N && 0 <= j && j < N;
@@ -63,7 +67,7 @@ struct Link {
     }
 
     bool maybe_toggle_block(int exclude_dir, int goal_id) {
-        if (mt() % (5 + goal_id) == 0) {
+        if (mt() % (fixed_density + goal_id * density_grad / 100) == 0) {
             vector<int> dirs = {0, 1, 2, 3};
             shuffle(dirs.begin(), dirs.end(), mt);
             for (int d : dirs) {
