@@ -20,7 +20,7 @@ vector<pair<int, int>> goals(39);
 int seed = 1;
 mt19937 mt(seed);
 
-const double TIME_LIMIT = 1950.0;
+const double TIME_LIMIT = 1900.0;
 
 struct Timer {
     chrono::system_clock::time_point start;
@@ -41,21 +41,13 @@ struct Link {
     int ci, cj;
     vector<string> actions;
     vector<bool> reached_goal;
-    vector<vector<bool>> banned_now;
-    vector<vector<bool>> banned_new;
-    set<pair<int, int>> placed_blocks;
-    set<pair<int, int>> used_blocks;
-    set<pair<int, int>> banned_blocks;
+    set<pair<int, int>> placed_blocks; // 設置したブロック
+    set<pair<int, int>> used_blocks;   // 実際に使われたブロック
+    set<pair<int, int>> banned_blocks; // 次の周回で設置禁止にするブロック
 
     Link(int si, int sj)
         : ci(si), cj(sj), block(N, vector<bool>(N, false)),
-          banned_now(N, vector<bool>(N, false)),
-          banned_new(N, vector<bool>(N, false)), reached_goal(M, false) {}
-
-    void inherit_ban_from(Link &prev) {
-        banned_now = prev.banned_new;
-        banned_new = vector<vector<bool>>(N, vector<bool>(N, false));
-    }
+          reached_goal(M, false) {}
 
     bool is_in(int i, int j) const {
         return 0 <= i && i < N && 0 <= j && j < N;
@@ -75,44 +67,37 @@ struct Link {
     }
 
     bool maybe_toggle_block(int exclude_dir, int goal_id) {
-        if (mt() % (5 + goal_id * 2) == 0) {
+        if (mt() % (5 + goal_id) == 0) {
             vector<int> dirs = {0, 1, 2, 3};
             shuffle(dirs.begin(), dirs.end(), mt);
             for (int d : dirs) {
                 if (d == exclude_dir)
                     continue;
-
                 int ni = ci + di[d], nj = cj + dj[d];
-                if (!is_in(ni, nj))
-                    continue;
+                if (is_in(ni, nj)) {
+                    if (banned_blocks.count({ni, nj}))
+                        continue; // 禁止リストにあったら設置しない
 
-                // 【追加】禁止リストに載ってたらダメ！
-                if (banned_now[ni][nj])
-                    continue;
-
-                // 目的地だったらダメ
-                bool is_goal = false;
-                for (const auto &g : goals) {
-                    if (g.first == ni && g.second == nj) {
-                        is_goal = true;
-                        break;
+                    bool is_goal = false;
+                    for (const auto &g : goals) {
+                        if (g.first == ni && g.second == nj) {
+                            is_goal = true;
+                            break;
+                        }
                     }
+                    if (is_goal)
+                        continue;
+
+                    if (has_nearby_block(ni, nj))
+                        continue;
+
+                    block[ni][nj] = !block[ni][nj];
+                    actions.push_back("A "s + dir_char[d]);
+
+                    placed_blocks.insert({ni, nj}); // 設置したことを記録
+
+                    return true;
                 }
-                if (is_goal)
-                    continue;
-
-                // 周りにブロックあったらダメ
-                if (has_nearby_block(ni, nj))
-                    continue;
-
-                // ブロックを置く
-                block[ni][nj] = !block[ni][nj];
-                actions.push_back("A "s + dir_char[d]);
-
-                // 【ここがポイント！】設置した位置を新しい禁止リストに登録
-                banned_new[ni][nj] = true;
-
-                return true;
             }
         }
         return false;
@@ -289,7 +274,6 @@ int main() {
     while (timer.progress() < 1.0) {
         lp++;
         Link current = initial;
-        current.inherit_ban_from(best);
         current.solve();
         if (current.score() > best.score()) {
             cerr << "lp: " << lp << " score: " << current.score() << '\n';
