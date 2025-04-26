@@ -1,9 +1,10 @@
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <queue>
 #include <random>
 #include <string>
-#include <tuple> // tieを使うため
+#include <tuple>
 #include <vector>
 using namespace std;
 
@@ -15,15 +16,31 @@ const char dir_char[4] = {'U', 'D', 'L', 'R'};
 int start_i, start_j;
 vector<pair<int, int>> goals(40);
 
+const double TIME_LIMIT = 1900.0;
+
+struct Timer {
+    chrono::system_clock::time_point start;
+
+    Timer() { start = chrono::system_clock::now(); }
+    double progress() {
+        chrono::system_clock::time_point current = chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+                   .count() /
+               TIME_LIMIT;
+    }
+};
+
 struct Link {
     vector<vector<bool>> block;
     int ci, cj;
     vector<string> actions;
+    vector<bool> reached_goal;
     mt19937 mt;
     uniform_int_distribution<> chance;
 
     Link(int si, int sj)
-        : ci(si), cj(sj), block(N, vector<bool>(N, false)), chance(0, 99) {
+        : ci(si), cj(sj), block(N, vector<bool>(N, false)),
+          reached_goal(M, false), chance(0, 99) {
         random_device seed_gen;
         mt.seed(seed_gen());
     }
@@ -78,8 +95,22 @@ struct Link {
                 }
                 if ((ni != i || nj != j) && prev[ni][nj].first == -1) {
                     prev[ni][nj] = {i, j};
-                    how[ni][nj] = d + 4; // 4以上なら滑走
+                    how[ni][nj] = d + 4;
                     q.emplace(ni, nj);
+                }
+            }
+        }
+
+        // ゴールがブロックされていても、1マス手前から解除できるようにする
+        if (prev[ti][tj].first == -1) {
+            for (int d = 0; d < 4; ++d) {
+                int ni = ti + di[d], nj = tj + dj[d];
+                if (is_in(ni, nj) && prev[ni][nj].first != -1) {
+                    // ゴールの隣のマスからブロックを壊して到達可能
+                    prev[ti][tj] = {ni, nj};
+                    how[ti][tj] =
+                        d; // 移動方向として記録（MでもSでもないが特別処理で対応）
+                    break;
                 }
             }
         }
@@ -103,11 +134,27 @@ struct Link {
         return path;
     }
 
-    void move_with_bfs(int ti, int tj) {
+    bool move_with_bfs(int goal_id) {
+        // 目的地がブロックされていたら壊す
+        int ti = goals[goal_id].first;
+        int tj = goals[goal_id].second;
+        if (block[ti][tj]) {
+            for (int d = 0; d < 4; ++d) {
+                int ni = ti + di[d], nj = tj + dj[d];
+                if (ci == ni && cj == nj) {
+                    block[ti][tj] = false;
+                    actions.push_back(
+                        "A "s +
+                        dir_char[(d + 1) % 2 == 0 ? d - 1 : d + 1]); // 相手方向
+                    break;
+                }
+            }
+        }
+
         while (!(ci == ti && cj == tj)) {
             auto path = bfs(ci, cj, ti, tj);
             if (path.empty())
-                return; // もう行けない
+                return false; // 行けない
 
             for (auto [type, d] : path) {
                 bool updated = maybe_toggle_block(d);
@@ -115,7 +162,7 @@ struct Link {
                 if (type == 'M') {
                     int ni = ci + di[d], nj = cj + dj[d];
                     if (!is_in(ni, nj) || block[ni][nj])
-                        break;
+                        return false;
                     ci = ni;
                     cj = nj;
                     actions.push_back("M "s + dir_char[d]);
@@ -129,7 +176,7 @@ struct Link {
                         moved = true;
                     }
                     if (!moved)
-                        break;
+                        return false;
                     ci = ni;
                     cj = nj;
                     actions.push_back("S "s + dir_char[d]);
@@ -137,15 +184,24 @@ struct Link {
 
                 updated |= maybe_toggle_block(d);
                 if (updated)
-                    break; // ブロック設置ならBFSからやり直す
+                    break; // ブロック設置でBFSやり直し
+            }
+        }
+
+        reached_goal[goal_id] = true;
+        return true;
+    }
+
+    void solve() {
+        for (int i = 0; i < M; ++i) {
+            if (!move_with_bfs(i)) {
+                break; // 次の探索に行く
             }
         }
     }
 
-    void solve() {
-        for (const auto &g : goals) {
-            move_with_bfs(g.first, g.second);
-        }
+    int score() const {
+        return count(reached_goal.begin(), reached_goal.end(), true);
     }
 
     void output_actions() const {
@@ -162,9 +218,20 @@ int main() {
         cin >> goals[i].first >> goals[i].second;
     }
 
-    Link link(start_i, start_j);
-    link.solve();
-    link.output_actions();
+    Link initial(start_i, start_j);
 
+    Timer timer;
+    Link best = initial;
+    best.solve();
+
+    while (timer.progress() < 1.0) {
+        Link current = initial;
+        current.solve();
+        if (current.score() > best.score()) {
+            best = current;
+        }
+    }
+
+    best.output_actions();
     return 0;
 }
