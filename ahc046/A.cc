@@ -62,8 +62,8 @@ struct Link {
         return false;
     }
 
-    bool maybe_toggle_block(int exclude_dir) {
-        if (mt() % 5 == 0) {
+    bool maybe_toggle_block(int exclude_dir, int goal_id) {
+        if (mt() % (5 + goal_id) == 0) {
             vector<int> dirs = {0, 1, 2, 3};
             shuffle(dirs.begin(), dirs.end(), mt);
             for (int d : dirs) {
@@ -173,7 +173,7 @@ struct Link {
                 return false; // 行けない
 
             for (auto [type, d] : path) {
-                bool updated = maybe_toggle_block(d);
+                bool updated = maybe_toggle_block(d, goal_id);
 
                 if (type == 'M') {
                     int ni = ci + di[d], nj = cj + dj[d];
@@ -198,7 +198,7 @@ struct Link {
                     actions.push_back("S "s + dir_char[d]);
                 }
 
-                updated |= maybe_toggle_block(d);
+                updated |= maybe_toggle_block(d, goal_id);
                 if (updated)
                     break; // ブロック設置でBFSやり直し
             }
