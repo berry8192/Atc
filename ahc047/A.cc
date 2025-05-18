@@ -82,9 +82,6 @@ struct Model {
     Model() {
         C.assign(M, 'a');
         A.assign(M, vector<int>(M, 0));
-        for (int i = 0; i < M; i++) {
-            A[i][0] = 100;
-        }
     }
     void print_ans() {
         for (int i = 0; i < M; i++) {
@@ -212,6 +209,41 @@ struct Model {
             A[i][i] = 100;
         }
     }
+    // 指定したindexの文字列のループ遷移頻度に基づき、a-f状態の遷移確率を最適化
+    void set_selected_string_model_freq(const vector<string> &S,
+                                        const vector<int> &indices) {
+        C = {'a', 'b', 'c', 'd', 'e', 'f', 'a', 'b', 'c', 'd', 'e', 'f'};
+        string s_cat;
+        for (int idx : indices)
+            s_cat += S[idx];
+        int sz = s_cat.size();
+        vector<vector<int>> freq(M, vector<int>(M));
+        for (int i = 0; i < sz; ++i) {
+            int c = s_cat[i] - 'a';
+            int nc = s_cat[(i + 1) % sz] - 'a';
+            int nnc = s_cat[(i + 2) % sz] - 'a';
+            if (nc >= 3) {
+                c += M / 2;
+            }
+            if (nnc >= 3) {
+                nc += M / 2;
+            }
+            assert(c < M);
+            assert(nc < M);
+            freq[c][nc]++;
+        }
+        // 遷移確率を100%に正規化
+        for (int i = 0; i < M; ++i) {
+            int sum1 = 1;
+            int sum1o = 0;
+            rep(j, M) { sum1 += freq[i][j]; }
+            rep(j, M - 1) {
+                A[i][j] = 100 * freq[i][j] / sum1;
+                sum1o += A[i][j];
+            }
+            A[i][M - 1] = 100 - sum1o;
+        }
+    }
 };
 
 void inpt() {
@@ -226,7 +258,8 @@ void inpt() {
 int main() {
     inpt();
     Model model;
-    model.set_best_string_model(S, P);
+    vector<int> indices = {4, 8};
+    model.set_selected_string_model_freq(S, indices);
     string err;
     long long score = model.compute_score(S, P, N, M, L, err);
     cerr << "Initial score: " << score << endl;
