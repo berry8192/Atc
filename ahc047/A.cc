@@ -230,7 +230,7 @@ struct Model {
             }
             assert(c < M);
             assert(nc < M);
-            freq[c][nc]++;
+            freq[c][nc] += 10000;
         }
         // 遷移確率を100%に正規化
         for (int i = 0; i < M; ++i) {
