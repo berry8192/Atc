@@ -18,12 +18,13 @@ using namespace std;
 // 	rep(i, pvv.size()-1) outputFile << pvv[i] << ", ";
 // 	outputFile<< pvv[pvv.size()-1] <<endl;
 // }
-// template <class T> void PV(T pvv) {
-// 	if(!pvv.size()) return;
-// 	rep(i, pvv.size()-1) cout << pvv[i] << ", ";
-// 	// rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
-// 	cout<< pvv[pvv.size()-1] <<endl;
-// }
+template <class T> void PV(T pvv) {
+    if (!pvv.size())
+        return;
+    rep(i, pvv.size() - 1) cerr << pvv[i] << ", ";
+    // rep(i, pvv.size()-1) cout<< pvv[i]/20 SP << pvv[i]%20 <<endl;
+    cerr << pvv[pvv.size() - 1] << endl;
+}
 
 // template <class T>void PVV(T pvv) {
 // 	rep(i, pvv.size()){
@@ -214,10 +215,14 @@ struct Model {
                                         const vector<int> &indices) {
         C = {'a', 'b', 'c', 'd', 'e', 'f', 'a', 'b', 'c', 'd', 'e', 'f'};
         string s_cat;
-        for (int idx : indices)
+        vector<int> s_cat_owner; // s_catの各文字がどのindicesのものか
+        for (int k = 0; k < indices.size(); ++k) {
+            int idx = indices[k];
             s_cat += S[idx];
+            s_cat_owner.insert(s_cat_owner.end(), S[idx].size(), k);
+        }
         int sz = s_cat.size();
-        vector<vector<int>> freq(M, vector<int>(M));
+        vector<vector<ll>> freq(M, vector<ll>(M));
         for (int i = 0; i < sz; ++i) {
             int c = s_cat[i] - 'a';
             int nc = s_cat[(i + 1) % sz] - 'a';
@@ -230,12 +235,13 @@ struct Model {
             }
             assert(c < M);
             assert(nc < M);
-            freq[c][nc] += 10000;
+            // 元のPの値に10000をかけた値を足す
+            freq[c][nc] += (P[indices[s_cat_owner[i]]]) * 10000;
         }
         // 遷移確率を100%に正規化
         for (int i = 0; i < M; ++i) {
-            int sum1 = 1;
-            int sum1o = 0;
+            ll sum1 = 1;
+            ll sum1o = 0;
             rep(j, M) { sum1 += freq[i][j]; }
             rep(j, M - 1) {
                 A[i][j] = 100 * freq[i][j] / sum1;
@@ -258,9 +264,10 @@ void inpt() {
 int main() {
     inpt();
     Model model, best_model;
+    best_model.set_best_string_model(S, P);
     vector<int> indices, best_indices;
-    long long best_score = -1e18;
     string err;
+    long long best_score = best_model.compute_score(S, P, N, M, L, err);
     // Pが高い順のindexリストを作成
     vector<pair<int, int>> pidx;
     rep(i, N) pidx.emplace_back(P[i], i);
@@ -269,21 +276,41 @@ int main() {
     for (auto &pi : pidx)
         sorted_idx.push_back(pi.second);
 
-    // 1個から10個まで全探索
-    for (int select_size = 1; select_size <= 10; ++select_size) {
+    // 2個から10個まで全探索＋1個だけ間を抜かすパターン
+    for (int select_size = 2; select_size <= 10; ++select_size) {
         if (N < select_size)
             break;
+        // 連続パターン (1,2,...,select_size)
         indices.clear();
         for (int i = 0; i < select_size; ++i)
             indices.push_back(sorted_idx[i]);
         model.set_selected_string_model_freq(S, indices);
+        // PV(indices);
         long long score = model.compute_score(S, P, N, M, L, err);
         if (score > best_score) {
-            // cerr << "Score: " << score << endl;
-            // cerr << "select_size: " << select_size << endl;
             best_score = score;
             best_indices = indices;
             best_model = model;
+        }
+        // 1個だけ間を抜かすパターン
+        // (0,1,...,skip-1,skip+1,...,select_size) for skip in [0, select_size)
+        for (int skip = 0; skip < select_size; ++skip) {
+            if (select_size >= N)
+                break; // skipパターンが存在しない
+            indices.clear();
+            for (int i = 0; i < select_size + 1; ++i) {
+                if (i == skip)
+                    continue;
+                indices.push_back(sorted_idx[i]);
+            }
+            model.set_selected_string_model_freq(S, indices);
+            // PV(indices);
+            long long score2 = model.compute_score(S, P, N, M, L, err);
+            if (score2 > best_score) {
+                best_score = score2;
+                best_indices = indices;
+                best_model = model;
+            }
         }
     }
     cerr << "Best score: " << best_score << endl;
