@@ -213,28 +213,7 @@ struct Model {
     // 指定したindexの文字列のループ遷移頻度に基づき、a-f状態の遷移確率を最適化
     void set_selected_string_model_freq(const vector<string> &S,
                                         const vector<int> &indices) {
-        // 文字ごとの出現頻度をカウント
-        vector<int> freq_map(6);
-        int sum_c = 0;
-        for (int idx : indices) {
-            for (char ch : S[idx]) {
-                freq_map[int(ch - 'a')]++;
-                sum_c++;
-            }
-        }
-        // 頻度でMを分配
-        vector<int> freq_size(6);
-        C.clear();
-        for (int i = 0; i < M - 1; ++i) {
-            int fig = min(4.0, round(1.0 * M * freq_map[i] / sum_c));
-            freq_size[i] = fig;
-            rep(lp, fig) { C.push_back('a' + i); }
-        }
-        while (C.size() < M) {
-            C.push_back('a' + (M - 1));
-            freq_size[M - 1]++;
-        }
-
+        C = {'a', 'b', 'c', 'd', 'e', 'f', 'a', 'b', 'c', 'd', 'e', 'f'};
         // string s_cat;
         // vector<int> s_cat_owner; // s_catの各文字がどのindicesのものか
         // for (int k = 0; k < indices.size(); ++k) {
@@ -243,7 +222,6 @@ struct Model {
         //     s_cat_owner.insert(s_cat_owner.end(), S[idx].size(), k);
         // }
         // int sz = s_cat.size();
-
         vector<vector<ll>> freq(M, vector<ll>(M));
         rep(j, indices.size()) {
             string s = S[indices[j]];
@@ -256,21 +234,16 @@ struct Model {
                 } else {
                     nnc = s[i + 2] - 'a';
                 }
-                // Cのindexに変換
-                int cidx = find(C.begin(), C.end(), s[i]) - C.begin();
-                int ncidx = find(C.begin(), C.end(), s[i + 1]) - C.begin();
-                int nncidx = find(C.begin(), C.end(),
-                                  s[(i == s.size() - 2) ? i : i + 2]) -
-                             C.begin();
-                if (ncidx >= 3) {
-                    cidx += M / 2;
+                if (nc >= 3) {
+                    c += M / 2;
                 }
-                if (nncidx >= 3) {
-                    ncidx += M / 2;
+                if (nnc >= 3) {
+                    nc += M / 2;
                 }
-                if (cidx >= M || ncidx >= M)
-                    continue;
-                freq[cidx][ncidx] += (P[indices[j]]) * 10000;
+                assert(c < M);
+                assert(nc < M);
+                // 元のPの値に10000をかけた値を足す
+                freq[c][nc] += (P[indices[j]]) * 10000;
             }
         }
         // 遷移確率を100%に正規化
@@ -279,10 +252,20 @@ struct Model {
             ll sum1o = 0;
             rep(j, M) { sum1 += freq[i][j]; }
             rep(j, M - 1) {
-                A[i][j] = 100 * freq[i][j] / sum1;
+                A[i][j] = round(100.0 * freq[i][j] / sum1);
                 sum1o += A[i][j];
             }
             A[i][M - 1] = 100 - sum1o;
+            if (A[i][M - 1] < 0) {
+                sum1 = 1;
+                sum1o = 0;
+                rep(j, M) { sum1 += freq[i][j]; }
+                rep(j, M - 1) {
+                    A[i][j] = 100 * freq[i][j] / sum1;
+                    sum1o += A[i][j];
+                }
+                A[i][M - 1] = 100 - sum1o;
+            }
         }
     }
 };
@@ -302,7 +285,7 @@ int main() {
     best_model.set_best_string_model(S, P);
     vector<int> indices, best_indices;
     string err;
-    long long best_score = -1;
+    long long best_score = best_model.compute_score(S, P, N, M, L, err);
     // Pが高い順のindexリストを作成
     vector<pair<int, int>> pidx;
     rep(i, N) pidx.emplace_back(P[i], i);
@@ -312,7 +295,7 @@ int main() {
         sorted_idx.push_back(pi.second);
 
     // 2個から10個まで全探索＋1個だけ/2個だけ間を抜かすパターン
-    for (int select_size = 2; select_size <= 2; ++select_size) {
+    for (int select_size = 2; select_size <= 6; ++select_size) {
         if (N < select_size)
             break;
         // 連続パターン (1,2,...,select_size)
@@ -328,7 +311,6 @@ int main() {
             // PV(indices);
             // cerr << "best_score: " << best_score << endl;
         }
-        break;
         // 1個だけ間を抜かすパターン
         for (int skip = 0; skip < select_size; ++skip) {
             if (select_size >= N)
