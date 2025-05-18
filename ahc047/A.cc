@@ -285,12 +285,13 @@ int main() {
         for (int i = 0; i < select_size; ++i)
             indices.push_back(sorted_idx[i]);
         model.set_selected_string_model_freq(S, indices);
-        // PV(indices);
         long long score = model.compute_score(S, P, N, M, L, err);
         if (score > best_score) {
             best_score = score;
             best_indices = indices;
             best_model = model;
+            // PV(indices);
+            // cerr << "best_score: " << best_score << endl;
         }
         // 1個だけ間を抜かすパターン
         // (0,1,...,skip-1,skip+1,...,select_size) for skip in [0, select_size)
@@ -310,6 +311,8 @@ int main() {
                 best_score = score2;
                 best_indices = indices;
                 best_model = model;
+                // PV(indices);
+                // cerr << "best_score: " << best_score << endl;
             }
         }
     }
