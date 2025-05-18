@@ -95,6 +95,98 @@ struct Model {
             cout << endl;
         }
     }
+    double
+    compute_word_probability(const std::vector<char> &word, int L,
+                             const std::vector<char> &C,
+                             const std::vector<std::vector<int>> &A) const {
+        int M = C.size();
+        int n = 0;
+        std::map<std::pair<int, int>, int> states;
+        for (int j = 0; j < M; ++j) {
+            states[{0, j}] = n++;
+            for (int i = 0; i + 1 < word.size(); ++i) {
+                if (word[i] == C[j]) {
+                    states[{i + 1, j}] = n++;
+                }
+            }
+        }
+        std::vector<double> X(n * n, 0.0);
+        for (const auto &kv : states) {
+            int len = kv.first.first, u = kv.first.second, j = kv.second;
+            for (int v = 0; v < M; ++v) {
+                std::vector<char> next(word.begin(), word.begin() + len);
+                next.push_back(C[v]);
+                int s = 0;
+                while (s < next.size() &&
+                       std::vector<char>(next.begin() + s, next.end()) !=
+                           std::vector<char>(word.begin(),
+                                             word.begin() + next.size() - s)) {
+                    ++s;
+                }
+                if (next.size() - s != word.size()) {
+                    int i2 = states[{int(next.size() - s), v}];
+                    X[i2 * n + j] += A[u][v] / 100.0;
+                }
+            }
+        }
+        // 行列累乗
+        int power = L - 1;
+        std::vector<double> Y(n * n, 0.0);
+        for (int i = 0; i < n; ++i)
+            Y[i * n + i] = 1.0;
+        auto mul = [&](const std::vector<double> &a,
+                       const std::vector<double> &b) {
+            std::vector<double> c(n * n, 0.0);
+            for (int i = 0; i < n; ++i)
+                for (int k = 0; k < n; ++k)
+                    for (int j = 0; j < n; ++j)
+                        c[i * n + j] += a[i * n + k] * b[k * n + j];
+            return c;
+        };
+        std::vector<double> Xpow = X;
+        while (power > 0) {
+            if (power & 1)
+                Y = mul(Y, Xpow);
+            Xpow = mul(Xpow, Xpow);
+            power >>= 1;
+        }
+        int init;
+        if (C[0] == word[0]) {
+            init = states[{1, 0}];
+        } else {
+            init = states[{0, 0}];
+        }
+        double ret = 1.0;
+        for (int i = 0; i < n; ++i)
+            ret -= Y[i * n + init];
+        if (ret < 0.0)
+            ret = 0.0;
+        if (ret > 1.0)
+            ret = 1.0;
+        return ret;
+    }
+    // 得点計算
+    long long compute_score(const vector<string> &S, const vector<int> &P,
+                            int N, int M, int L, string &err) const {
+        for (int i = 0; i < M; ++i) {
+            int sum = 0;
+            for (int j = 0; j < M; ++j)
+                sum += A[i][j];
+            if (sum != 100) {
+                err = "Sum of A[" + to_string(i) + "] is not 100 (" +
+                      to_string(sum) + ")";
+                return 0;
+            }
+        }
+        double total_score = 0.0;
+        for (int i = 0; i < N; ++i) {
+            vector<char> word(S[i].begin(), S[i].end());
+            double prob = compute_word_probability(word, L, C, A);
+            total_score += prob * P[i];
+        }
+        err = "";
+        return static_cast<long long>(round(total_score));
+    }
 };
 
 void inpt() {
@@ -109,6 +201,9 @@ void inpt() {
 int main() {
     inpt();
     Model model;
+    string err;
+    long long score = model.compute_score(S, P, N, M, L, err);
+    cerr << "Initial score: " << score << endl;
     model.print_ans();
     return 0;
 }
