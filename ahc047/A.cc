@@ -257,12 +257,36 @@ void inpt() {
 
 int main() {
     inpt();
-    Model model;
-    vector<int> indices = {4, 8};
-    model.set_selected_string_model_freq(S, indices);
+    Model model, best_model;
+    vector<int> indices, best_indices;
+    long long best_score = -1e18;
     string err;
-    long long score = model.compute_score(S, P, N, M, L, err);
-    cerr << "Initial score: " << score << endl;
-    model.print_ans();
+    // Pが高い順のindexリストを作成
+    vector<pair<int, int>> pidx;
+    rep(i, N) pidx.emplace_back(P[i], i);
+    sort(pidx.rbegin(), pidx.rend());
+    vector<int> sorted_idx;
+    for (auto &pi : pidx)
+        sorted_idx.push_back(pi.second);
+
+    // 1個から10個まで全探索
+    for (int select_size = 1; select_size <= 10; ++select_size) {
+        if (N < select_size)
+            break;
+        indices.clear();
+        for (int i = 0; i < select_size; ++i)
+            indices.push_back(sorted_idx[i]);
+        model.set_selected_string_model_freq(S, indices);
+        long long score = model.compute_score(S, P, N, M, L, err);
+        if (score > best_score) {
+            // cerr << "Score: " << score << endl;
+            // cerr << "select_size: " << select_size << endl;
+            best_score = score;
+            best_indices = indices;
+            best_model = model;
+        }
+    }
+    cerr << "Best score: " << best_score << endl;
+    best_model.print_ans();
     return 0;
 }
