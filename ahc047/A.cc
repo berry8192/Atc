@@ -214,29 +214,37 @@ struct Model {
     void set_selected_string_model_freq(const vector<string> &S,
                                         const vector<int> &indices) {
         C = {'a', 'b', 'c', 'd', 'e', 'f', 'a', 'b', 'c', 'd', 'e', 'f'};
-        string s_cat;
-        vector<int> s_cat_owner; // s_catの各文字がどのindicesのものか
-        for (int k = 0; k < indices.size(); ++k) {
-            int idx = indices[k];
-            s_cat += S[idx];
-            s_cat_owner.insert(s_cat_owner.end(), S[idx].size(), k);
-        }
-        int sz = s_cat.size();
+        // string s_cat;
+        // vector<int> s_cat_owner; // s_catの各文字がどのindicesのものか
+        // for (int k = 0; k < indices.size(); ++k) {
+        //     int idx = indices[k];
+        //     s_cat += S[idx];
+        //     s_cat_owner.insert(s_cat_owner.end(), S[idx].size(), k);
+        // }
+        // int sz = s_cat.size();
         vector<vector<ll>> freq(M, vector<ll>(M));
-        for (int i = 0; i < sz; ++i) {
-            int c = s_cat[i] - 'a';
-            int nc = s_cat[(i + 1) % sz] - 'a';
-            int nnc = s_cat[(i + 2) % sz] - 'a';
-            if (nc >= 3) {
-                c += M / 2;
+        rep(j, indices.size()) {
+            string s = S[indices[j]];
+            for (int i = 0; i < s.size() - 1; ++i) {
+                int c = s[i] - 'a';
+                int nc = s[i + 1] - 'a';
+                int nnc;
+                if (i == s.size() - 2) {
+                    nnc = s[i] - 'a';
+                } else {
+                    nnc = s[i + 2] - 'a';
+                }
+                if (nc >= 3) {
+                    c += M / 2;
+                }
+                if (nnc >= 3) {
+                    nc += M / 2;
+                }
+                assert(c < M);
+                assert(nc < M);
+                // 元のPの値に10000をかけた値を足す
+                freq[c][nc] += (P[indices[j]]) * 10000;
             }
-            if (nnc >= 3) {
-                nc += M / 2;
-            }
-            assert(c < M);
-            assert(nc < M);
-            // 元のPの値に10000をかけた値を足す
-            freq[c][nc] += (P[indices[s_cat_owner[i]]]) * 10000;
         }
         // 遷移確率を100%に正規化
         for (int i = 0; i < M; ++i) {
