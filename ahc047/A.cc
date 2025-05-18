@@ -187,6 +187,31 @@ struct Model {
         err = "";
         return static_cast<long long>(round(total_score));
     }
+    // 最もPが高いSを100%で生成するモデルに書き換える
+    void set_best_string_model(const vector<string> &S, const vector<int> &P) {
+        int idx = max_element(P.begin(), P.end()) - P.begin();
+        const string &best = S[idx];
+        int len = best.size();
+        // C: 先頭から順にbestの文字、余りは'a'
+        for (int i = 0; i < M; ++i) {
+            if (i < len)
+                C[i] = best[i];
+            else
+                C[i] = 'a';
+        }
+        // A: i→i+1に100%, 最後は自身に100%
+        for (int i = 0; i < M; ++i)
+            fill(A[i].begin(), A[i].end(), 0);
+        for (int i = 0; i < len - 1 && i + 1 < M; ++i) {
+            A[i][i + 1] = 100;
+        }
+        if (len - 1 < M) {
+            A[len - 1][len - 1] = 100;
+        }
+        for (int i = len; i < M; ++i) {
+            A[i][i] = 100;
+        }
+    }
 };
 
 void inpt() {
@@ -201,6 +226,7 @@ void inpt() {
 int main() {
     inpt();
     Model model;
+    model.set_best_string_model(S, P);
     string err;
     long long score = model.compute_score(S, P, N, M, L, err);
     cerr << "Initial score: " << score << endl;
