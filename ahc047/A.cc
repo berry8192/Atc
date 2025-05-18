@@ -276,8 +276,8 @@ int main() {
     for (auto &pi : pidx)
         sorted_idx.push_back(pi.second);
 
-    // 2個から10個まで全探索＋1個だけ間を抜かすパターン
-    for (int select_size = 2; select_size <= 10; ++select_size) {
+    // 2個から10個まで全探索＋1個だけ/2個だけ間を抜かすパターン
+    for (int select_size = 2; select_size <= 5; ++select_size) {
         if (N < select_size)
             break;
         // 連続パターン (1,2,...,select_size)
@@ -294,10 +294,9 @@ int main() {
             // cerr << "best_score: " << best_score << endl;
         }
         // 1個だけ間を抜かすパターン
-        // (0,1,...,skip-1,skip+1,...,select_size) for skip in [0, select_size)
         for (int skip = 0; skip < select_size; ++skip) {
             if (select_size >= N)
-                break; // skipパターンが存在しない
+                break;
             indices.clear();
             for (int i = 0; i < select_size + 1; ++i) {
                 if (i == skip)
@@ -305,14 +304,31 @@ int main() {
                 indices.push_back(sorted_idx[i]);
             }
             model.set_selected_string_model_freq(S, indices);
-            // PV(indices);
             long long score2 = model.compute_score(S, P, N, M, L, err);
             if (score2 > best_score) {
                 best_score = score2;
                 best_indices = indices;
                 best_model = model;
-                // PV(indices);
-                // cerr << "best_score: " << best_score << endl;
+            }
+        }
+        // 2個だけ間を抜かすパターン
+        if (select_size + 2 <= N) {
+            for (int skip1 = 0; skip1 < select_size + 1; ++skip1) {
+                for (int skip2 = skip1 + 1; skip2 < select_size + 2; ++skip2) {
+                    indices.clear();
+                    for (int i = 0; i < select_size + 2; ++i) {
+                        if (i == skip1 || i == skip2)
+                            continue;
+                        indices.push_back(sorted_idx[i]);
+                    }
+                    model.set_selected_string_model_freq(S, indices);
+                    long long score3 = model.compute_score(S, P, N, M, L, err);
+                    if (score3 > best_score) {
+                        best_score = score3;
+                        best_indices = indices;
+                        best_model = model;
+                    }
+                }
             }
         }
     }
