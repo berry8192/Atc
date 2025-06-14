@@ -141,26 +141,6 @@ struct Graph {
             }
         }
     }
-    void vertex_baika(int d) {
-        vector<vector<Edge>> ng;
-        ng.resize(n * d);
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < g[i].size(); j++) {
-                Edge edge = g[i][j];
-                // cout << "original edge: " << edge.from << "->" << edge.to
-                //      << " cost: " << edge.cost << endl;
-                for (int k = 0; k < d; k++) {
-                    int from = edge.from * d + k;
-                    int to = edge.to * d + (k ^ edge.cost);
-                    ng[from].push_back({from, to, edge.cost});
-                    // cout << "edge: " << from << "->" << to
-                    //      << " cost: " << edge.cost << endl;
-                }
-            }
-        }
-        g = ng;
-        n *= d;
-    }
     void board_init(int hh, int ww, int &sh, int &sw, int &gh, int &gw) {
         // void board_init(int h, int w) {
         h = hh;

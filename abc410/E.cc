@@ -141,26 +141,6 @@ struct Graph {
             }
         }
     }
-    void vertex_baika(int d) {
-        vector<vector<Edge>> ng;
-        ng.resize(n * d);
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < g[i].size(); j++) {
-                Edge edge = g[i][j];
-                // cout << "original edge: " << edge.from << "->" << edge.to
-                //      << " cost: " << edge.cost << endl;
-                for (int k = 0; k < d; k++) {
-                    int from = edge.from * d + k;
-                    int to = edge.to * d + (k ^ edge.cost);
-                    ng[from].push_back({from, to, edge.cost});
-                    // cout << "edge: " << from << "->" << to
-                    //      << " cost: " << edge.cost << endl;
-                }
-            }
-        }
-        g = ng;
-        n *= d;
-    }
     void board_init(int hh, int ww, int &sh, int &sw, int &gh, int &gw) {
         // void board_init(int h, int w) {
         h = hh;
@@ -369,43 +349,47 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
-    int n, ans = 0;
-    vector<int> v;
+    int n, h, m;
+    vector<int> a, b;
 
-    cin >> n;
-    v.resize(n);
+    cin >> n >> h >> m;
+    a.resize(n);
+    b.resize(n);
 
-    rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
+    rep(i, n) cin >> a[i] >> b[i];
+
+    vector<int> dp(h + 1, -1);
+    dp[h] = m;
 
     rep(i, n) {
-        if (v[i])
-            ans++;
+        // cout << a[i] SP << b[i] << endl;
+        vector<int> hdp(h + 1, -1), mdp(h + 1, -1);
+        rep(j, h + 1) {
+            if (j - a[i] >= 0 && j <= h) {
+                // cout << dp[i + 1][j - a[i]] SP << dp[i][j] << endl;
+                hdp[j - a[i]] = dp[j];
+            }
+            int tmp = dp[j] - b[i];
+            if (tmp >= 0) {
+                mdp[j] = tmp;
+            }
+        }
+        // cout << "i: " << i << endl;
+        int flg = 1;
+        rep(j, h + 1) {
+            // cout << j SP << hdp[j] SP << mdp[j] << endl;
+            dp[j] = max(hdp[j], mdp[j]);
+            if (dp[j] >= 0) {
+                flg = 0;
+            }
+        }
+        // cout << endl;
+        if (flg) {
+            cout << i << endl;
+            return 0;
+        }
     }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
-
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
+    cout << n << endl;
 
     return 0;
 }

@@ -141,26 +141,6 @@ struct Graph {
             }
         }
     }
-    void vertex_baika(int d) {
-        vector<vector<Edge>> ng;
-        ng.resize(n * d);
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < g[i].size(); j++) {
-                Edge edge = g[i][j];
-                // cout << "original edge: " << edge.from << "->" << edge.to
-                //      << " cost: " << edge.cost << endl;
-                for (int k = 0; k < d; k++) {
-                    int from = edge.from * d + k;
-                    int to = edge.to * d + (k ^ edge.cost);
-                    ng[from].push_back({from, to, edge.cost});
-                    // cout << "edge: " << from << "->" << to
-                    //      << " cost: " << edge.cost << endl;
-                }
-            }
-        }
-        g = ng;
-        n *= d;
-    }
     void board_init(int hh, int ww, int &sh, int &sw, int &gh, int &gw) {
         // void board_init(int h, int w) {
         h = hh;
@@ -207,24 +187,45 @@ struct Graph {
         }
     }
 
-    vector<int> bfs(int x) {
-        vector<int> rtn(n, imax);
-        rtn[x] = 0;
+    int bfs() {
+        vector<bitset<1024>> dist(n);
+        dist[0][0] = true;
+
         queue<int> que;
-        que.push(x);
+        que.push(0);
+        // rep(i, dist[0].size()) { cout << dist[0][i] << " "; }
+        // return 0;
         while (!que.empty()) {
             int y = que.front();
-            int d = rtn[y];
+            // cout << "in: " << y << endl;
+            bitset<1024> d = dist[y];
             que.pop();
+
             for (int i = 0; i < g[y].size(); i++) {
                 int to_x = g[y][i].to;
-                if (d + g[y][i].cost < rtn[to_x]) {
-                    rtn[to_x] = d + g[y][i].cost;
+                rep(j, 1024) {
+                    if (d[j] == 0) {
+                        continue;
+                    }
+                    int tmp = g[y][i].cost ^ j;
+                    if (dist[to_x][tmp])
+                        continue;
+                    dist[to_x][tmp] = true;
                     que.push(to_x);
                 }
             }
         }
-        return rtn;
+        rep(i, (1 << 10)) {
+            if (dist[n - 1][i]) {
+                cout << "reach: " << i << endl;
+            }
+        }
+        rep(i, (1 << 10)) {
+            if (dist[n - 1][i]) {
+                return i;
+            }
+        }
+        return -1;
     }
     // ダイクストラ法
     void djikstra(int startIndex) {
@@ -369,43 +370,13 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
-    int n, ans = 0;
-    vector<int> v;
+    int n, m;
+    cin >> n >> m;
 
-    cin >> n;
-    v.resize(n);
+    Graph graph;
+    graph.init(n, m, true, false);
 
-    rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
-
-    rep(i, n) {
-        if (v[i])
-            ans++;
-    }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
-
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
+    cout << graph.bfs() << endl;
 
     return 0;
 }

@@ -141,26 +141,6 @@ struct Graph {
             }
         }
     }
-    void vertex_baika(int d) {
-        vector<vector<Edge>> ng;
-        ng.resize(n * d);
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < g[i].size(); j++) {
-                Edge edge = g[i][j];
-                // cout << "original edge: " << edge.from << "->" << edge.to
-                //      << " cost: " << edge.cost << endl;
-                for (int k = 0; k < d; k++) {
-                    int from = edge.from * d + k;
-                    int to = edge.to * d + (k ^ edge.cost);
-                    ng[from].push_back({from, to, edge.cost});
-                    // cout << "edge: " << from << "->" << to
-                    //      << " cost: " << edge.cost << endl;
-                }
-            }
-        }
-        g = ng;
-        n *= d;
-    }
     void board_init(int hh, int ww, int &sh, int &sw, int &gh, int &gw) {
         // void board_init(int h, int w) {
         h = hh;
@@ -369,20 +349,6 @@ template <class T> void addbit(vector<T> vv) {
 }
 
 int main() {
-    // cout << fixed << setprecision(12);
-    // int a;
-    // cin>> a;
-    // int b;
-    // cin>> b;
-    // int c;
-    // cin>> c;
-    // int d;
-    // cin>> d;
-    // string s;
-    // cin>> s;
-    // cout<< stollmod(s, 10) <<endl;
-    // string t;
-    // cin>> t;
     int n, ans = 0;
     vector<int> v;
 
@@ -390,22 +356,15 @@ int main() {
     v.resize(n);
 
     rep(i, n) cin >> v[i];
-    sort(all(v));
-    PV(v);
+    int k;
+    cin >> k;
 
     rep(i, n) {
-        if (v[i])
+        if (k <= v[i]) {
             ans++;
+        }
     }
-    cout << gcdv(v) << endl;
-    cout << lcmv(v) << endl;
-    cout << sumv(v) << endl;
-    PV(subv(v));
-
-    if (n == 0)
-        cout << "Yes" << endl;
-    else
-        cout << "No" << endl;
+    cout << ans << endl;
 
     return 0;
 }
