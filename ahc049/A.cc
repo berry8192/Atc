@@ -125,15 +125,34 @@ struct BoxGroup {
 
     bool can_deliver() const {
         // cerr << "Checking if can deliver..." << endl;
-        int weight_sum = 0;
-        Pos cpos = {0, 0};
-        repr(i, boxes.size()) {
-            int dist = cpos.manhattan(boxes[i].pos);
-            if (weight_sum * dist >= boxes[i].d) {
+        assert(!boxes.empty());
+
+        rep(i, boxes.size() - 1) {
+            int weight_sum = 0;
+            Pos cpos = boxes[i].pos;
+            int taikyu = boxes[i].d;
+            // cout << "taikyu: " << taikyu << endl;
+            rep3(j, boxes.size(), i + 1) {
+                int dist = cpos.manhattan(boxes[j].pos);
+                int damage = dist * weight_sum;
+
+                taikyu -= damage;
+                // cout << i SP << j SP << "dist: " << dist SP
+                //      << "weight_sum: " << weight_sum SP
+                //      << "damage: " << damage SP << "taikyu: " << taikyu <<
+                //      endl;
+                if (taikyu <= 0) {
+                    return false;
+                }
+                weight_sum += boxes[j].w;
+                cpos = boxes[j].pos;
+            }
+            int dist = cpos.manhattan({0, 0});
+            int damage = dist * weight_sum;
+            taikyu -= damage;
+            if (taikyu <= 0) {
                 return false;
             }
-            weight_sum += boxes[i].w;
-            cpos = boxes[i].pos;
         }
         return true;
     }
@@ -145,7 +164,7 @@ struct Grid {
     int total_moves = 0;
 
     void init() {
-        groups_size = 399;
+        groups_size = 100;
         groups.resize(groups_size);
     }
     void make_groups() {
