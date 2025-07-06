@@ -147,18 +147,21 @@ vector<Pos> d4 = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 // };
 
 struct Grid {
-    vector<string> board;    // ボードの状態
-    map<Pos, double> robots; // ロボットの位置と確率
-    vector<Pos> p;           // 回答の列P
-    double remain_robots;    // 残っているロボットの期待値
-    double score;            // スコア
+    vector<string> board;                    // ボードの状態
+    map<Pos, double> robots;                 // ロボットの位置と確率
+    vector<Pos> p;                           // 回答の列P
+    double remain_robots;                    // 残っているロボットの期待値
+    double score;                            // スコア
+    vector<vector<vector<Pos>>> landing_pos; // [h][w][dir] -> landing position
 
     Grid(vector<string> &input_board) {
         board = input_board;
         remain_robots = 1.0;
         score = 0.0;
+        landing_pos.resize(N, vector<vector<Pos>>(N, vector<Pos>(4)));
         gen_initial_answer();
         calc_initial_robots();
+        calc_landing_positions();
     }
 
     void gen_initial_answer() {
@@ -200,19 +203,54 @@ struct Grid {
             }
         }
     }
+    void calc_landing_positions() {
+        rep(i, N) {
+            rep(j, N) {
+                if (board[i][j] == '.') {
+                    rep(dir_idx, 4) {
+                        Pos current(i, j);
+                        Pos dir = d4[dir_idx];
+                        Pos next = current + dir;
+                        while (!next.is_oob() && board[next.h][next.w] == '.') {
+                            current = next;
+                            next = current + dir;
+                        }
+                        landing_pos[i][j][dir_idx] = current;
+                    }
+                }
+            }
+        }
+    }
+    void update_landing_positions(Pos rock_pos) {
+        // 岩が置かれた位置の影響を受ける範囲を更新
+        rep(dir_idx, 4) {
+            Pos dir = d4[dir_idx];
+            Pos reverse_dir(-dir.h, -dir.w);
+
+            // 岩の位置から逆方向に進んで影響を受ける位置を更新
+            Pos current = rock_pos + reverse_dir;
+            while (!current.is_oob() && board[current.h][current.w] == '.') {
+                // この位置からdir方向の着地点を再計算
+                Pos calc_pos = current;
+                Pos next = calc_pos + dir;
+                while (!next.is_oob() && board[next.h][next.w] == '.') {
+                    calc_pos = next;
+                    next = calc_pos + dir;
+                }
+                landing_pos[current.h][current.w][dir_idx] = calc_pos;
+                current = current + reverse_dir;
+            }
+        }
+    }
     void move_robot() {
         vector<vector<double>> prob(N, vector<double>(N, 0.0));
         for (const auto &robot : robots) {
             Pos pos = robot.first;
             double prob_value = robot.second;
 
-            for (const Pos &dir : d4) {
-                Pos new_pos = pos + dir;
-                while (!new_pos.is_oob() &&
-                       board[new_pos.h][new_pos.w] == '.') {
-                    new_pos = new_pos + dir;
-                }
-                prob[new_pos.h - dir.h][new_pos.w - dir.w] += prob_value * 0.25;
+            rep(dir_idx, 4) {
+                Pos landing = landing_pos[pos.h][pos.w][dir_idx];
+                prob[landing.h][landing.w] += prob_value * 0.25;
             }
         }
         robots.clear();
@@ -232,15 +270,12 @@ struct Grid {
             remain_robots -= prob_value;
             robots.erase(rock_pos);
         }
+        update_landing_positions(rock_pos);
     }
     void greed_rock(int turn) {
-        Pos prev_rock_pos = {0, 0};
-        if (turn > 0) {
-            p[turn - 1];
-        }
         Pos min_robots_pos;
         double min_robots = imax;
-        bool empty_found = false;
+        bool found = false;
         rep(i, N) {
             rep(j, N) {
                 if (robots.find({i, j}) != robots.end()) {
@@ -249,12 +284,17 @@ struct Grid {
                         min_robots = prob_value;
                         min_robots_pos = {i, j};
                     }
+                } else if (board[i][j] == '.') {
+                    min_robots = 0.0;
+                    min_robots_pos = {i, j};
+                    found = true;
+                    break;
                 }
             }
-            if (empty_found) {
+            if (found)
                 break;
-            }
         }
+        // cout << min_robots << endl;
         p[turn] = min_robots_pos;
         fall_rock(turn);
     }
