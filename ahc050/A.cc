@@ -298,8 +298,61 @@ struct Grid {
         p[turn] = min_robots_pos;
         fall_rock(turn);
     }
+    void greed_rock_surrounded(int turn) {
+        Pos best_pos;
+        double best_score = -1e9;
+        bool found = false;
+
+        // Calculate turn ratio (0.0 at start, 1.0 at end)
+        double turn_ratio = (double)turn / (N * N - M - 1);
+        // Early turn penalty factor (higher penalty in early turns)
+        double early_penalty = (1.0 - turn_ratio) * 5000.0;
+
+        rep(i, N) {
+            rep(j, N) {
+                if (board[i][j] != '.')
+                    continue;
+
+                Pos pos(i, j);
+                double robot_prob = 0.0;
+                if (robots.find(pos) != robots.end()) {
+                    robot_prob = robots[pos];
+                }
+
+                // Count surrounding walls/rocks (higher is better)
+                int wall_count = count_surrounding_walls(pos);
+
+                // Calculate score: prioritize high wall count and low robot
+                // probability Apply stronger penalty for robot probability in
+                // early turns
+                double score =
+                    wall_count * 10.0 - robot_prob * (1000.0 + early_penalty);
+
+                if (!found || score > best_score) {
+                    best_score = score;
+                    best_pos = pos;
+                    found = true;
+                }
+            }
+        }
+
+        p[turn] = best_pos;
+        fall_rock(turn);
+    }
+
+    int count_surrounding_walls(Pos pos) {
+        int wall_count = 0;
+        for (const Pos &dir : d4) {
+            Pos neighbor = pos + dir;
+            if (neighbor.is_oob() || board[neighbor.h][neighbor.w] == '#') {
+                wall_count++;
+            }
+        }
+        return wall_count;
+    }
+
     void progress_turn(int turn) {
-        greed_rock(turn);
+        greed_rock_surrounded(turn); // Use the new surrounded-aware strategy
         move_robot();
         score += remain_robots;
     }
