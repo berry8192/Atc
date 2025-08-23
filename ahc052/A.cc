@@ -72,8 +72,9 @@ Timer timer;
 int seed = 1;
 mt19937 mt(seed);
 
-int N;
-int HEIGHT, WIDTH;
+int N, M, K;
+vector<string> v_walls; // 縦の壁
+vector<string> h_walls; // 横の壁
 
 // 構造体
 struct Pos {
@@ -91,10 +92,10 @@ struct Pos {
         // assert(h<n);
         // assert(0<=w);
         // assert(w<=h);
-        return !(0 <= h && h < HEIGHT && 0 <= w && w < WIDTH);
+        return !(0 <= h && h < N && 0 <= w && w < N);
     }
     int manhattan(Pos pos) { return abs(h - pos.h) + abs(w - pos.w); }
-    int index() { return h * WIDTH + w; }
+    int index() { return h * N + w; }
     void print() { cout << "(" << h << ", " << w << ")" << endl; }
     // 受け取った近傍でPosを作る
     vector<Pos> around_pos(const vector<Pos> &dir) {
@@ -127,22 +128,62 @@ struct Pos {
         return rtn;
     }
 };
-
-struct Grid {};
-
-int M, K;
 vector<Pos> robots;
-vector<string> v_walls; // 縦の壁
-vector<string> h_walls; // 横の壁
 
-Pos itop(int idx) { return {idx / WIDTH, idx % WIDTH}; }
+struct Grid {
+    vector<Pos> robot_pos; // 各ロボットの現在位置
+    vector<vector<int>>
+        board; // 各マスの状態 (0: 未塗装, -1: 塗装済み, 1-M: ロボットが存在)
+    vector<vector<char>>
+        button_config;       // [button_id][robot_id] -> action (U/D/L/R/S)
+    vector<char> operations; // 操作列 (押すボタンの番号)
+
+    Grid() {
+        robot_pos.resize(M);
+        board.assign(N, vector<int>(N));
+    }
+
+    // ロボットの初期位置を設定
+    void init_robots() {
+        for (int i = 0; i < M; i++) {
+            robot_pos[i] = robots[i];
+            // 初期位置にロボットを配置（1-indexed）
+            board[robot_pos[i].h][robot_pos[i].w] = i + 1;
+        }
+    }
+
+    // ボタンの設定を行う
+    void set_button(int button_id, int robot_id, char action) {
+        button_config[button_id][robot_id] = action;
+    }
+
+    // 操作を追加
+    void add_operation(char button_id) { operations.push_back(button_id); }
+
+    // ボタン設定を出力
+    void output_config() {
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < M; j++) {
+                cout << button_config[i][j];
+            }
+            cout << endl;
+        }
+    }
+
+    // 操作列を出力
+    void output_operations() {
+        for (char op : operations) {
+            cout << op << endl;
+        }
+    }
+};
+
+Pos itop(int idx) { return {idx / N, idx % N}; }
 
 Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
 void inpt() {
     cin >> N >> M >> K;
-    HEIGHT = N;
-    WIDTH = N;
 
     // ロボットの初期位置を読み込み
     robots.resize(M);
