@@ -397,26 +397,12 @@ struct Grid {
             }
         }
 
-        // 余った2台は別途適当にUDLRを割り当て
+        // 余った2台は1~8番目のロボットの設定をランダムに選んでコピー
         for (int robot_id = 8; robot_id < M; robot_id++) {
-            vector<int> extra_assigned_buttons;
-            for (char action : actions) {
-                int button_id = mt() % K;
-                button_config[button_id][robot_id] = action;
-                extra_assigned_buttons.push_back(button_id);
-            }
-
+            int source_robot = mt() % min(8, M); // 0~7の範囲でランダム選択
             for (int button_id = 0; button_id < K; button_id++) {
-                bool already_assigned = false;
-                for (int assigned : extra_assigned_buttons) {
-                    if (button_id == assigned) {
-                        already_assigned = true;
-                        break;
-                    }
-                }
-                if (!already_assigned) {
-                    button_config[button_id][robot_id] = actions[mt() % 4];
-                }
+                button_config[button_id][robot_id] =
+                    button_config[button_id][source_robot];
             }
         }
     }
