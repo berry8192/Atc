@@ -181,6 +181,7 @@ struct Pos {
         return rtn;
     }
 };
+vector<Pos> d4 = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 vector<Pos> robots;
 
 // 前計算した距離を取得
@@ -457,6 +458,8 @@ struct Grid {
 
         Pos current_target(-1, -1);
         int target_robot = -1;
+        vector<Pos> d4c = d4;
+        shuffle(all(d4c), mt);
 
         while (operations.size() < 2 * N * N) {
             // 現在の最良操作回数を上回ったら打ち切り
@@ -470,11 +473,22 @@ struct Grid {
 
             if (current_target.h == -1 ||
                 board[current_target.h][current_target.w] != 0) {
-                int best_robot = 0;
+                int best_robot = target_robot;
                 Pos best_target = empty_cells[0];
-                int min_distance = get_distance(robot_pos[0], empty_cells[0]);
-
+                int min_distance = 100000;
+                // if (target_robot != -1) {
+                //     for (const Pos &pos : d4c) {
+                //         Pos pos2 = robot_pos[target_robot] + pos;
+                //         if (!pos2.is_oob() && board[pos2.h][pos2.w] == 0) {
+                //             min_distance = 1;
+                //             break;
+                //         }
+                //     }
+                // }
                 for (int i = 0; i < M; i++) {
+                    if (min_distance <= 1) {
+                        break;
+                    }
                     for (const Pos &empty_cell : empty_cells) {
                         int dist = get_distance(robot_pos[i], empty_cell);
                         if (dist < min_distance) {
@@ -691,10 +705,6 @@ struct Grid {
         operations.push_back('0' + button_id);
     }
 };
-
-Pos itop(int idx) { return {idx / N, idx % N}; }
-
-Pos d4[] = {{0, 1}, {-1, 0}, {0, -1}, {1, 0}};
 
 void inpt() {
     cin >> N >> M >> K;
