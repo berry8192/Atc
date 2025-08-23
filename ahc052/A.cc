@@ -266,6 +266,151 @@ struct Grid {
         }
     }
 
+    // 全ロボットに8パターンの変換を適用したキーコンフィグを設定
+    void setup_random_config_same() {
+        vector<char> actions = {'U', 'D', 'L', 'R'};
+
+        // 基本設定を作成
+        vector<char> base_config(K);
+
+        // UDLR を必ず1つ以上含むように設定
+        vector<int> assigned_buttons;
+        for (char action : actions) {
+            int button_id = mt() % K;
+            base_config[button_id] = action;
+            assigned_buttons.push_back(button_id);
+        }
+
+        // 残りのボタンにランダムな行動を割り当て
+        for (int button_id = 0; button_id < K; button_id++) {
+            bool already_assigned = false;
+            for (int assigned : assigned_buttons) {
+                if (button_id == assigned) {
+                    already_assigned = true;
+                    break;
+                }
+            }
+            if (!already_assigned) {
+                base_config[button_id] = actions[mt() % 4];
+            }
+        }
+
+        // 変換関数
+        auto transform_config = [&](const vector<char> &config,
+                                    int pattern) -> vector<char> {
+            vector<char> result = config;
+            for (int i = 0; i < K; i++) {
+                char original = config[i];
+                char transformed;
+
+                switch (pattern) {
+                case 0: // 元の状態
+                    transformed = original;
+                    break;
+                case 1: // 90度回転 (U->R, R->D, D->L, L->U)
+                    if (original == 'U')
+                        transformed = 'R';
+                    else if (original == 'R')
+                        transformed = 'D';
+                    else if (original == 'D')
+                        transformed = 'L';
+                    else if (original == 'L')
+                        transformed = 'U';
+                    break;
+                case 2: // 180度回転 (U->D, D->U, L->R, R->L)
+                    if (original == 'U')
+                        transformed = 'D';
+                    else if (original == 'D')
+                        transformed = 'U';
+                    else if (original == 'L')
+                        transformed = 'R';
+                    else if (original == 'R')
+                        transformed = 'L';
+                    break;
+                case 3: // 270度回転 (U->L, L->D, D->R, R->U)
+                    if (original == 'U')
+                        transformed = 'L';
+                    else if (original == 'L')
+                        transformed = 'D';
+                    else if (original == 'D')
+                        transformed = 'R';
+                    else if (original == 'R')
+                        transformed = 'U';
+                    break;
+                case 4: // 垂直軸反転 (U->D, D->U, L->L, R->R)
+                    if (original == 'U')
+                        transformed = 'D';
+                    else if (original == 'D')
+                        transformed = 'U';
+                    else
+                        transformed = original;
+                    break;
+                case 5: // 水平軸反転 (U->U, D->D, L->R, R->L)
+                    if (original == 'L')
+                        transformed = 'R';
+                    else if (original == 'R')
+                        transformed = 'L';
+                    else
+                        transformed = original;
+                    break;
+                case 6: // 対角線反転1 (U->L, L->U, D->R, R->D)
+                    if (original == 'U')
+                        transformed = 'L';
+                    else if (original == 'L')
+                        transformed = 'U';
+                    else if (original == 'D')
+                        transformed = 'R';
+                    else if (original == 'R')
+                        transformed = 'D';
+                    break;
+                case 7: // 対角線反転2 (U->R, R->U, D->L, L->D)
+                    if (original == 'U')
+                        transformed = 'R';
+                    else if (original == 'R')
+                        transformed = 'U';
+                    else if (original == 'D')
+                        transformed = 'L';
+                    else if (original == 'L')
+                        transformed = 'D';
+                    break;
+                }
+                result[i] = transformed;
+            }
+            return result;
+        };
+
+        // 8台のロボットに8パターンを適用
+        for (int robot_id = 0; robot_id < min(8, M); robot_id++) {
+            vector<char> config = transform_config(base_config, robot_id);
+            for (int button_id = 0; button_id < K; button_id++) {
+                button_config[button_id][robot_id] = config[button_id];
+            }
+        }
+
+        // 余った2台は別途適当にUDLRを割り当て
+        for (int robot_id = 8; robot_id < M; robot_id++) {
+            vector<int> extra_assigned_buttons;
+            for (char action : actions) {
+                int button_id = mt() % K;
+                button_config[button_id][robot_id] = action;
+                extra_assigned_buttons.push_back(button_id);
+            }
+
+            for (int button_id = 0; button_id < K; button_id++) {
+                bool already_assigned = false;
+                for (int assigned : extra_assigned_buttons) {
+                    if (button_id == assigned) {
+                        already_assigned = true;
+                        break;
+                    }
+                }
+                if (!already_assigned) {
+                    button_config[button_id][robot_id] = actions[mt() % 4];
+                }
+            }
+        }
+    }
+
     // 壁があるかチェック
     bool has_wall(Pos from, Pos to) {
         if (from.h == to.h) {
@@ -346,7 +491,7 @@ struct Grid {
 
     // 解く
     void solve() {
-        setup_random_config();
+        setup_random_config_same();
         init_robots();
 
         Pos current_target(-1, -1); // 現在のターゲット
