@@ -140,7 +140,9 @@ struct Grid {
 
     Grid() {
         robot_pos.resize(M);
-        board.assign(N, vector<int>(N));
+        board.assign(N, vector<int>(N, 0));
+        button_config.assign(K, vector<char>(M, 'U'));
+        operations.clear();
     }
 
     // ロボットの初期位置を設定
@@ -164,7 +166,7 @@ struct Grid {
     void output_config() {
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < M; j++) {
-                cout << button_config[i][j];
+                cout << button_config[i][j] << " ";
             }
             cout << endl;
         }
@@ -174,6 +176,151 @@ struct Grid {
     void output_operations() {
         for (char op : operations) {
             cout << op << endl;
+        }
+    }
+
+    // ランダムに操作列を設定（各ロボットにUDLRを必ず1つ以上含む）
+    void setup_random_config() {
+        vector<char> actions = {'U', 'D', 'L', 'R'};
+
+        for (int robot_id = 0; robot_id < M; robot_id++) {
+            // 各ロボットに対してUDLRを必ず1つ以上割り当て
+            vector<int> assigned_buttons;
+            for (char action : actions) {
+                int button_id = mt() % K;
+                button_config[button_id][robot_id] = action;
+                assigned_buttons.push_back(button_id);
+            }
+
+            // 残りのボタンにランダムな行動を割り当て
+            for (int button_id = 0; button_id < K; button_id++) {
+                bool already_assigned = false;
+                for (int assigned : assigned_buttons) {
+                    if (button_id == assigned) {
+                        already_assigned = true;
+                        break;
+                    }
+                }
+                if (!already_assigned) {
+                    button_config[button_id][robot_id] = actions[mt() % 4];
+                }
+            }
+        }
+    }
+
+    // 壁があるかチェック
+    bool has_wall(Pos from, Pos to) {
+        if (from.h == to.h) {
+            // 横移動
+            int min_w = min(from.w, to.w);
+            return v_walls[from.h][min_w] == '1';
+        } else {
+            // 縦移動
+            int min_h = min(from.h, to.h);
+            return h_walls[min_h][from.w] == '1';
+        }
+    }
+
+    // ロボットを移動（壁チェック付き）
+    Pos move_robot(Pos pos, char action) {
+        Pos new_pos = pos;
+        if (action == 'U')
+            new_pos.h--;
+        else if (action == 'D')
+            new_pos.h++;
+        else if (action == 'L')
+            new_pos.w--;
+        else if (action == 'R')
+            new_pos.w++;
+
+        if (new_pos.is_oob() || has_wall(pos, new_pos)) {
+            return pos; // 移動できない場合は元の位置
+        }
+        return new_pos;
+    }
+
+    // 最も近いロボットを見つける
+    int find_nearest_robot(Pos target) {
+        int best_robot = 0;
+        int min_dist = robot_pos[0].manhattan(target);
+
+        for (int i = 1; i < M; i++) {
+            int dist = robot_pos[i].manhattan(target);
+            if (dist < min_dist) {
+                min_dist = dist;
+                best_robot = i;
+            }
+        }
+        return best_robot;
+    }
+
+    // 空きマスを探す
+    vector<Pos> find_empty_cells() {
+        vector<Pos> empty_cells;
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                if (board[i][j] == 0) {
+                    empty_cells.push_back(Pos(i, j));
+                }
+            }
+        }
+        return empty_cells;
+    }
+
+    // ボタンを押してロボットを移動
+    void execute_button(int button_id) {
+        // 現在のロボット位置をクリア
+        for (int i = 0; i < M; i++) {
+            if (board[robot_pos[i].h][robot_pos[i].w] > 0) {
+                board[robot_pos[i].h][robot_pos[i].w] = -1;
+            }
+        }
+
+        // 各ロボットを移動
+        for (int i = 0; i < M; i++) {
+            robot_pos[i] =
+                move_robot(robot_pos[i], button_config[button_id][i]);
+            board[robot_pos[i].h][robot_pos[i].w] = i + 1;
+        }
+
+        operations.push_back('0' + button_id);
+    }
+
+    // 解く
+    void solve() {
+        setup_random_config();
+        init_robots();
+
+        while (operations.size() < 2 * N * N) {
+            vector<Pos> empty_cells = find_empty_cells();
+            if (empty_cells.empty())
+                break;
+
+            // ランダムな空きマスを選択
+            Pos target = empty_cells[mt() % empty_cells.size()];
+            int nearest_robot = find_nearest_robot(target);
+
+            // デバッグ出力
+            // cerr << "turn: " << operations.size() SP;
+            // cerr << "Robot " << nearest_robot << " targeting (" << target.h
+            //      << ", " << target.w << ")" << endl;
+
+            // 最も近いロボットをターゲットに向かわせるボタンを探す
+            int best_button = 0;
+            int min_dist = N * N;
+
+            for (int button_id = 0; button_id < K; button_id++) {
+                Pos new_pos =
+                    move_robot(robot_pos[nearest_robot],
+                               button_config[button_id][nearest_robot]);
+                int dist = new_pos.manhattan(target);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    best_button = button_id;
+                }
+            }
+
+            execute_button(best_button);
         }
     }
 };
@@ -206,6 +353,11 @@ void inpt() {
 
 int main() {
     inpt();
+
+    Grid grid;
+    grid.solve();
+    grid.output_config();
+    grid.output_operations();
 
     return 0;
 }
