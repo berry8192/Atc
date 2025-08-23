@@ -48,7 +48,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 2000.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
@@ -411,6 +411,189 @@ struct Grid {
         }
     }
 
+    // スコアを計算する関数
+    int calculate_score() {
+        int empty_count = 0;
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                if (board[i][j] == 0) {
+                    empty_count++;
+                }
+            }
+        }
+
+        int T = operations.size();
+        if (empty_count == 0) {
+            return 3 * N * N - T; // R=0の場合
+        } else {
+            return N * N - empty_count; // R>0の場合
+        }
+    }
+
+    // 状態をリセットする関数
+    void reset() {
+        robot_pos.clear();
+        robot_pos.resize(M);
+        board.assign(N, vector<int>(N, 0));
+        operations.clear();
+    }
+
+    // 現在の状態をコピーする関数
+    Grid copy() {
+        Grid new_grid;
+        new_grid.robot_pos = robot_pos;
+        new_grid.board = board;
+        new_grid.button_config = button_config;
+        new_grid.operations = operations;
+        return new_grid;
+    }
+
+    // 最適化されたsolve関数（シミュレーション用）
+    int solve_simulation() {
+        init_robots();
+
+        Pos current_target(-1, -1);
+        int target_robot = -1;
+
+        while (operations.size() < 2 * N * N) {
+            vector<Pos> empty_cells = find_empty_cells();
+            if (empty_cells.empty())
+                break;
+
+            if (current_target.h == -1 ||
+                board[current_target.h][current_target.w] != 0) {
+                int best_robot = 0;
+                Pos best_target = empty_cells[0];
+                int min_distance = get_distance(robot_pos[0], empty_cells[0]);
+
+                for (int i = 0; i < M; i++) {
+                    for (const Pos &empty_cell : empty_cells) {
+                        int dist = get_distance(robot_pos[i], empty_cell);
+                        if (dist < min_distance) {
+                            min_distance = dist;
+                            best_robot = i;
+                            best_target = empty_cell;
+                        }
+                    }
+                }
+
+                current_target = best_target;
+                target_robot = best_robot;
+            }
+
+            int best_button = 0;
+            int min_dist = N * N;
+
+            for (int button_id = 0; button_id < K; button_id++) {
+                Pos new_pos =
+                    move_robot(robot_pos[target_robot],
+                               button_config[button_id][target_robot]);
+                int dist = get_distance(new_pos, current_target);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    best_button = button_id;
+                }
+            }
+
+            execute_button(best_button);
+        }
+
+        return calculate_score();
+    }
+
+    // 時間制限付き最適化
+    void solve_with_optimization() {
+        // 初期解を生成
+        setup_random_config_same();
+        reset();
+        int best_score = solve_simulation();
+        vector<vector<char>> best_config = button_config;
+
+        cerr << "Initial score: " << best_score << endl;
+
+        int iteration = 0;
+        while (timer.progress() < 0.95) { // 95%の時間まで最適化
+            iteration++;
+
+            // 新しいランダム設定を試す
+            setup_random_config_same();
+            reset();
+            int current_score = solve_simulation();
+
+            // より良いスコアの場合は更新
+            if (current_score > best_score) {
+                best_score = current_score;
+                best_config = button_config;
+                cerr << "Iteration " << iteration << ": New best score "
+                     << best_score << endl;
+            }
+
+            // 100回に1回進捗を出力
+            if (iteration % 100 == 0) {
+                cerr << "Iteration " << iteration << ": Current best "
+                     << best_score << " (progress: " << timer.progress() * 100
+                     << "%)" << endl;
+            }
+        }
+
+        cerr << "Total iterations: " << iteration << endl;
+        cerr << "Final best score: " << best_score << endl;
+
+        // 最良の設定で最終実行
+        button_config = best_config;
+        reset();
+        init_robots();
+
+        Pos current_target(-1, -1);
+        int target_robot = -1;
+
+        while (operations.size() < 2 * N * N) {
+            vector<Pos> empty_cells = find_empty_cells();
+            if (empty_cells.empty())
+                break;
+
+            if (current_target.h == -1 ||
+                board[current_target.h][current_target.w] != 0) {
+                int best_robot = 0;
+                Pos best_target = empty_cells[0];
+                int min_distance = get_distance(robot_pos[0], empty_cells[0]);
+
+                for (int i = 0; i < M; i++) {
+                    for (const Pos &empty_cell : empty_cells) {
+                        int dist = get_distance(robot_pos[i], empty_cell);
+                        if (dist < min_distance) {
+                            min_distance = dist;
+                            best_robot = i;
+                            best_target = empty_cell;
+                        }
+                    }
+                }
+
+                current_target = best_target;
+                target_robot = best_robot;
+            }
+
+            int best_button = 0;
+            int min_dist = N * N;
+
+            for (int button_id = 0; button_id < K; button_id++) {
+                Pos new_pos =
+                    move_robot(robot_pos[target_robot],
+                               button_config[button_id][target_robot]);
+                int dist = get_distance(new_pos, current_target);
+                if (dist < min_dist) {
+                    min_dist = dist;
+                    best_button = button_id;
+                }
+            }
+
+            execute_button(best_button);
+        }
+    }
+
+    // 解く（最適化版を使用）
+    void solve() { solve_with_optimization(); }
+
     // 壁があるかチェック
     bool has_wall(Pos from, Pos to) {
         if (from.h == to.h) {
@@ -487,62 +670,6 @@ struct Grid {
         }
 
         operations.push_back('0' + button_id);
-    }
-
-    // 解く
-    void solve() {
-        setup_random_config_same();
-        init_robots();
-
-        Pos current_target(-1, -1); // 現在のターゲット
-        int target_robot = -1;      // ターゲットを担当するロボット
-
-        while (operations.size() < 2 * N * N) {
-            // cerr << operations.size() << endl;
-            vector<Pos> empty_cells = find_empty_cells();
-            if (empty_cells.empty())
-                break;
-
-            // 現在のターゲットが塗られているか、初回の場合は新しいターゲットを選択
-            if (current_target.h == -1 ||
-                board[current_target.h][current_target.w] != 0) {
-                // 最も距離が短いロボット-空きマスペアを選択
-                int best_robot = 0;
-                Pos best_target = empty_cells[0];
-                int min_distance = get_distance(robot_pos[0], empty_cells[0]);
-
-                for (int i = 0; i < M; i++) {
-                    for (const Pos &empty_cell : empty_cells) {
-                        int dist = get_distance(robot_pos[i], empty_cell);
-                        if (dist < min_distance) {
-                            min_distance = dist;
-                            best_robot = i;
-                            best_target = empty_cell;
-                        }
-                    }
-                }
-
-                current_target = best_target;
-                target_robot = best_robot;
-            }
-
-            // 担当ロボットをターゲットに向かわせるボタンを探す
-            int best_button = 0;
-            int min_dist = N * N;
-
-            for (int button_id = 0; button_id < K; button_id++) {
-                Pos new_pos =
-                    move_robot(robot_pos[target_robot],
-                               button_config[button_id][target_robot]);
-                int dist = get_distance(new_pos, current_target);
-                if (dist < min_dist) {
-                    min_dist = dist;
-                    best_button = button_id;
-                }
-            }
-
-            execute_button(best_button);
-        }
     }
 };
 
