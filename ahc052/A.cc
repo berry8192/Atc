@@ -449,13 +449,18 @@ struct Grid {
     }
 
     // 最適化されたsolve関数（シミュレーション用）
-    int solve_simulation() {
+    int solve_simulation(int best_operations = INT_MAX) {
         init_robots();
 
         Pos current_target(-1, -1);
         int target_robot = -1;
 
         while (operations.size() < 2 * N * N) {
+            // 現在の最良操作回数を上回ったら打ち切り
+            if (operations.size() >= best_operations) {
+                return -1; // スコア計算せずに早期終了
+            }
+
             vector<Pos> empty_cells = find_empty_cells();
             if (empty_cells.empty())
                 break;
@@ -508,8 +513,10 @@ struct Grid {
         reset();
         int best_score = solve_simulation();
         vector<vector<char>> best_config = button_config;
+        int best_operations_count = operations.size();
 
-        cerr << "Initial score: " << best_score << endl;
+        cerr << "Initial score: " << best_score
+             << " (operations: " << best_operations_count << ")" << endl;
 
         int iteration = 0;
         while (timer.progress() < 0.95) { // 95%の時間まで最適化
@@ -518,26 +525,35 @@ struct Grid {
             // 新しいランダム設定を試す
             setup_random_config_same();
             reset();
-            int current_score = solve_simulation();
+            int current_score = solve_simulation(best_operations_count);
+
+            // 早期終了した場合はスキップ
+            if (current_score == -1) {
+                continue;
+            }
 
             // より良いスコアの場合は更新
             if (current_score > best_score) {
                 best_score = current_score;
                 best_config = button_config;
+                best_operations_count = operations.size();
                 cerr << "Iteration " << iteration << ": New best score "
-                     << best_score << endl;
+                     << best_score << " (operations: " << best_operations_count
+                     << ")" << endl;
             }
 
             // 100回に1回進捗を出力
             if (iteration % 100 == 0) {
                 cerr << "Iteration " << iteration << ": Current best "
-                     << best_score << " (progress: " << timer.progress() * 100
-                     << "%)" << endl;
+                     << best_score << " (operations: " << best_operations_count
+                     << ", progress: " << timer.progress() * 100 << "%)"
+                     << endl;
             }
         }
 
         cerr << "Total iterations: " << iteration << endl;
-        cerr << "Final best score: " << best_score << endl;
+        cerr << "Final best score: " << best_score
+             << " (operations: " << best_operations_count << ")" << endl;
 
         // 最良の設定で最終実行
         button_config = best_config;
