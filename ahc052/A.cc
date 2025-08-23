@@ -73,8 +73,61 @@ int seed = 1;
 mt19937 mt(seed);
 
 int N, M, K;
-vector<string> v_walls; // 縦の壁
-vector<string> h_walls; // 横の壁
+vector<string> v_walls;               // 縦の壁
+vector<string> h_walls;               // 横の壁
+vector<vector<int>> precomputed_dist; // 前計算した距離
+
+// 前計算で全マス間の最短距離を計算
+void precompute_distances() {
+    precomputed_dist.assign(N * N, vector<int>(N * N, N * N));
+
+    // 各マスから隣接マスへの距離を設定
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            int idx = i * N + j;
+            precomputed_dist[idx][idx] = 0;
+
+            // 4方向をチェック
+            vector<pair<int, int>> dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+            for (auto dir : dirs) {
+                int di = dir.first;
+                int dj = dir.second;
+                int ni = i + di;
+                int nj = j + dj;
+
+                if (ni >= 0 && ni < N && nj >= 0 && nj < N) {
+                    bool has_wall_between = false;
+
+                    if (di == 0) { // 横移動
+                        int min_j = min(j, nj);
+                        has_wall_between = v_walls[i][min_j] == '1';
+                    } else { // 縦移動
+                        int min_i = min(i, ni);
+                        has_wall_between = h_walls[min_i][j] == '1';
+                    }
+
+                    if (!has_wall_between) {
+                        int nidx = ni * N + nj;
+                        precomputed_dist[idx][nidx] = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    // Floyd-Warshall法で全マス間の最短距離を計算
+    for (int k = 0; k < N * N; k++) {
+        for (int i = 0; i < N * N; i++) {
+            for (int j = 0; j < N * N; j++) {
+                if (precomputed_dist[i][k] + precomputed_dist[k][j] <
+                    precomputed_dist[i][j]) {
+                    precomputed_dist[i][j] =
+                        precomputed_dist[i][k] + precomputed_dist[k][j];
+                }
+            }
+        }
+    }
+}
 
 // 構造体
 struct Pos {
@@ -129,6 +182,11 @@ struct Pos {
     }
 };
 vector<Pos> robots;
+
+// 前計算した距離を取得
+int get_distance(Pos from, Pos to) {
+    return precomputed_dist[from.index()][to.index()];
+}
 
 struct Grid {
     vector<Pos> robot_pos; // 各ロボットの現在位置
@@ -239,55 +297,19 @@ struct Grid {
         return new_pos;
     }
 
-    // 最も近いロボットを見つける（BFSで壁を考慮）
+    // 最も近いロボットを見つける（前計算した距離を利用）
     int find_nearest_robot(Pos target) {
         int best_robot = 0;
-        int min_dist = bfs_distance(robot_pos[0], target);
+        int min_dist = get_distance(robot_pos[0], target);
 
         for (int i = 1; i < M; i++) {
-            int dist = bfs_distance(robot_pos[i], target);
+            int dist = get_distance(robot_pos[i], target);
             if (dist < min_dist) {
                 min_dist = dist;
                 best_robot = i;
             }
         }
         return best_robot;
-    }
-
-    // BFSで壁を考慮した距離を計算
-    int bfs_distance(Pos start, Pos goal) {
-        if (start == goal)
-            return 0;
-
-        vector<vector<int>> dist(N, vector<int>(N, -1));
-        queue<Pos> q;
-
-        q.push(start);
-        dist[start.h][start.w] = 0;
-
-        while (!q.empty()) {
-            Pos current = q.front();
-            q.pop();
-
-            // 4方向に移動を試す
-            vector<char> directions = {'U', 'D', 'L', 'R'};
-            for (char dir : directions) {
-                Pos next = move_robot(current, dir);
-
-                // 移動できた場合（壁がない場合）
-                if (!(next == current) && dist[next.h][next.w] == -1) {
-                    dist[next.h][next.w] = dist[current.h][current.w] + 1;
-                    q.push(next);
-
-                    if (next == goal) {
-                        return dist[next.h][next.w];
-                    }
-                }
-            }
-        }
-
-        // 到達不可能な場合は大きな値を返す
-        return N * N;
     }
 
     // 空きマスを探す
@@ -331,6 +353,7 @@ struct Grid {
         int target_robot = -1;      // ターゲットを担当するロボット
 
         while (operations.size() < 2 * N * N) {
+            // cerr << operations.size() << endl;
             vector<Pos> empty_cells = find_empty_cells();
             if (empty_cells.empty())
                 break;
@@ -338,9 +361,24 @@ struct Grid {
             // 現在のターゲットが塗られているか、初回の場合は新しいターゲットを選択
             if (current_target.h == -1 ||
                 board[current_target.h][current_target.w] != 0) {
-                // ランダムな空きマスを選択
-                current_target = empty_cells[mt() % empty_cells.size()];
-                target_robot = find_nearest_robot(current_target);
+                // 最も距離が短いロボット-空きマスペアを選択
+                int best_robot = 0;
+                Pos best_target = empty_cells[0];
+                int min_distance = get_distance(robot_pos[0], empty_cells[0]);
+
+                for (int i = 0; i < M; i++) {
+                    for (const Pos &empty_cell : empty_cells) {
+                        int dist = get_distance(robot_pos[i], empty_cell);
+                        if (dist < min_distance) {
+                            min_distance = dist;
+                            best_robot = i;
+                            best_target = empty_cell;
+                        }
+                    }
+                }
+
+                current_target = best_target;
+                target_robot = best_robot;
             }
 
             // 担当ロボットをターゲットに向かわせるボタンを探す
@@ -351,7 +389,7 @@ struct Grid {
                 Pos new_pos =
                     move_robot(robot_pos[target_robot],
                                button_config[button_id][target_robot]);
-                int dist = bfs_distance(new_pos, current_target);
+                int dist = get_distance(new_pos, current_target);
                 if (dist < min_dist) {
                     min_dist = dist;
                     best_button = button_id;
@@ -391,6 +429,7 @@ void inpt() {
 
 int main() {
     inpt();
+    precompute_distances();
 
     Grid grid;
     grid.solve();
