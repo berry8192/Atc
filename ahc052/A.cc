@@ -273,12 +273,15 @@ struct Grid {
         // 基本設定を作成
         vector<char> base_config(K);
 
-        // UDLR を必ず1つ以上含むように設定
+        // UDLR を必ず2つ以上含むように設定
         vector<int> assigned_buttons;
         for (char action : actions) {
-            int button_id = mt() % K;
-            base_config[button_id] = action;
-            assigned_buttons.push_back(button_id);
+            // 各アクションを2回割り当て
+            for (int i = 0; i < 2; i++) {
+                int button_id = mt() % K;
+                base_config[button_id] = action;
+                assigned_buttons.push_back(button_id);
+            }
         }
 
         // 残りのボタンにランダムな行動を割り当て
