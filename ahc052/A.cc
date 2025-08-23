@@ -197,11 +197,17 @@ struct Grid {
         button_config;       // [button_id][robot_id] -> action (U/D/L/R/S)
     vector<char> operations; // 操作列 (押すボタンの番号)
 
+    // 最良解を保存するメンバ変数
+    vector<vector<char>> best_config;
+    vector<char> best_operations;
+
     Grid() {
         robot_pos.resize(M);
         board.assign(N, vector<int>(N, 0));
         button_config.assign(K, vector<char>(M, 'U'));
         operations.clear();
+        best_config.assign(K, vector<char>(M, 'U'));
+        best_operations.clear();
     }
 
     // ロボットの初期位置を設定
@@ -225,7 +231,7 @@ struct Grid {
     void output_config() {
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < M; j++) {
-                cout << button_config[i][j] << " ";
+                cout << best_config[i][j] << " ";
             }
             cout << endl;
         }
@@ -233,7 +239,7 @@ struct Grid {
 
     // 操作列を出力
     void output_operations() {
-        for (char op : operations) {
+        for (char op : best_operations) {
             cout << op << endl;
         }
     }
@@ -460,6 +466,9 @@ struct Grid {
         int target_robot = -1;
         vector<Pos> d4c = d4;
         shuffle(all(d4c), mt);
+        vector<int> robot_indicces(8);
+        iota(all(robot_indicces), 0);
+        shuffle(all(robot_indicces), mt);
 
         while (operations.size() < 2 * N * N) {
             // 現在の最良操作回数を上回ったら打ち切り
@@ -485,15 +494,16 @@ struct Grid {
                 //         }
                 //     }
                 // }
-                for (int i = 0; i < M; i++) {
+                for (int i = 0; i < 8; i++) {
                     if (min_distance <= 1) {
                         break;
                     }
                     for (const Pos &empty_cell : empty_cells) {
-                        int dist = get_distance(robot_pos[i], empty_cell);
+                        int dist = get_distance(robot_pos[robot_indicces[i]],
+                                                empty_cell);
                         if (dist < min_distance) {
                             min_distance = dist;
-                            best_robot = i;
+                            best_robot = robot_indicces[i];
                             best_target = empty_cell;
                         }
                     }
@@ -529,7 +539,8 @@ struct Grid {
         setup_random_config_same();
         reset();
         int best_score = solve_simulation();
-        vector<vector<char>> best_config = button_config;
+        best_config = button_config;
+        best_operations = operations;
         int best_operations_count = operations.size();
 
         cerr << "Initial score: " << best_score
@@ -553,6 +564,7 @@ struct Grid {
             if (current_score > best_score) {
                 best_score = current_score;
                 best_config = button_config;
+                best_operations = operations;
                 best_operations_count = operations.size();
                 cerr << "Iteration " << iteration << ": New best score "
                      << best_score << " (operations: " << best_operations_count
@@ -571,57 +583,6 @@ struct Grid {
         cerr << "Total iterations: " << iteration << endl;
         cerr << "Final best score: " << best_score
              << " (operations: " << best_operations_count << ")" << endl;
-
-        // 最良の設定で最終実行
-        button_config = best_config;
-        reset();
-        init_robots();
-
-        Pos current_target(-1, -1);
-        int target_robot = -1;
-
-        while (operations.size() < 2 * N * N) {
-            vector<Pos> empty_cells = find_empty_cells();
-            if (empty_cells.empty())
-                break;
-
-            if (current_target.h == -1 ||
-                board[current_target.h][current_target.w] != 0) {
-                int best_robot = 0;
-                Pos best_target = empty_cells[0];
-                int min_distance = get_distance(robot_pos[0], empty_cells[0]);
-
-                for (int i = 0; i < M; i++) {
-                    for (const Pos &empty_cell : empty_cells) {
-                        int dist = get_distance(robot_pos[i], empty_cell);
-                        if (dist < min_distance) {
-                            min_distance = dist;
-                            best_robot = i;
-                            best_target = empty_cell;
-                        }
-                    }
-                }
-
-                current_target = best_target;
-                target_robot = best_robot;
-            }
-
-            int best_button = 0;
-            int min_dist = N * N;
-
-            for (int button_id = 0; button_id < K; button_id++) {
-                Pos new_pos =
-                    move_robot(robot_pos[target_robot],
-                               button_config[button_id][target_robot]);
-                int dist = get_distance(new_pos, current_target);
-                if (dist < min_dist) {
-                    min_dist = dist;
-                    best_button = button_id;
-                }
-            }
-
-            execute_button(best_button);
-        }
     }
 
     // 解く（最適化版を使用）
