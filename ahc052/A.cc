@@ -239,19 +239,55 @@ struct Grid {
         return new_pos;
     }
 
-    // 最も近いロボットを見つける
+    // 最も近いロボットを見つける（BFSで壁を考慮）
     int find_nearest_robot(Pos target) {
         int best_robot = 0;
-        int min_dist = robot_pos[0].manhattan(target);
+        int min_dist = bfs_distance(robot_pos[0], target);
 
         for (int i = 1; i < M; i++) {
-            int dist = robot_pos[i].manhattan(target);
+            int dist = bfs_distance(robot_pos[i], target);
             if (dist < min_dist) {
                 min_dist = dist;
                 best_robot = i;
             }
         }
         return best_robot;
+    }
+
+    // BFSで壁を考慮した距離を計算
+    int bfs_distance(Pos start, Pos goal) {
+        if (start == goal)
+            return 0;
+
+        vector<vector<int>> dist(N, vector<int>(N, -1));
+        queue<Pos> q;
+
+        q.push(start);
+        dist[start.h][start.w] = 0;
+
+        while (!q.empty()) {
+            Pos current = q.front();
+            q.pop();
+
+            // 4方向に移動を試す
+            vector<char> directions = {'U', 'D', 'L', 'R'};
+            for (char dir : directions) {
+                Pos next = move_robot(current, dir);
+
+                // 移動できた場合（壁がない場合）
+                if (!(next == current) && dist[next.h][next.w] == -1) {
+                    dist[next.h][next.w] = dist[current.h][current.w] + 1;
+                    q.push(next);
+
+                    if (next == goal) {
+                        return dist[next.h][next.w];
+                    }
+                }
+            }
+        }
+
+        // 到達不可能な場合は大きな値を返す
+        return N * N;
     }
 
     // 空きマスを探す
@@ -291,29 +327,31 @@ struct Grid {
         setup_random_config();
         init_robots();
 
+        Pos current_target(-1, -1); // 現在のターゲット
+        int target_robot = -1;      // ターゲットを担当するロボット
+
         while (operations.size() < 2 * N * N) {
             vector<Pos> empty_cells = find_empty_cells();
             if (empty_cells.empty())
                 break;
 
-            // ランダムな空きマスを選択
-            Pos target = empty_cells[mt() % empty_cells.size()];
-            int nearest_robot = find_nearest_robot(target);
+            // 現在のターゲットが塗られているか、初回の場合は新しいターゲットを選択
+            if (current_target.h == -1 ||
+                board[current_target.h][current_target.w] != 0) {
+                // ランダムな空きマスを選択
+                current_target = empty_cells[mt() % empty_cells.size()];
+                target_robot = find_nearest_robot(current_target);
+            }
 
-            // デバッグ出力
-            // cerr << "turn: " << operations.size() SP;
-            // cerr << "Robot " << nearest_robot << " targeting (" << target.h
-            //      << ", " << target.w << ")" << endl;
-
-            // 最も近いロボットをターゲットに向かわせるボタンを探す
+            // 担当ロボットをターゲットに向かわせるボタンを探す
             int best_button = 0;
             int min_dist = N * N;
 
             for (int button_id = 0; button_id < K; button_id++) {
                 Pos new_pos =
-                    move_robot(robot_pos[nearest_robot],
-                               button_config[button_id][nearest_robot]);
-                int dist = new_pos.manhattan(target);
+                    move_robot(robot_pos[target_robot],
+                               button_config[button_id][target_robot]);
+                int dist = bfs_distance(new_pos, current_target);
                 if (dist < min_dist) {
                     min_dist = dist;
                     best_button = button_id;
