@@ -82,12 +82,25 @@ struct Game {
             A.push_back(first_50[i]);
         }
 
-        // 残りの450個を1E6*2^(0~10)で均等に割り振り (指数を連続的に)
-        long long base = 1000000LL; // 1E6
+        // 残りの450個をMIN_VAL~MAX_VALで均等に割り振り
+        const long long MIN_VAL = 100000000LL;
+        const long long MAX_VAL = 100000000000LL;
+
+        // 線形補間バージョン
+        // repr(i, 450) {
+        //     long long value = MIN_VAL + (MAX_VAL - MIN_VAL) * i / 449;
+        //     A.push_back(value);
+        // }
+
+        // 指数補間バージョン（コメントアウト）
+
+        double min_exp = log10(MIN_VAL);
+        double max_exp = log10(MAX_VAL);
+
         repr(i, 450) {
-            // 指数を0から10まで連続的に変化させる
-            double exponent = 15.0 * i / 449.0; // 0.0 から 10.0 まで
-            long long value = (long long)(base * pow(2.0, exponent));
+            // 指数をmin_expからmax_expまで連続的に変化させる
+            double exponent = min_exp + (max_exp - min_exp) * i / 449.0;
+            long long value = (long long)pow(10.0, exponent);
             A.push_back(value);
         }
     }
