@@ -15,7 +15,7 @@ long long llimax = 9223372036854775807;
 
 // 焼きなましの定数
 chrono::system_clock::time_point start, current;
-double TIME_LIMIT = 1900.0;
+double TIME_LIMIT = 190.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 1000000000000.0;
 double end_temp = 100000.0;
@@ -84,7 +84,7 @@ struct Game {
         }
 
         // 残りの450個をMIN_VAL~MAX_VALで均等に割り振り
-        const long long MIN_VAL = 10000000LL;
+        const long long MIN_VAL = 20000000LL;
         const long long MAX_VAL = 1000000000000LL;
 
         // 線形補間バージョン
@@ -213,19 +213,26 @@ struct Game {
         vector<int> best_X = X;
         long long best_score = calculate_score();
 
+        int loop = 0;
         // 焼きなまし法
         while (timer.progress() < 1.0) {
+            loop++;
             double progress = timer.progress();
             double temp = start_temp * pow(end_temp / start_temp, progress);
 
             vector<int> old_X = X;
 
-            // ランダムな山を選択して、その山のカードを全て0の山（捨て札）に戻す
-            int target_pile = (mt() % M) + 1;
+            // ランダムな2つの山を選択して、その山のカードを全て0の山（捨て札）に戻す
+            int target_pile1 = (mt() % M) + 1;
+            int target_pile2 = (mt() % M) + 1;
+            // 異なる山になるまで再抽選
+            while (target_pile1 == target_pile2) {
+                target_pile2 = (mt() % M) + 1;
+            }
             vector<int> removed_cards;
 
             for (int i = 0; i < N; i++) {
-                if (X[i] == target_pile) {
+                if (X[i] == target_pile1 || X[i] == target_pile2) {
                     removed_cards.push_back(i);
                     X[i] = 0; // 0の山に戻す
                 }
@@ -284,8 +291,9 @@ struct Game {
                 accept = true;
                 best_score = new_score;
                 best_X = X;
-                // 予想得点を出力
-                cerr << "Expected score: " << best_score << endl;
+                // 予想得点を出力,loop数も
+                cerr << "Expected score: " << best_score << " loop: " << loop
+                     << endl;
             } else {
                 double delta = new_score - best_score;
                 double prob = exp(delta / temp);
@@ -302,6 +310,7 @@ struct Game {
         // 最良解を復元
         X = best_X;
 
+        cerr << "loop: " << loop << endl;
         cerr << "Expected score: " << best_score << endl;
     }
 
