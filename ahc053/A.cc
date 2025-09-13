@@ -17,8 +17,8 @@ long long llimax = 9223372036854775807;
 chrono::system_clock::time_point start, current;
 double TIME_LIMIT = 1900.0;
 // double TIME_LIMIT=190.0;
-double start_temp = 10000000.0;
-double end_temp = 10000.0;
+double start_temp = 1000000000000.0;
+double end_temp = 100000.0;
 
 // int型vectorを出力
 template <class T> void PV(T pvv) {
@@ -84,8 +84,8 @@ struct Game {
         }
 
         // 残りの450個をMIN_VAL~MAX_VALで均等に割り振り
-        const long long MIN_VAL = 100000000LL;
-        const long long MAX_VAL = 100000000000LL;
+        const long long MIN_VAL = 10000000LL;
+        const long long MAX_VAL = 1000000000000LL;
 
         // 線形補間バージョン
         // repr(i, 450) {
@@ -111,7 +111,7 @@ struct Game {
             cout << A[i];
             if (i < N - 1)
                 cout << " ";
-            cout << endl;
+            // cout << endl;
         }
         cout << endl;
     }
@@ -188,6 +188,14 @@ struct Game {
                 long long new_sum = pile_sum[pile] + value;
                 long long error = abs(new_sum - B[pile - 1]);
                 long long current_error = abs(pile_sum[pile] - B[pile - 1]);
+
+                // オーバーしていない場合は誤差を1000で割る（オーバーを強く避ける）
+                if (new_sum <= B[pile - 1]) {
+                    error /= 1000;
+                }
+                if (pile_sum[pile] <= B[pile - 1]) {
+                    current_error /= 1000;
+                }
 
                 if (error < current_error && error < min_error) {
                     min_error = error;
@@ -293,6 +301,8 @@ struct Game {
 
         // 最良解を復元
         X = best_X;
+
+        cerr << "Expected score: " << best_score << endl;
     }
 
     void output_assignment() {
