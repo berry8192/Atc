@@ -60,12 +60,12 @@ struct Game {
         // A[0] = 9.98×10^14, A[10] = 9.982×10^14, A[20] = 9.988×10^14,
         // A[30] = 9.996×10^14, A[40] = 1.0005×10^15, A[49] = 1.0015×10^15
         vector<long long> first_50 = {
-            998000000000000,  998020000000000,  998040000000000,
-            998060000000000,  998080000000000,  998100000000000,
-            998120000000000,  998140000000000,  998160000000000,
-            998180000000000,  998200000000000,  998260000000000,
-            998320000000000,  998380000000000,  998440000000000,
-            998500000000000,  998560000000000,  998620000000000,
+            998000000000000,  998010000000000,  998020000000000,
+            998030000000000,  998040000000000,  998080000000000,
+            998120000000000,  998160000000000,  998200000000000,
+            998240000000000,  998280000000000,  998320000000000,
+            998370000000000,  998420000000000,  998470000000000,
+            998520000000000,  998570000000000,  998620000000000,
             998680000000000,  998740000000000,  998800000000000,
             998880000000000,  998960000000000,  999040000000000,
             999120000000000,  999200000000000,  999280000000000,
@@ -84,8 +84,8 @@ struct Game {
         }
 
         // 残りの450個をMIN_VAL~MAX_VALで均等に割り振り
-        const long long MIN_VAL = 20000000LL;
-        const long long MAX_VAL = 1000000000000LL;
+        const long long MIN_VAL = 10000000LL;
+        const long long MAX_VAL = 1500000000000LL;
 
         // 線形補間バージョン
         // repr(i, 450) {
@@ -309,6 +309,58 @@ struct Game {
 
         // 最良解を復元
         X = best_X;
+
+        // 最終的な貪欲最適化：全ての山に対して最適化
+        bool improved = true;
+        while (improved) {
+            improved = false;
+
+            // 全てのカードについて、より良い山があるかチェック
+            for (int card_idx = 0; card_idx < N; card_idx++) {
+                // 先頭50個は固定なのでスキップ
+                if (card_idx < 50)
+                    continue;
+
+                long long value = A[card_idx];
+                int current_pile = X[card_idx];
+
+                // 現在の山から一時的に削除
+                vector<long long> pile_sum(M + 1, 0);
+                for (int i = 0; i < N; i++) {
+                    if (X[i] > 0 && i != card_idx) {
+                        pile_sum[X[i]] += A[i];
+                    }
+                }
+
+                // 最も誤差が小さくなる山を探す
+                int best_pile = 0;
+                long long min_error = LLONG_MAX;
+
+                // 0の山（捨て札）も含めて検討
+                for (int pile = 0; pile <= M; pile++) {
+                    long long new_sum = pile_sum[pile] + value;
+                    long long total_error = 0;
+
+                    // 全ての山の誤差を計算
+                    for (int j = 0; j < M; j++) {
+                        long long pile_value =
+                            (j + 1 == pile) ? new_sum : pile_sum[j + 1];
+                        total_error += abs(pile_value - B[j]);
+                    }
+
+                    if (total_error < min_error) {
+                        min_error = total_error;
+                        best_pile = pile;
+                    }
+                }
+
+                // より良い山が見つかった場合は移動
+                if (best_pile != current_pile) {
+                    X[card_idx] = best_pile;
+                    improved = true;
+                }
+            }
+        }
 
         // cerr << "loop: " << loop << endl;
         cerr << "Expected score: " << best_score << endl;
