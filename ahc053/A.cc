@@ -292,8 +292,8 @@ struct Game {
                 best_score = new_score;
                 best_X = X;
                 // 予想得点を出力,loop数も
-                cerr << "Expected score: " << best_score << " loop: " << loop
-                     << endl;
+                // cerr << "Expected score: " << best_score << " loop: " << loop
+                //      << endl;
             } else {
                 double delta = new_score - best_score;
                 double prob = exp(delta / temp);
@@ -310,7 +310,7 @@ struct Game {
         // 最良解を復元
         X = best_X;
 
-        cerr << "loop: " << loop << endl;
+        // cerr << "loop: " << loop << endl;
         cerr << "Expected score: " << best_score << endl;
     }
 
