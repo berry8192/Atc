@@ -209,35 +209,60 @@ struct Game {
             double progress = timer.progress();
             double temp = start_temp * pow(end_temp / start_temp, progress);
 
-            // 近傍操作をランダムに選択
-            int operation = mt() % 3;
             vector<int> old_X = X;
 
-            if (operation == 0) {
-                // カードの山を変更
-                int card_idx = mt() % N;
-                int old_pile = X[card_idx];
-                int new_pile = mt() % (M + 1); // 0は捨てる
-                X[card_idx] = new_pile;
+            // ランダムな山を選択して、その山のカードを全て0の山（捨て札）に戻す
+            int target_pile = (mt() % M) + 1;
+            vector<int> removed_cards;
 
-            } else if (operation == 1) {
-                // 2枚のカードの山を交換
-                int card1 = mt() % N;
-                int card2 = mt() % N;
-                if (card1 != card2) {
-                    swap(X[card1], X[card2]);
+            for (int i = 0; i < N; i++) {
+                if (X[i] == target_pile) {
+                    removed_cards.push_back(i);
+                    X[i] = 0; // 0の山に戻す
+                }
+            }
+
+            // 0の山のカードだけを使って元の山を最善に再構築
+            vector<long long> pile_sum(M + 1, 0);
+
+            // 現在の各山の合計を計算
+            for (int i = 0; i < N; i++) {
+                if (X[i] > 0) {
+                    pile_sum[X[i]] += A[i];
+                }
+            }
+
+            // 0の山にあるカードを価値順にソート
+            vector<pair<long long, int>> available_cards;
+            for (int i = 0; i < N; i++) {
+                if (X[i] == 0) {
+                    available_cards.push_back({A[i], i});
+                }
+            }
+            sort(available_cards.rbegin(), available_cards.rend());
+
+            // 貪欲法で再配置
+            for (auto &card : available_cards) {
+                long long value = card.first;
+                int idx = card.second;
+
+                int best_pile = 0;
+                long long min_error = LLONG_MAX;
+
+                for (int pile = 1; pile <= M; pile++) {
+                    long long new_sum = pile_sum[pile] + value;
+                    long long error = abs(new_sum - B[pile - 1]);
+                    long long current_error = abs(pile_sum[pile] - B[pile - 1]);
+
+                    if (error < current_error && error < min_error) {
+                        min_error = error;
+                        best_pile = pile;
+                    }
                 }
 
-            } else {
-                // ランダムな山のカードを全て別の山に移動
-                int from_pile = (mt() % M) + 1;
-                int to_pile = (mt() % M) + 1;
-                if (from_pile != to_pile) {
-                    for (int i = 0; i < N; i++) {
-                        if (X[i] == from_pile) {
-                            X[i] = to_pile;
-                        }
-                    }
+                if (best_pile > 0) {
+                    X[idx] = best_pile;
+                    pile_sum[best_pile] += value;
                 }
             }
 
