@@ -20,6 +20,14 @@ double TIME_LIMIT = 1900.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
 
+// int型vectorを出力
+template <class T> void PV(T pvv) {
+    if (!pvv.size())
+        return;
+    rep(i, pvv.size() - 1) cout << pvv[i] SP;
+    cout << pvv[pvv.size() - 1] << endl;
+}
+
 struct Timer {
     chrono::_V2::system_clock::time_point start;
 
@@ -48,21 +56,39 @@ struct Game {
     vector<int> X;
 
     void prepare_cards() {
-        A.resize(N);
-        int idx = 0;
+        // 最初の50個の値を配列で定義 (線形補間)
+        // A[0] = 9.98×10^14, A[10] = 9.982×10^14, A[20] = 9.988×10^14,
+        // A[30] = 9.996×10^14, A[40] = 1.0005×10^15, A[49] = 1.0015×10^15
+        vector<long long> first_50 = {
+            998000000000000,  998071428571429,  998142857142858,
+            998214285714287,  998285714285716,  998357142857145,
+            998428571428574,  998500000000003,  998571428571432,
+            998642857142861,  998714285714290,  998785714285719,
+            998857142857148,  998928571428577,  999000000000006,
+            999071428571435,  999142857142864,  999214285714293,
+            999285714285722,  999357142857151,  999428571428580,
+            999500000000009,  999571428571438,  999642857142867,
+            999714285714296,  999785714285725,  999857142857154,
+            999928571428583,  1000000000000012, 1000071428571441,
+            1000142857142870, 1000214285714299, 1000285714285728,
+            1000357142857157, 1000428571428586, 1000500000000015,
+            1000571428571444, 1000642857142873, 1000714285714302,
+            1000785714285731, 1000857142857160, 1000928571428589,
+            1001000000000018, 1001071428571447, 1001142857142876,
+            1001214285714305, 1001285714285734, 1001357142857163,
+            1001428571428592, 1001500000000021};
 
-        // 50個の9.8*10^12
-        long long base_value = 980000000000000LL;
         for (int i = 0; i < 50; i++) {
-            A[idx++] = base_value;
+            A.push_back(first_50[i]);
         }
 
-        // 4*10^12を512で割った値を1,2,4,8,16,32,64,128,256倍したものをそれぞれ50個
-        long long unit = 4000000000000LL / 512;
-        for (int mult = 1; mult <= 256; mult *= 2) {
-            for (int i = 0; i < 50; i++) {
-                A[idx++] = unit * mult;
-            }
+        // 残りの450個を1E6*2^(0~10)で均等に割り振り (指数を連続的に)
+        long long base = 1000000LL; // 1E6
+        repr(i, 450) {
+            // 指数を0から10まで連続的に変化させる
+            double exponent = 15.0 * i / 449.0; // 0.0 から 10.0 まで
+            long long value = (long long)(base * pow(2.0, exponent));
+            A.push_back(value);
         }
     }
 
@@ -71,6 +97,7 @@ struct Game {
             cout << A[i];
             if (i < N - 1)
                 cout << " ";
+            cout << endl;
         }
         cout << endl;
     }
@@ -82,15 +109,151 @@ struct Game {
         }
     }
 
-    void solve() {
-        X.resize(N);
-        // 簡単な貪欲解法: 各カードを最も近い目標値の山に割り当て
+    long long calculate_score() {
+        vector<long long> pile_sum(M, 0);
+
+        // 各山の合計を計算
         for (int i = 0; i < N; i++) {
-            X[i] = 0; // とりあえず捨てる
+            if (X[i] > 0) {
+                pile_sum[X[i] - 1] += A[i];
+            }
         }
 
-        // より良い割り当てを実装可能
-        // 今は簡単のため全て捨てる
+        // 誤差Eを計算
+        long long E = 0;
+        long long min_error = LLONG_MAX;
+        long long max_error = 0;
+
+        for (int j = 0; j < M; j++) {
+            long long error = abs(pile_sum[j] - B[j]);
+            E += error;
+            min_error = min(min_error, error);
+            max_error = max(max_error, error);
+        }
+
+        // // 誤差情報を出力
+        // cerr << "Error sum: " << E << ", Min error: " << min_error
+        //      << ", Max error: " << max_error << endl;
+
+        // 得点を計算: round((20-log10(1+E))*5*10^7)
+        double score_d = (20.0 - log10(1.0 + E)) * 5.0 * 1e7;
+        return (long long)round(score_d);
+    }
+
+    void solve() {
+        X.resize(N, 0);
+
+        // 初期解を貪欲法で作成
+        vector<long long> pile_sum(M + 1, 0);
+        vector<pair<long long, int>> cards;
+        for (int i = 0; i < N; i++) {
+            cards.push_back({A[i], i});
+        }
+        sort(cards.rbegin(), cards.rend());
+
+        // 初期配置
+        // 先頭50個はそのままBに順序で割り当て
+        for (int i = 0; i < min(50, M); i++) {
+            X[i] = i + 1;
+            pile_sum[i + 1] += A[i];
+        }
+
+        // 残りのカードは貪欲法で配置
+        for (auto &card : cards) {
+            long long value = card.first;
+            int idx = card.second;
+
+            // 先頭50個は既に配置済みなのでスキップ
+            if (idx < 50)
+                continue;
+
+            int best_pile = 0;
+            long long min_error = LLONG_MAX;
+
+            for (int pile = 1; pile <= M; pile++) {
+                long long new_sum = pile_sum[pile] + value;
+                long long error = abs(new_sum - B[pile - 1]);
+                long long current_error = abs(pile_sum[pile] - B[pile - 1]);
+
+                if (error < current_error && error < min_error) {
+                    min_error = error;
+                    best_pile = pile;
+                }
+            }
+
+            if (best_pile > 0) {
+                X[idx] = best_pile;
+                pile_sum[best_pile] += value;
+            }
+        }
+
+        // 現在の解を保存
+        vector<int> best_X = X;
+        long long best_score = calculate_score();
+
+        // 焼きなまし法
+        while (timer.progress() < 1.0) {
+            double progress = timer.progress();
+            double temp = start_temp * pow(end_temp / start_temp, progress);
+
+            // 近傍操作をランダムに選択
+            int operation = mt() % 3;
+            vector<int> old_X = X;
+
+            if (operation == 0) {
+                // カードの山を変更
+                int card_idx = mt() % N;
+                int old_pile = X[card_idx];
+                int new_pile = mt() % (M + 1); // 0は捨てる
+                X[card_idx] = new_pile;
+
+            } else if (operation == 1) {
+                // 2枚のカードの山を交換
+                int card1 = mt() % N;
+                int card2 = mt() % N;
+                if (card1 != card2) {
+                    swap(X[card1], X[card2]);
+                }
+
+            } else {
+                // ランダムな山のカードを全て別の山に移動
+                int from_pile = (mt() % M) + 1;
+                int to_pile = (mt() % M) + 1;
+                if (from_pile != to_pile) {
+                    for (int i = 0; i < N; i++) {
+                        if (X[i] == from_pile) {
+                            X[i] = to_pile;
+                        }
+                    }
+                }
+            }
+
+            // 新しい解の評価
+            long long new_score = calculate_score();
+
+            // 受容判定
+            bool accept = false;
+            if (new_score > best_score) {
+                accept = true;
+                best_score = new_score;
+                best_X = X;
+                // 予想得点を出力
+                cerr << "Expected score: " << best_score << endl;
+            } else {
+                double delta = new_score - best_score;
+                double prob = exp(delta / temp);
+                if ((double)mt() / mt.max() < prob) {
+                    accept = true;
+                }
+            }
+
+            if (!accept) {
+                X = old_X; // 元に戻す
+            }
+        }
+
+        // 最良解を復元
+        X = best_X;
     }
 
     void output_assignment() {
