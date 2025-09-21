@@ -3,6 +3,7 @@
 #include <iostream>
 #include <queue>
 #include <random>
+#include <set>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -21,6 +22,10 @@ vector<vector<bool>> confirmed;
 // 4方向の移動 (上, 下, 左, 右)
 int dr[] = {-1, 1, 0, 0};
 int dc[] = {0, 0, -1, 1};
+
+// 8方向の移動 (上, 下, 左, 右, 斜め4方向)
+int dr8[] = {-1, 1, 0, 0, -1, -1, 1, 1};
+int dc8[] = {0, 0, -1, 1, -1, 1, -1, 1};
 
 // 視界制限のためのトレント配置判定距離
 const int VISION_LIMIT_DISTANCE = 2;
@@ -69,8 +74,54 @@ class DSU {
     int get_size(int x) { return size[leader(x)]; }
 };
 
+// 8近傍隣接チェック用DSU
+class WallDSU {
+  public:
+    vector<int> parent, size;
+    int boundary_node; // 外周木用の超頂点
+
+    WallDSU(int n) : parent(n + 1), size(n + 1, 1) {
+        for (int i = 0; i <= n; i++)
+            parent[i] = i;
+        boundary_node = n; // 最後のノードを外周用に使用
+    }
+
+    int leader(int x) {
+        if (parent[x] == x)
+            return x;
+        return parent[x] = leader(parent[x]);
+    }
+
+    bool same(int x, int y) { return leader(x) == leader(y); }
+
+    void merge(int x, int y) {
+        x = leader(x);
+        y = leader(y);
+        if (x == y)
+            return;
+        if (size[x] < size[y])
+            swap(x, y);
+        parent[y] = x;
+        size[x] += size[y];
+    }
+
+    bool is_connected_to_boundary(int x) { return same(x, boundary_node); }
+};
+
 // 座標を1次元のインデックスに変換
 int coord_to_index(int r, int c) { return r * N + c; }
+// 座標を1次元のインデックスに変換（8近傍DSU用）
+int coord_to_wall_index(int r, int c) { return r * N + c; }
+
+// 外周かどうかチェック
+bool is_boundary(int r, int c) {
+    return r == 0 || r == N - 1 || c == 0 || c == N - 1;
+}
+
+// 8近傍で隣接するかチェック
+bool is_adjacent_8(int r1, int c1, int r2, int c2) {
+    return abs(r1 - r2) <= 1 && abs(c1 - c2) <= 1 && !(r1 == r2 && c1 == c2);
+}
 
 // 空きマスの連結性をチェックする関数
 bool check_connectivity(const vector<string> &maze) {
@@ -513,6 +564,209 @@ vector<pair<int, int>> place_additional_vision_limiting_treants(
     return additional_treants;
 }
 
+// 8近傍隣接DSUを初期化
+WallDSU initialize_wall_dsu(const vector<string> &maze,
+                            const vector<pair<int, int>> &existing_treants) {
+    WallDSU wall_dsu(N * N);
+    vector<string> temp_maze = maze;
+
+    // 既存トレントを仮配置
+    for (const auto &p : existing_treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    // 外周の木を超頂点に接続
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            if (is_boundary(i, j) &&
+                (temp_maze[i][j] == 'T' || temp_maze[i][j] == 't')) {
+                wall_dsu.merge(coord_to_wall_index(i, j),
+                               wall_dsu.boundary_node);
+            }
+        }
+    }
+
+    // 8近傍で隣接する木/トレント同士を接続
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            if (temp_maze[i][j] == 'T' || temp_maze[i][j] == 't') {
+                for (int d = 0; d < 8; ++d) {
+                    int ni = i + dr8[d];
+                    int nj = j + dc8[d];
+                    if (ni >= 0 && ni < N && nj >= 0 && nj < N &&
+                        (temp_maze[ni][nj] == 'T' ||
+                         temp_maze[ni][nj] == 't')) {
+                        wall_dsu.merge(coord_to_wall_index(i, j),
+                                       coord_to_wall_index(ni, nj));
+                    }
+                }
+            }
+        }
+    }
+
+    return wall_dsu;
+}
+
+// 8近傍で既存のトレントに隣接しているかチェック
+bool is_adjacent_to_existing_treant(int r, int c, const vector<string> &maze) {
+    for (int d = 0; d < 8; ++d) {
+        int nr = r + dr8[d];
+        int nc = c + dc8[d];
+        if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+            (maze[nr][nc] == 'T' || maze[nr][nc] == 't')) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 到達不能エリアの増加をチェック
+bool increases_unreachable_area(int r, int c, const vector<string> &maze) {
+    int adventurer_start_r = 0;
+    int adventurer_start_c = N / 2;
+
+    // 配置前の到達不能エリア数
+    int before_unreachable =
+        count_unreachable_cells(maze, adventurer_start_r, adventurer_start_c);
+
+    // 配置後の到達不能エリア数
+    vector<string> temp_maze = maze;
+    temp_maze[r][c] = 't';
+    int after_unreachable = count_unreachable_cells(
+        temp_maze, adventurer_start_r, adventurer_start_c);
+
+    return after_unreachable > before_unreachable;
+}
+
+// 通路確保処理
+void add_corridor_cells(int treant_r, int treant_c,
+                        vector<pair<int, int>> &corridor_cells,
+                        const vector<string> &temp_maze) {
+    // 右、右下、下の方向に通路を確保
+    vector<pair<int, int>> corridor_offsets = {
+        {0, 1}, // 右
+        {1, 1}, // 右下
+        {1, 0}  // 下
+    };
+
+    for (const auto &offset : corridor_offsets) {
+        int corridor_r = treant_r + offset.first;
+        int corridor_c = treant_c + offset.second;
+        if (corridor_r > 0 && corridor_r < N - 1 && corridor_c > 0 &&
+            corridor_c < N - 1 && temp_maze[corridor_r][corridor_c] == '.') {
+
+            // 既に通路リストに含まれていない場合のみ追加
+            bool already_exists = false;
+            for (const auto &existing : corridor_cells) {
+                if (existing.first == corridor_r &&
+                    existing.second == corridor_c) {
+                    already_exists = true;
+                    break;
+                }
+            }
+            if (!already_exists) {
+                corridor_cells.push_back({corridor_r, corridor_c});
+            }
+        }
+    }
+}
+
+// トレント設置処理（未実装）
+bool place_treant_next_to_corridor(const vector<pair<int, int>> &corridor_cells,
+                                   vector<string> &temp_maze,
+                                   vector<pair<int, int>> &additional_treants,
+                                   WallDSU &wall_dsu, int pi, int pj) {
+    // TODO: 実装予定
+    // 通路リストを右上から順にソートし、各通路の右にトレント設置を試行
+    return false;
+}
+
+// 斜め通路を確保するための追加トレント配置
+vector<pair<int, int>> place_diagonal_corridor_treants(
+    int pi, int pj, const vector<pair<int, int>> &existing_treants) {
+    vector<pair<int, int>> additional_treants;
+    vector<string> temp_maze = current_maze;
+
+    // 冒険者の初期位置（森の入口）
+    int adventurer_start_r = 0;
+    int adventurer_start_c = N / 2;
+
+    // 既存のトレントを仮配置
+    for (const auto &p : existing_treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    // 8近傍隣接DSUを初期化
+    WallDSU wall_dsu = initialize_wall_dsu(current_maze, existing_treants);
+
+    // 通路として確保するマスのリスト
+    vector<pair<int, int>> corridor_cells;
+
+    // ステップ1: (1,1)にトレント設置（1回目のトレント設置処理）
+    int start_r = 1, start_c = 1;
+    if (start_r < N - 1 && start_c < N - 1 &&
+        temp_maze[start_r][start_c] == '.' &&
+        !(start_r == adventurer_start_r && start_c == adventurer_start_c)) {
+
+        // 外周との8近傍隣接チェック
+        bool adjacent_to_boundary = false;
+        for (int d = 0; d < 8; ++d) {
+            int nr = start_r + dr8[d];
+            int nc = start_c + dc8[d];
+            if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
+                if (wall_dsu.is_connected_to_boundary(
+                        coord_to_wall_index(nr, nc))) {
+                    adjacent_to_boundary = true;
+                    break;
+                }
+            }
+        }
+
+        if (!adjacent_to_boundary &&
+            !increases_unreachable_area(start_r, start_c, temp_maze)) {
+            temp_maze[start_r][start_c] = 't';
+            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+                additional_treants.push_back({start_r, start_c});
+
+                // DSUに新しいトレントを追加
+                int new_idx = coord_to_wall_index(start_r, start_c);
+                for (int d = 0; d < 8; ++d) {
+                    int nr = start_r + dr8[d];
+                    int nc = start_c + dc8[d];
+                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                        (temp_maze[nr][nc] == 'T' ||
+                         temp_maze[nr][nc] == 't')) {
+                        wall_dsu.merge(new_idx, coord_to_wall_index(nr, nc));
+                    }
+                }
+
+                // ステップ2: 通路確保処理
+                add_corridor_cells(start_r, start_c, corridor_cells, temp_maze);
+
+                // ステップ3: 以降のトレント設置処理（未実装）
+                int max_iterations = N;
+                for (int iteration = 0;
+                     iteration < max_iterations && !corridor_cells.empty();
+                     ++iteration) {
+                    bool placed = place_treant_next_to_corridor(
+                        corridor_cells, temp_maze, additional_treants, wall_dsu,
+                        pi, pj);
+                    if (!placed) {
+                        break;
+                    }
+                }
+
+            } else {
+                temp_maze[start_r][start_c] =
+                    '.'; // 経路が途絶える場合は元に戻す
+            }
+        }
+    }
+
+    return additional_treants;
+}
+
 // 最初のターンの処理
 void solve_first_turn(int pi, int pj, int /* n */,
                       const vector<pair<int, int>> &newly_confirmed) {
@@ -523,18 +777,18 @@ void solve_first_turn(int pi, int pj, int /* n */,
     vector<string> original_maze = current_maze;
     vector<pair<int, int>> best_treants;
 
-    // 1回だけ確率的渦巻きを実行（内部で1回試行）
+    // 1回だけ確率的渦巻きを実行（内部で1000回試行）
     current_maze = original_maze;
     best_treants = create_strategic_treants(pi, pj, 0, 0);
 
-    // 視界制限のための追加トレント配置（一時的に無効化）
-    // vector<pair<int, int>> additional_treants =
-    //     place_additional_vision_limiting_treants(pi, pj, best_treants);
+    // 斜め通路のための追加トレント配置
+    vector<pair<int, int>> additional_treants =
+        place_diagonal_corridor_treants(pi, pj, best_treants);
 
     // 最終的なトレント配置
     vector<pair<int, int>> final_treants = best_treants;
-    // final_treants.insert(final_treants.end(), additional_treants.begin(),
-    //                      additional_treants.end());
+    final_treants.insert(final_treants.end(), additional_treants.begin(),
+                         additional_treants.end());
 
     // 出力
     cout << final_treants.size();
