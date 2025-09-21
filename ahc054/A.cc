@@ -4,6 +4,7 @@
 #include <queue>
 #include <random>
 #include <string>
+#include <tuple>
 #include <vector>
 
 using namespace std;
@@ -169,7 +170,10 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
         return {};
     }
 
-    // 経路構築のループ
+    // まず経路を構築する（トレント配置はしない）
+    vector<tuple<int, int, int, int>>
+        path_segments; // (prev_r, prev_c, current_r, current_c)
+
     for (int i = 0; i < N * N; ++i) {
         int next_r = -1, next_c = -1;
         double min_dist_sq = 1e18;
@@ -197,13 +201,43 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
         if (next_r == -1)
             break; // 次に進むマスがない
 
+        // 経路セグメントを記録
+        path_segments.push_back(
+            make_tuple(prev_r, prev_c, current_r, current_c));
+
+        // 現在地を更新
+        prev_r = current_r;
+        prev_c = current_c;
+        current_r = next_r;
+        current_c = next_c;
+    }
+
+    // 構築された経路に沿ってトレント配置を行う
+    for (const auto &segment : path_segments) {
+        int seg_prev_r = get<0>(segment);
+        int seg_prev_c = get<1>(segment);
+        int seg_current_r = get<2>(segment);
+        int seg_current_c = get<3>(segment);
+
+        // この経路セグメントの次の現在地を探す
+        int seg_next_r = -1, seg_next_c = -1;
+        for (const auto &next_segment : path_segments) {
+            if (get<0>(next_segment) == seg_current_r &&
+                get<1>(next_segment) == seg_current_c) {
+                seg_next_r = get<2>(next_segment);
+                seg_next_c = get<3>(next_segment);
+                break;
+            }
+        }
+
         // 現在地から見た4近傍のうち、前と次の現在地以外のマスにトレントを配置
         for (int j = 0; j < 4; ++j) {
-            int tr = current_r + dr[j];
-            int tc = current_c + dc[j];
+            int tr = seg_current_r + dr[j];
+            int tc = seg_current_c + dc[j];
             if (tr >= 0 && tr < N && tc >= 0 && tc < N &&
-                current_maze[tr][tc] == '.' && (tr != prev_r || tc != prev_c) &&
-                (tr != next_r || tc != next_c) &&
+                current_maze[tr][tc] == '.' &&
+                (tr != seg_prev_r || tc != seg_prev_c) &&
+                (seg_next_r == -1 || tr != seg_next_r || tc != seg_next_c) &&
                 !(tr == adventurer_start_r &&
                   tc == adventurer_start_c)) { // 冒険者の初期位置を除外
 
@@ -215,12 +249,6 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
                 }
             }
         }
-
-        // 現在地を更新
-        prev_r = current_r;
-        prev_c = current_c;
-        current_r = next_r;
-        current_c = next_c;
     }
 
     current_maze = original_maze;
@@ -350,15 +378,10 @@ void solve_first_turn(int pi, int pj, int /* n */,
         current_maze[p.first][p.second] = 'T'; // 確定
     }
     cout << endl;
-}
 
-// 最初のターン以外の処理（何もしない）
-void solve_other_turns(int /* pi */, int /* pj */, int /* n */,
-                       const vector<pair<int, int>> &newly_confirmed) {
-    for (const auto &p : newly_confirmed) {
-        confirmed[p.first][p.second] = true;
-    }
-    cout << 0 << endl;
+    // 打ち切り出力を行ってプログラム終了
+    cout << -1 << endl;
+    exit(0);
 }
 
 int main() {
@@ -370,13 +393,11 @@ int main() {
     }
 
     bool first_turn = true;
-    long long turn_limit = 10LL * N * N;
-    long long current_turn = 0;
 
     while (true) {
         int pi, pj, n;
         cin >> pi >> pj >> n;
-        // cerr << pi << " " << pj << " " << n << endl;
+
         if (pi == ti && pj == tj) {
             return 0;
         }
@@ -388,14 +409,11 @@ int main() {
 
         if (first_turn) {
             solve_first_turn(pi, pj, n, newly_confirmed);
+            // この時点で exit(0) されるので、以下のコードは実行されない
             first_turn = false;
         } else {
-            solve_other_turns(pi, pj, n, newly_confirmed);
-        }
-
-        current_turn++;
-        if (current_turn > turn_limit) {
-            return 0;
+            // この部分はもう実行されないが、念のため残しておく
+            cout << 0 << endl;
         }
     }
 
