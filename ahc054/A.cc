@@ -25,6 +25,17 @@ int dc[] = {0, 0, -1, 1};
 // 視界制限のためのトレント配置判定距離
 const int VISION_LIMIT_DISTANCE = 2;
 
+// 渦巻きの最大ステップ数
+const int MAX_SPIRAL_STEPS = 30;
+
+// 渦巻き試行回数
+const int SPIRAL_TRIALS = 1000;
+
+// 評価値の重み
+const int PATH_LENGTH_WEIGHT = 2;
+const int UNREACHABLE_PENALTY = 1;
+const int DISTANCE_TO_FLOWER_WEIGHT = 5;
+
 // DSU (Disjoint Set Union) クラス
 class DSU {
   public:
@@ -130,19 +141,137 @@ int calculate_path_length(int start_r, int start_c, int end_r, int end_c,
     return -1; // 到達不能
 }
 
-// 新しい渦巻きアルゴリズム
-vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
-                                                int rotation_dir) {
-    vector<pair<int, int>> treants_to_place;
+// 到達不能地点の数を計算する
+int count_unreachable_cells(const vector<string> &maze, int start_r,
+                            int start_c) {
+    vector<vector<bool>> reachable(N, vector<bool>(N, false));
+    queue<pair<int, int>> q;
 
-    // 現在の迷路状態をバックアップ
+    if (maze[start_r][start_c] != '.')
+        return N * N; // スタート地点が無効
+
+    reachable[start_r][start_c] = true;
+    q.push({start_r, start_c});
+
+    while (!q.empty()) {
+        pair<int, int> curr = q.front();
+        q.pop();
+        int r = curr.first;
+        int c = curr.second;
+
+        for (int i = 0; i < 4; ++i) {
+            int nr = r + dr[i];
+            int nc = c + dc[i];
+
+            if (nr >= 0 && nr < N && nc >= 0 && nc < N && !reachable[nr][nc] &&
+                maze[nr][nc] == '.') {
+                reachable[nr][nc] = true;
+                q.push({nr, nc});
+            }
+        }
+    }
+
+    int unreachable_count = 0;
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            if (maze[i][j] == '.' && !reachable[i][j]) {
+                unreachable_count++;
+            }
+        }
+    }
+
+    return unreachable_count;
+}
+
+// 経路中のマスの花からのマンハッタン距離の平均を計算する
+double calculate_average_distance_to_flower(int pi, int pj,
+                                            const vector<string> &maze) {
+    vector<vector<int>> dist(N, vector<int>(N, -1));
+    queue<pair<int, int>> q;
+    vector<pair<int, int>> path;
+
+    if (maze[pi][pj] == 'T' || maze[pi][pj] == 't')
+        return 1e9; // 到達不能
+
+    dist[pi][pj] = 0;
+    q.push({pi, pj});
+
+    while (!q.empty()) {
+        pair<int, int> curr = q.front();
+        q.pop();
+        int r = curr.first;
+        int c = curr.second;
+
+        if (r == ti && c == tj) {
+            // 経路を逆算して構築
+            int cr = ti, cc = tj;
+            while (!(cr == pi && cc == pj)) {
+                path.push_back({cr, cc});
+                // 隣接するマスの中で距離が1少ないマスを探す
+                for (int i = 0; i < 4; i++) {
+                    int nr = cr + dr[i];
+                    int nc = cc + dc[i];
+                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                        dist[nr][nc] == dist[cr][cc] - 1) {
+                        cr = nr;
+                        cc = nc;
+                        break;
+                    }
+                }
+            }
+            path.push_back({pi, pj});
+            break;
+        }
+
+        for (int i = 0; i < 4; ++i) {
+            int nr = r + dr[i];
+            int nc = c + dc[i];
+
+            if (nr >= 0 && nr < N && nc >= 0 && nc < N && dist[nr][nc] == -1 &&
+                maze[nr][nc] != 'T' && maze[nr][nc] != 't') {
+                dist[nr][nc] = dist[r][c] + 1;
+                q.push({nr, nc});
+            }
+        }
+    }
+
+    if (path.empty())
+        return 1e9; // 到達不能
+
+    // 経路中の各マスの花からのマンハッタン距離を計算
+    double total_distance = 0.0;
+    for (const auto &pos : path) {
+        int manhattan_dist = abs(pos.first - ti) + abs(pos.second - tj);
+        total_distance += manhattan_dist;
+    }
+
+    return total_distance / path.size();
+}
+
+// 方向を左回り/右回りに回転させる
+int rotate_direction(int dir, int rotation) {
+    // rotation: 0=左回り, 1=右回り
+    if (rotation == 0) {      // 左回り
+        return (dir + 3) % 4; // -1を+3で代用
+    } else {                  // 右回り
+        return (dir + 1) % 4;
+    }
+}
+
+// トレント引き寄せ渦巻きアルゴリズム（1回の試行）
+vector<pair<int, int>> create_single_spiral_trial(int pi, int pj, int open_dir,
+                                                  mt19937 &gen) {
+    vector<pair<int, int>> treants_to_place;
     vector<string> original_maze = current_maze;
 
     // 冒険者の初期位置（森の入口）
     int adventurer_start_r = 0;
     int adventurer_start_c = N / 2;
 
-    // 花の周りの3方向を最初に塞ぐ
+    // 設置済みトレントのリスト（優先度付き：早く設置したほど高優先度）
+    vector<pair<pair<int, int>, int>> placed_treants; // ((r, c), priority)
+
+    // 花の周りの3方向を最初に塞ぐ（最高優先度）
     for (int i = 0; i < 4; ++i) {
         if (i == open_dir)
             continue;
@@ -150,10 +279,10 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
         int nc = tj + dc[i];
         if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
             original_maze[nr][nc] == '.' &&
-            !(nr == adventurer_start_r &&
-              nc == adventurer_start_c)) { // 冒険者の初期位置を除外
+            !(nr == adventurer_start_r && nc == adventurer_start_c)) {
             current_maze[nr][nc] = 't';
             treants_to_place.push_back({nr, nc});
+            placed_treants.push_back({{nr, nc}, 100}); // 最高優先度
         }
     }
 
@@ -170,16 +299,11 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
         return {};
     }
 
-    // まず経路を構築する（トレント配置はしない）
-    vector<tuple<int, int, int, int>>
-        path_segments; // (prev_r, prev_c, current_r, current_c)
+    // トレント引き寄せ経路構築（最大30ステップ）
+    for (int step = 0; step < MAX_SPIRAL_STEPS; ++step) {
+        vector<pair<int, int>> candidates;
 
-    for (int i = 0; i < N * N; ++i) {
-        int next_r = -1, next_c = -1;
-        double min_dist_sq = 1e18;
-
-        // 次の現在地を決定（花に最も近い空きマス）
-        // ユークリッド距離の2乗で比較
+        // 候補となる次の位置を収集
         for (int j = 0; j < 4; ++j) {
             int nr = current_r + dr[j];
             int nc = current_c + dc[j];
@@ -189,21 +313,73 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
 
             if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
                 current_maze[nr][nc] == '.') {
-                double dist_sq = pow(nr - ti, 2) + pow(nc - tj, 2);
-                if (dist_sq < min_dist_sq) {
-                    min_dist_sq = dist_sq;
-                    next_r = nr;
-                    next_c = nc;
-                }
+                candidates.push_back({nr, nc});
             }
         }
 
-        if (next_r == -1)
+        if (candidates.empty())
             break; // 次に進むマスがない
 
-        // 経路セグメントを記録
-        path_segments.push_back(
-            make_tuple(prev_r, prev_c, current_r, current_c));
+        // 最高優先度のトレントとのユークリッド距離が最も近い候補を選択
+        vector<int> best_candidates;
+        double min_distance_sq = 1e9;
+
+        for (int i = 0; i < candidates.size(); ++i) {
+            int nr = candidates[i].first;
+            int nc = candidates[i].second;
+
+            // 最高優先度のトレント（優先度100）との距離の二乗を計算
+            double min_dist_sq_to_high_priority = 1e9;
+            for (const auto &treant_info : placed_treants) {
+                if (treant_info.second == 100) { // 最高優先度のみ
+                    int tr = treant_info.first.first;
+                    int tc = treant_info.first.second;
+                    double dist_sq = pow(nr - tr, 2) + pow(nc - tc, 2);
+                    min_dist_sq_to_high_priority =
+                        min(min_dist_sq_to_high_priority, dist_sq);
+                }
+            }
+
+            if (min_dist_sq_to_high_priority < min_distance_sq) {
+                min_distance_sq = min_dist_sq_to_high_priority;
+                best_candidates.clear();
+                best_candidates.push_back(i);
+            } else if (abs(min_dist_sq_to_high_priority - min_distance_sq) <
+                       1e-9) {
+                best_candidates.push_back(i);
+            }
+        }
+
+        // 同じ距離の候補が複数ある場合はランダム選択
+        uniform_int_distribution<> candidate_dist(0,
+                                                  best_candidates.size() - 1);
+        int selected_idx = candidate_dist(gen);
+        int best_candidate = best_candidates[selected_idx];
+
+        int next_r = candidates[best_candidate].first;
+        int next_c = candidates[best_candidate].second;
+
+        // 前の現在地から見た4近傍のうち、経路以外のマスにトレントを配置
+        for (int j = 0; j < 4; ++j) {
+            int tr = prev_r + dr[j];
+            int tc = prev_c + dc[j];
+            if (tr >= 0 && tr < N && tc >= 0 && tc < N &&
+                current_maze[tr][tc] == '.' &&
+                (tr != current_r || tc != current_c) &&
+                (tr != next_r || tc != next_c) &&
+                !(tr == adventurer_start_r && tc == adventurer_start_c)) {
+
+                current_maze[tr][tc] = 't';
+                if (calculate_path_length(pi, pj, ti, tj, current_maze) != -1) {
+                    treants_to_place.push_back({tr, tc});
+                    // 新しく設置したトレントを記録（優先度は段階的に下げる）
+                    int new_priority = max(10, 100 - step * 5);
+                    placed_treants.push_back({{tr, tc}, new_priority});
+                } else {
+                    current_maze[tr][tc] = '.'; // 経路が途絶えるので元に戻す
+                }
+            }
+        }
 
         // 現在地を更新
         prev_r = current_r;
@@ -212,47 +388,56 @@ vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
         current_c = next_c;
     }
 
-    // 構築された経路に沿ってトレント配置を行う
-    for (const auto &segment : path_segments) {
-        int seg_prev_r = get<0>(segment);
-        int seg_prev_c = get<1>(segment);
-        int seg_current_r = get<2>(segment);
-        int seg_current_c = get<3>(segment);
+    current_maze = original_maze;
+    return treants_to_place;
+}
 
-        // この経路セグメントの次の現在地を探す
-        int seg_next_r = -1, seg_next_c = -1;
-        for (const auto &next_segment : path_segments) {
-            if (get<0>(next_segment) == seg_current_r &&
-                get<1>(next_segment) == seg_current_c) {
-                seg_next_r = get<2>(next_segment);
-                seg_next_c = get<3>(next_segment);
-                break;
-            }
+// 新しい確率的渦巻きアルゴリズム
+vector<pair<int, int>> create_strategic_treants(int pi, int pj, int open_dir,
+                                                int rotation_dir) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> open_dir_dist(0, 3);
+
+    vector<pair<int, int>> best_treants;
+    int best_score = -1e9;
+
+    for (int trial = 0; trial < SPIRAL_TRIALS; ++trial) {
+        // ランダムに開放方向を選択
+        int random_open_dir = open_dir_dist(gen);
+
+        vector<pair<int, int>> treants =
+            create_single_spiral_trial(pi, pj, random_open_dir, gen);
+
+        if (treants.empty())
+            continue;
+
+        // 評価値計算のための仮迷路構築
+        vector<string> temp_maze = current_maze;
+        for (const auto &p : treants) {
+            temp_maze[p.first][p.second] = 't';
         }
 
-        // 現在地から見た4近傍のうち、前と次の現在地以外のマスにトレントを配置
-        for (int j = 0; j < 4; ++j) {
-            int tr = seg_current_r + dr[j];
-            int tc = seg_current_c + dc[j];
-            if (tr >= 0 && tr < N && tc >= 0 && tc < N &&
-                current_maze[tr][tc] == '.' &&
-                (tr != seg_prev_r || tc != seg_prev_c) &&
-                (seg_next_r == -1 || tr != seg_next_r || tc != seg_next_c) &&
-                !(tr == adventurer_start_r &&
-                  tc == adventurer_start_c)) { // 冒険者の初期位置を除外
+        int path_length = calculate_path_length(pi, pj, ti, tj, temp_maze);
+        if (path_length == -1)
+            continue; // 到達不能な場合はスキップ
 
-                current_maze[tr][tc] = 't';
-                if (calculate_path_length(pi, pj, ti, tj, current_maze) != -1) {
-                    treants_to_place.push_back({tr, tc});
-                } else {
-                    current_maze[tr][tc] = '.'; // 経路が途絶えるので元に戻す
-                }
-            }
+        int unreachable_count = count_unreachable_cells(temp_maze, 0, N / 2);
+        double avg_distance_to_flower =
+            calculate_average_distance_to_flower(pi, pj, temp_maze);
+
+        // 評価値計算: 経路長*2 - 到達不能*1 + 花からの平均距離*2
+        int score = path_length * PATH_LENGTH_WEIGHT -
+                    unreachable_count * UNREACHABLE_PENALTY +
+                    (int)(avg_distance_to_flower * DISTANCE_TO_FLOWER_WEIGHT);
+
+        if (score > best_score) {
+            best_score = score;
+            best_treants = treants;
         }
     }
 
-    current_maze = original_maze;
-    return treants_to_place;
+    return best_treants;
 }
 
 // 指定マスから上下左右それぞれの方向に指定距離以内に木（トレントを含む）があるかチェック
@@ -337,39 +522,19 @@ void solve_first_turn(int pi, int pj, int /* n */,
 
     vector<string> original_maze = current_maze;
     vector<pair<int, int>> best_treants;
-    int max_path_length = -1;
 
-    // 8通りの戦略をシミュレート (4方向 x 2回転方向)
-    for (int open_dir = 0; open_dir < 4; ++open_dir) {
-        // rotation_dirはここでは使わないが、将来的な拡張のために残しておく
-        for (int rotation_dir = 0; rotation_dir < 2; ++rotation_dir) {
-            current_maze = original_maze;
-            vector<pair<int, int>> treants =
-                create_strategic_treants(pi, pj, open_dir, rotation_dir);
+    // 1回だけ確率的渦巻きを実行（内部で1回試行）
+    current_maze = original_maze;
+    best_treants = create_strategic_treants(pi, pj, 0, 0);
 
-            // 評価のため、トレントを仮に配置した迷路を構築
-            vector<string> temp_maze = original_maze;
-            for (const auto &p : treants)
-                temp_maze[p.first][p.second] = 't';
+    // 視界制限のための追加トレント配置（一時的に無効化）
+    // vector<pair<int, int>> additional_treants =
+    //     place_additional_vision_limiting_treants(pi, pj, best_treants);
 
-            int current_path_length =
-                calculate_path_length(pi, pj, ti, tj, temp_maze);
-
-            if (current_path_length > max_path_length) {
-                max_path_length = current_path_length;
-                best_treants = treants;
-            }
-        }
-    }
-
-    // 視界制限のための追加トレント配置
-    vector<pair<int, int>> additional_treants =
-        place_additional_vision_limiting_treants(pi, pj, best_treants);
-
-    // 最終的なトレント配置を結合
+    // 最終的なトレント配置
     vector<pair<int, int>> final_treants = best_treants;
-    final_treants.insert(final_treants.end(), additional_treants.begin(),
-                         additional_treants.end());
+    // final_treants.insert(final_treants.end(), additional_treants.begin(),
+    //                      additional_treants.end());
 
     // 出力
     cout << final_treants.size();
