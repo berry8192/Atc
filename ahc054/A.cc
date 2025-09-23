@@ -34,12 +34,44 @@ const int VISION_LIMIT_DISTANCE = 2;
 const int MAX_SPIRAL_STEPS = 30;
 
 // 渦巻き試行回数
-const int SPIRAL_TRIALS = 1000;
+const int SPIRAL_TRIALS = 100;
 
 // 評価値の重み
 const int PATH_LENGTH_WEIGHT = 2;
 const int UNREACHABLE_PENALTY = 1;
 const int DISTANCE_TO_FLOWER_WEIGHT = 5;
+
+// 機械的配置モード用の定数
+const int MECHANICAL_PLACEMENT_INTERVAL = 3; // デフォルトのトレント配置間隔
+const double TREE_DENSITY_THRESHOLD = 1.0;   // 木の密度閾値
+const bool USE_MECHANICAL_MODE = true; // trueで機械的モード、falseで既存モード
+
+// サイクル履歴を記録する構造体
+struct CycleHistory {
+    vector<pair<int, int>> treants;   // そのサイクルで配置されたトレント
+    vector<pair<int, int>> corridors; // そのサイクルで確保された通路
+};
+
+// デバッグ用：サイクル履歴を表示する関数
+void debug_print_cycle_history(const vector<CycleHistory> &cycle_history) {
+    cerr << "=== Cycle History Debug ===" << endl;
+    for (int i = 0; i < cycle_history.size(); ++i) {
+        cerr << "Cycle " << i << ":" << endl;
+
+        cerr << "  Treants (" << cycle_history[i].treants.size() << "): ";
+        for (const auto &treant : cycle_history[i].treants) {
+            cerr << "(" << treant.first << "," << treant.second << ") ";
+        }
+        cerr << endl;
+
+        cerr << "  Corridors (" << cycle_history[i].corridors.size() << "): ";
+        for (const auto &corridor : cycle_history[i].corridors) {
+            cerr << "(" << corridor.first << "," << corridor.second << ") ";
+        }
+        cerr << endl;
+    }
+    cerr << "=========================" << endl;
+}
 
 // DSU (Disjoint Set Union) クラス
 class DSU {
@@ -638,6 +670,134 @@ bool increases_unreachable_area(int r, int c, const vector<string> &maze) {
     return after_unreachable > before_unreachable;
 }
 
+// 木の密度を計算する関数
+double calculate_tree_density() {
+    int tree_count = 0;
+    int total_cells = N * N;
+
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            if (current_maze[i][j] == 'T') {
+                tree_count++;
+            }
+        }
+    }
+
+    double density = (double)tree_count / total_cells;
+    cerr << "Tree density: " << tree_count << "/" << total_cells << " = "
+         << density << endl;
+    return density;
+}
+
+// 機械的な固定パターンでトレント配置を行う関数（斜め線状）
+vector<pair<int, int>>
+place_mechanical_treants(int pi, int pj,
+                         const vector<pair<int, int>> &existing_treants,
+                         int placement_interval) {
+    vector<pair<int, int>> placed_treants;
+    vector<string> temp_maze = current_maze;
+
+    // 冒険者の初期位置（森の入口）
+    int adventurer_start_r = 0;
+    int adventurer_start_c = N / 2;
+
+    // 既存のトレントを迷路に反映
+    for (const auto &p : existing_treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    // DSUを初期化
+    WallDSU wall_dsu = initialize_wall_dsu(current_maze, existing_treants);
+
+    cerr << "Starting mechanical diagonal treant placement with interval "
+         << placement_interval << "..." << endl;
+
+    // 斜め線状に配置（左上から右下へ）
+    for (int diag = 1; diag < N + N - 2; diag += placement_interval) {
+        for (int r = 1; r < N - 1; ++r) {
+            int c = diag - r + 1;
+
+            // 範囲チェック
+            if (c <= 0 || c >= N - 1)
+                continue;
+
+            cerr << "Trying to place treant at (" << r << "," << c << ")"
+                 << endl;
+
+            // 既にトレントが配置されている場合はスキップ
+            if (temp_maze[r][c] != '.') {
+                cerr << "  Skipped - not empty space" << endl;
+                continue;
+            }
+
+            // 冒険者の初期位置は避ける
+            if (r == adventurer_start_r && c == adventurer_start_c) {
+                cerr << "  Skipped - adventurer start position" << endl;
+                continue;
+            }
+
+            // 外周の木との8近傍隣接チェック
+            bool adjacent_to_boundary = false;
+            for (int d = 0; d < 8; ++d) {
+                int nr = r + dr8[d];
+                int nc = c + dc8[d];
+                if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                    (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
+                    if (wall_dsu.is_connected_to_boundary(
+                            coord_to_wall_index(nr, nc))) {
+                        adjacent_to_boundary = true;
+                        break;
+                    }
+                }
+            }
+
+            if (adjacent_to_boundary) {
+                cerr << "  Skipped - adjacent to boundary DSU" << endl;
+                continue;
+            }
+
+            // 到達不能エリア増加チェック
+            if (increases_unreachable_area(r, c, temp_maze)) {
+                cerr << "  Skipped - increases unreachable area" << endl;
+                continue;
+            }
+
+            // トレント配置を試す
+            temp_maze[r][c] = 't';
+
+            // 経路が確保されているかチェック
+            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+                placed_treants.push_back({r, c});
+
+                // DSUに新しいトレントを追加
+                int new_idx = coord_to_wall_index(r, c);
+                for (int d = 0; d < 8; ++d) {
+                    int nr = r + dr8[d];
+                    int nc = c + dc8[d];
+                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                        (temp_maze[nr][nc] == 'T' ||
+                         temp_maze[nr][nc] == 't')) {
+                        wall_dsu.merge(new_idx, coord_to_wall_index(nr, nc));
+                    }
+                }
+
+                cerr << "  SUCCESS - Placed treant at (" << r << "," << c << ")"
+                     << endl;
+            } else {
+                // 経路が途絶える場合は元に戻す
+                temp_maze[r][c] = '.';
+                cerr << "  FAILED - Path blocked, treant placement cancelled"
+                     << endl;
+            }
+        }
+    }
+
+    cerr << "Mechanical diagonal placement completed. Total treants placed: "
+         << placed_treants.size() << endl;
+
+    return placed_treants;
+}
+
 // 通路確保処理
 void add_corridor_cells(int treant_r, int treant_c,
                         vector<pair<int, int>> &corridor_cells,
@@ -671,17 +831,187 @@ void add_corridor_cells(int treant_r, int treant_c,
     }
 }
 
-// トレント設置処理（未実装）
-bool place_treant_next_to_corridor(const vector<pair<int, int>> &corridor_cells,
+// トレント設置処理
+bool place_treant_next_to_corridor(vector<pair<int, int>> &corridor_cells,
                                    vector<string> &temp_maze,
                                    vector<pair<int, int>> &additional_treants,
-                                   WallDSU &wall_dsu, int pi, int pj) {
-    // TODO: 実装予定
-    // 通路リストを右上から順にソートし、各通路の右にトレント設置を試行
-    return false;
+                                   WallDSU &wall_dsu, int pi, int pj,
+                                   vector<CycleHistory> &cycle_history) {
+    // 冒険者の初期位置（森の入口）
+    int adventurer_start_r = 0;
+    int adventurer_start_c = N / 2;
+
+    vector<pair<int, int>> new_corridors;
+    vector<pair<int, int>> new_treants;
+    bool placed_any_treant = false;
+
+    // 前のサイクルのトレント位置を取得
+    vector<pair<int, int>> previous_treants;
+    if (!cycle_history.empty()) {
+        previous_treants = cycle_history.back().treants;
+    }
+
+    // すべての通路マスに対してトレント設置を試行
+    for (const auto &corridor : corridor_cells) {
+        int corridor_r = corridor.first;
+        int corridor_c = corridor.second;
+
+        // 通路マスの右と下、さらに右のマスにトレント設置を試行
+        vector<pair<int, int>> treant_offsets = {
+            {0, 1}, // 右
+            {1, 0}, // 下
+            {0, 2}  // さらに右（設置失敗時の代替位置）
+        };
+
+        for (const auto &offset : treant_offsets) {
+            int treant_r = corridor_r + offset.first;
+            int treant_c = corridor_c + offset.second;
+
+            // 範囲チェック
+            if (treant_r >= N - 1 || treant_c >= N - 1 || treant_r <= 0 ||
+                treant_c <= 0)
+                continue;
+
+            // 既にトレントが配置されている場合はスキップ
+            if (temp_maze[treant_r][treant_c] != '.')
+                continue;
+
+            // 冒険者の初期位置は避ける
+            if (treant_r == adventurer_start_r &&
+                treant_c == adventurer_start_c)
+                continue;
+
+            // 通路マスにはトレントを設置しない（全履歴をチェック）
+            bool is_corridor_cell = false;
+            for (const auto &cycle : cycle_history) {
+                for (const auto &corridor_pos : cycle.corridors) {
+                    if (corridor_pos.first == treant_r &&
+                        corridor_pos.second == treant_c) {
+                        is_corridor_cell = true;
+                        break;
+                    }
+                }
+                if (is_corridor_cell)
+                    break;
+            }
+            // 現在のサイクルの通路もチェック
+            for (const auto &corridor_pos : corridor_cells) {
+                if (corridor_pos.first == treant_r &&
+                    corridor_pos.second == treant_c) {
+                    is_corridor_cell = true;
+                    break;
+                }
+            }
+            if (is_corridor_cell)
+                continue;
+
+            // 前のサイクルのトレントとの8近傍隣接チェック
+            bool adjacent_to_previous_treant = false;
+            for (const auto &prev_treant : previous_treants) {
+                for (int d = 0; d < 8; ++d) {
+                    int check_r = prev_treant.first + dr8[d];
+                    int check_c = prev_treant.second + dc8[d];
+                    if (check_r == treant_r && check_c == treant_c) {
+                        adjacent_to_previous_treant = true;
+                        break;
+                    }
+                }
+                if (adjacent_to_previous_treant)
+                    break;
+            }
+            if (adjacent_to_previous_treant) {
+                cerr << "Skipping treant at (" << treant_r << "," << treant_c
+                     << ") - adjacent to previous cycle treant" << endl;
+                continue;
+            }
+
+            // 外周の木との8近傍隣接チェック
+            bool adjacent_to_boundary = false;
+            for (int d = 0; d < 8; ++d) {
+                int nr = treant_r + dr8[d];
+                int nc = treant_c + dc8[d];
+                if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                    (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
+                    if (wall_dsu.is_connected_to_boundary(
+                            coord_to_wall_index(nr, nc))) {
+                        adjacent_to_boundary = true;
+                        break;
+                    }
+                }
+            }
+
+            // 外周に隣接する場合はスキップ
+            if (adjacent_to_boundary)
+                continue;
+
+            // 到達不能エリア増加チェック
+            if (increases_unreachable_area(treant_r, treant_c, temp_maze))
+                continue;
+
+            // トレント配置を試す
+            temp_maze[treant_r][treant_c] = 't';
+
+            // 経路が確保されているかチェック
+            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+                additional_treants.push_back({treant_r, treant_c});
+                new_treants.push_back({treant_r, treant_c});
+                placed_any_treant = true;
+
+                // DSUに新しいトレントを追加
+                int new_idx = coord_to_wall_index(treant_r, treant_c);
+                for (int d = 0; d < 8; ++d) {
+                    int nr = treant_r + dr8[d];
+                    int nc = treant_c + dc8[d];
+                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                        (temp_maze[nr][nc] == 'T' ||
+                         temp_maze[nr][nc] == 't')) {
+                        wall_dsu.merge(new_idx, coord_to_wall_index(nr, nc));
+                    }
+                }
+
+                // 新たに配置したトレントの周囲に通路を追加
+                add_corridor_cells(treant_r, treant_c, new_corridors,
+                                   temp_maze);
+
+                cerr << "Placed treant at (" << treant_r << "," << treant_c
+                     << ") next to corridor (" << corridor_r << ","
+                     << corridor_c << ") using offset (" << offset.first << ","
+                     << offset.second << ")" << endl;
+
+                // 一つのトレント設置に成功したら、この通路マスからの設置は完了
+                break;
+
+            } else {
+                // 経路が途絶える場合は元に戻す
+                temp_maze[treant_r][treant_c] = '.';
+                cerr << "Failed to place treant at (" << treant_r << ","
+                     << treant_c << ") - path blocked" << endl;
+            }
+        }
+    }
+
+    // 新しい通路をリストに追加
+    corridor_cells.insert(corridor_cells.end(), new_corridors.begin(),
+                          new_corridors.end());
+
+    // サイクル履歴に記録
+    if (placed_any_treant || !new_corridors.empty()) {
+        CycleHistory current_cycle;
+        current_cycle.treants = new_treants;
+        current_cycle.corridors = new_corridors;
+        cycle_history.push_back(current_cycle);
+
+        // デバッグ出力
+        cerr << "Added new cycle. Current cycle count: " << cycle_history.size()
+             << endl;
+        cerr << "New treants: " << new_treants.size()
+             << ", New corridors: " << new_corridors.size() << endl;
+    }
+
+    return placed_any_treant;
 }
 
-// 斜め通路を確保するための追加トレント配置
+// 斜め通路を確保するための追加トレント配置（履歴管理版）
 vector<pair<int, int>> place_diagonal_corridor_treants(
     int pi, int pj, const vector<pair<int, int>> &existing_treants) {
     vector<pair<int, int>> additional_treants;
@@ -701,6 +1031,9 @@ vector<pair<int, int>> place_diagonal_corridor_treants(
 
     // 通路として確保するマスのリスト
     vector<pair<int, int>> corridor_cells;
+
+    // サイクル履歴を記録する配列
+    vector<CycleHistory> cycle_history;
 
     // ステップ1: (1,1)にトレント設置（1回目のトレント設置処理）
     int start_r = 1, start_c = 1;
@@ -744,18 +1077,43 @@ vector<pair<int, int>> place_diagonal_corridor_treants(
                 // ステップ2: 通路確保処理
                 add_corridor_cells(start_r, start_c, corridor_cells, temp_maze);
 
-                // ステップ3: 以降のトレント設置処理（未実装）
+                // 初期サイクル履歴を記録
+                CycleHistory initial_cycle;
+                initial_cycle.treants.push_back({start_r, start_c});
+                initial_cycle.corridors = corridor_cells;
+                cycle_history.push_back(initial_cycle);
+
+                // デバッグ出力
+                cerr << "Initial cycle created:" << endl;
+                cerr << "  Initial treant: (" << start_r << "," << start_c
+                     << ")" << endl;
+                cerr << "  Initial corridors: " << corridor_cells.size()
+                     << endl;
+
+                // ステップ3: 以降のトレント設置処理
                 int max_iterations = N;
                 for (int iteration = 0;
                      iteration < max_iterations && !corridor_cells.empty();
                      ++iteration) {
+
+                    cerr << "Starting iteration " << iteration << " with "
+                         << corridor_cells.size() << " corridor cells" << endl;
+
                     bool placed = place_treant_next_to_corridor(
                         corridor_cells, temp_maze, additional_treants, wall_dsu,
-                        pi, pj);
+                        pi, pj, cycle_history);
+
+                    cerr << "Iteration " << iteration
+                         << " result: " << (placed ? "SUCCESS" : "FAILED")
+                         << endl;
+
                     if (!placed) {
                         break;
                     }
                 }
+
+                // 最終的なサイクル履歴をデバッグ出力
+                debug_print_cycle_history(cycle_history);
 
             } else {
                 temp_maze[start_r][start_c] =
@@ -777,26 +1135,77 @@ void solve_first_turn(int pi, int pj, int /* n */,
     vector<string> original_maze = current_maze;
     vector<pair<int, int>> best_treants;
 
-    // 1回だけ確率的渦巻きを実行（内部で1000回試行）
-    current_maze = original_maze;
-    best_treants = create_strategic_treants(pi, pj, 0, 0);
+    // 木の密度を計算して配置間隔を決定
+    double tree_density = calculate_tree_density();
+    int dynamic_interval = (tree_density > TREE_DENSITY_THRESHOLD)
+                               ? 4
+                               : MECHANICAL_PLACEMENT_INTERVAL;
+    cerr << "Using placement interval: " << dynamic_interval
+         << " (density: " << tree_density
+         << ", threshold: " << TREE_DENSITY_THRESHOLD << ")" << endl;
 
-    // 斜め通路のための追加トレント配置
-    vector<pair<int, int>> additional_treants =
-        place_diagonal_corridor_treants(pi, pj, best_treants);
+    if (USE_MECHANICAL_MODE) {
+        cerr << "Using mechanical placement mode with spiral first" << endl;
 
-    // 最終的なトレント配置
-    vector<pair<int, int>> final_treants = best_treants;
-    final_treants.insert(final_treants.end(), additional_treants.begin(),
-                         additional_treants.end());
+        // 1. まず渦巻きアルゴリズムを実行
+        current_maze = original_maze;
+        best_treants = create_strategic_treants(pi, pj, 0, 0);
+        cerr << "Spiral placement completed. Treants placed: "
+             << best_treants.size() << endl;
 
-    // 出力
-    cout << final_treants.size();
-    for (const auto &p : final_treants) {
-        cout << " " << p.first << " " << p.second;
-        current_maze[p.first][p.second] = 'T'; // 確定
+        // 2. 機械的配置（斜め線状）を追加（動的間隔を使用）
+        cerr << "Adding mechanical diagonal treants after spiral placement..."
+             << endl;
+        vector<pair<int, int>> mechanical_treants =
+            place_mechanical_treants(pi, pj, best_treants, dynamic_interval);
+
+        // 機械的配置のトレントを追加
+        for (const auto &p : mechanical_treants) {
+            best_treants.push_back(p);
+            current_maze[p.first][p.second] = 't';
+            cerr << "Added mechanical treant at (" << p.first << "," << p.second
+                 << ")" << endl;
+        }
+
+        // 3. 斜め通路のための追加トレント配置
+        vector<pair<int, int>> additional_treants =
+            place_diagonal_corridor_treants(pi, pj, best_treants);
+
+        // 最終的なトレント配置
+        vector<pair<int, int>> final_treants = best_treants;
+        final_treants.insert(final_treants.end(), additional_treants.begin(),
+                             additional_treants.end());
+
+        // 出力
+        cout << final_treants.size();
+        for (const auto &p : final_treants) {
+            cout << " " << p.first << " " << p.second;
+            current_maze[p.first][p.second] = 'T'; // 確定
+        }
+        cout << endl;
+    } else {
+        cerr << "Using strategic placement mode" << endl;
+        // 1回だけ確率的渦巻きを実行（内部で1000回試行）
+        current_maze = original_maze;
+        best_treants = create_strategic_treants(pi, pj, 0, 0);
+
+        // 斜め通路のための追加トレント配置
+        vector<pair<int, int>> additional_treants =
+            place_diagonal_corridor_treants(pi, pj, best_treants);
+
+        // 最終的なトレント配置
+        vector<pair<int, int>> final_treants = best_treants;
+        final_treants.insert(final_treants.end(), additional_treants.begin(),
+                             additional_treants.end());
+
+        // 出力
+        cout << final_treants.size();
+        for (const auto &p : final_treants) {
+            cout << " " << p.first << " " << p.second;
+            current_maze[p.first][p.second] = 'T'; // 確定
+        }
+        cout << endl;
     }
-    cout << endl;
 
     // 打ち切り出力を行ってプログラム終了
     cout << -1 << endl;
