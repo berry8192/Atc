@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iostream>
 #include <queue>
@@ -45,6 +46,29 @@ const int DISTANCE_TO_FLOWER_WEIGHT = 5;
 const int MECHANICAL_PLACEMENT_INTERVAL = 3; // デフォルトのトレント配置間隔
 const double TREE_DENSITY_THRESHOLD = 1.0;   // 木の密度閾値
 const bool USE_MECHANICAL_MODE = true; // trueで機械的モード、falseで既存モード
+
+// 焼きなまし用の定数
+const int ANNEALING_ITERATIONS = 10000;   // 焼きなまし反復回数
+const double INITIAL_TEMPERATURE = 100.0; // 初期温度
+const double FINAL_TEMPERATURE = 1.0;     // 最終温度
+const double TIME_LIMIT = 1900.0;         // 制限時間（ミリ秒）
+
+struct Timer {
+    chrono::system_clock::time_point start;
+
+    Timer() { start = chrono::system_clock::now(); }
+    double progress() {
+        chrono::system_clock::time_point current = chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+                   .count() /
+               TIME_LIMIT;
+    }
+    double elapsed() {
+        chrono::system_clock::time_point current = chrono::system_clock::now();
+        return chrono::duration_cast<chrono::milliseconds>(current - start)
+            .count();
+    }
+};
 
 // サイクル履歴を記録する構造体
 struct CycleHistory {
@@ -1125,9 +1149,335 @@ vector<pair<int, int>> place_diagonal_corridor_treants(
     return additional_treants;
 }
 
+// 焼きなまし用の評価関数
+int evaluate_treant_configuration(int pi, int pj,
+                                  const vector<pair<int, int>> &treants) {
+    vector<string> temp_maze = current_maze;
+
+    // トレントを配置
+    for (const auto &p : treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    // 経路長を計算
+    int path_length = calculate_path_length(pi, pj, ti, tj, temp_maze);
+    if (path_length == -1) {
+        return -1000000; // 到達不能の場合は非常に低いスコア
+    }
+
+    // 到達不能地点数を計算
+    int unreachable_count = count_unreachable_cells(temp_maze, 0, N / 2);
+
+    // 花からの平均距離を計算
+    double avg_distance_to_flower =
+        calculate_average_distance_to_flower(pi, pj, temp_maze);
+
+    // 評価値計算
+    int score = path_length * PATH_LENGTH_WEIGHT -
+                unreachable_count * UNREACHABLE_PENALTY +
+                (int)(avg_distance_to_flower * DISTANCE_TO_FLOWER_WEIGHT);
+
+    return score;
+}
+
+// トレントの8近傍移動を試行
+pair<int, int> get_neighbor_position(int r, int c, mt19937 &gen) {
+    uniform_int_distribution<> dir_dist(0, 7);
+    int dir = dir_dist(gen);
+
+    int nr = r + dr8[dir];
+    int nc = c + dc8[dir];
+
+    // 範囲チェック
+    if (nr <= 0 || nr >= N - 1 || nc <= 0 || nc >= N - 1) {
+        return {r, c}; // 移動できない場合は元の位置を返す
+    }
+
+    return {nr, nc};
+}
+
+// 有効なマス（外周を避ける）かチェック
+bool is_valid_position(int r, int c) {
+    // 外周1マスを避ける
+    if (r <= 0 || r >= N - 1 || c <= 0 || c >= N - 1) {
+        return false;
+    }
+
+    // 冒険者の初期位置は避ける
+    if (r == 0 && c == N / 2) {
+        return false;
+    }
+
+    return true;
+}
+
+// 8近傍にあるトレント・木の数をカウント
+int count_adjacent_treants_and_trees(int r, int c, const vector<string> &maze) {
+    int count = 0;
+    for (int d = 0; d < 8; ++d) {
+        int nr = r + dr8[d];
+        int nc = c + dc8[d];
+        if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
+            if (maze[nr][nc] == 'T' || maze[nr][nc] == 't') {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+// トレント削除操作
+bool try_remove_treant(vector<pair<int, int>> &treants, int pi, int pj,
+                       mt19937 &gen) {
+    if (treants.empty())
+        return false;
+
+    // 有効な位置にあるトレントのみを削除候補とする
+    vector<int> valid_indices;
+    for (int i = 0; i < treants.size(); ++i) {
+        int r = treants[i].first;
+        int c = treants[i].second;
+        if (is_valid_position(r, c)) {
+            valid_indices.push_back(i);
+        }
+    }
+
+    if (valid_indices.empty())
+        return false;
+
+    // ランダムに選択
+    uniform_int_distribution<> idx_dist(0, valid_indices.size() - 1);
+    int selected_idx = valid_indices[idx_dist(gen)];
+
+    int r = treants[selected_idx].first;
+    int c = treants[selected_idx].second;
+
+    // 仮の迷路を作成してチェック
+    vector<string> temp_maze = current_maze;
+    for (const auto &p : treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    // 8近傍のトレント・木の数をチェック
+    int adjacent_count = count_adjacent_treants_and_trees(r, c, temp_maze);
+    if (adjacent_count >= 3) {
+        // トレントを削除
+        temp_maze[r][c] = '.';
+
+        // 連結性をチェック
+        if (check_connectivity(temp_maze) &&
+            calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+            treants.erase(treants.begin() + selected_idx);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+// トレント追加操作
+bool try_add_treant(vector<pair<int, int>> &treants, int pi, int pj,
+                    mt19937 &gen) {
+    // 有効な空きマスを収集
+    vector<pair<int, int>> valid_empty_positions;
+
+    // 仮の迷路を作成
+    vector<string> temp_maze = current_maze;
+    for (const auto &p : treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    for (int r = 1; r < N - 1; ++r) {
+        for (int c = 1; c < N - 1; ++c) {
+            if (is_valid_position(r, c) && temp_maze[r][c] == '.') {
+                // 8近傍のトレント・木の数をチェック
+                int adjacent_count =
+                    count_adjacent_treants_and_trees(r, c, temp_maze);
+                if (adjacent_count <= 2) {
+                    valid_empty_positions.push_back({r, c});
+                }
+            }
+        }
+    }
+
+    if (valid_empty_positions.empty())
+        return false;
+
+    // ランダムに選択
+    uniform_int_distribution<> pos_dist(0, valid_empty_positions.size() - 1);
+    auto selected_pos = valid_empty_positions[pos_dist(gen)];
+
+    int r = selected_pos.first;
+    int c = selected_pos.second;
+
+    // トレントを追加
+    temp_maze[r][c] = 't';
+
+    // 連結性をチェック
+    if (check_connectivity(temp_maze) &&
+        calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+        treants.push_back({r, c});
+        return true;
+    }
+
+    return false;
+}
+
+// 焼きなましアルゴリズム（時間制限対応版）
+vector<pair<int, int>>
+simulated_annealing(int pi, int pj, vector<pair<int, int>> initial_treants,
+                    Timer &timer) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_real_distribution<> prob_dist(0.0, 1.0);
+    uniform_int_distribution<> operation_dist(0,
+                                              2); // 0: 移動, 1: 削除, 2: 追加
+
+    vector<pair<int, int>> current_treants = initial_treants;
+    vector<pair<int, int>> best_treants = initial_treants;
+
+    int current_score = evaluate_treant_configuration(pi, pj, current_treants);
+    int best_score = current_score;
+
+    cerr << "Starting simulated annealing with initial score: " << current_score
+         << endl;
+
+    int iteration = 0;
+    int move_operations = 0, remove_operations = 0, add_operations = 0;
+
+    while (timer.progress() < 0.95) { // 95%の時間まで実行
+        // 温度計算（進捗に基づく）
+        double progress = timer.progress();
+        double temperature =
+            INITIAL_TEMPERATURE *
+            pow(FINAL_TEMPERATURE / INITIAL_TEMPERATURE, progress);
+
+        bool operation_success = false;
+        int new_score = current_score;
+        vector<pair<int, int>> backup_treants = current_treants;
+
+        // 操作を選択
+        int operation = operation_dist(gen);
+
+        if (operation == 0 && !current_treants.empty()) {
+            // 移動操作
+            uniform_int_distribution<> treant_dist(0,
+                                                   current_treants.size() - 1);
+            int treant_idx = treant_dist(gen);
+
+            // 元の位置を保存
+            pair<int, int> old_pos = current_treants[treant_idx];
+
+            // 新しい位置を生成
+            pair<int, int> new_pos =
+                get_neighbor_position(old_pos.first, old_pos.second, gen);
+
+            // 有効な位置かチェック
+            if (is_valid_position(new_pos.first, new_pos.second)) {
+                // 新しい位置が既存のトレントと重複していないかチェック
+                bool conflict = false;
+                for (int i = 0; i < current_treants.size(); ++i) {
+                    if (i != treant_idx && current_treants[i] == new_pos) {
+                        conflict = true;
+                        break;
+                    }
+                }
+
+                // 新しい位置が空きマスかチェック
+                if (!conflict &&
+                    current_maze[new_pos.first][new_pos.second] == '.') {
+                    // 一時的に移動
+                    current_treants[treant_idx] = new_pos;
+
+                    // 新しいスコアを計算
+                    new_score =
+                        evaluate_treant_configuration(pi, pj, current_treants);
+
+                    if (new_score > -1000000) { // 到達可能な場合のみ
+                        operation_success = true;
+                        move_operations++;
+                    }
+                }
+            }
+        } else if (operation == 1) {
+            // 削除操作
+            if (try_remove_treant(current_treants, pi, pj, gen)) {
+                new_score =
+                    evaluate_treant_configuration(pi, pj, current_treants);
+                if (new_score > -1000000) {
+                    operation_success = true;
+                    remove_operations++;
+                }
+            }
+        } else if (operation == 2) {
+            // 追加操作
+            if (try_add_treant(current_treants, pi, pj, gen)) {
+                new_score =
+                    evaluate_treant_configuration(pi, pj, current_treants);
+                if (new_score > -1000000) {
+                    operation_success = true;
+                    add_operations++;
+                }
+            }
+        }
+
+        if (operation_success) {
+            // 受け入れ判定
+            bool accept = false;
+            if (new_score > current_score) {
+                accept = true; // より良いスコアなら受け入れ
+            } else {
+                double prob = exp((new_score - current_score) / temperature);
+                if (prob_dist(gen) < prob) {
+                    accept = true;
+                }
+            }
+
+            if (accept) {
+                current_score = new_score;
+                if (new_score > best_score) {
+                    best_score = new_score;
+                    best_treants = current_treants;
+                    cerr << "New best score at iteration " << iteration
+                         << " (time: " << timer.elapsed()
+                         << "ms): " << best_score << endl;
+                }
+            } else {
+                // 受け入れない場合は元に戻す
+                current_treants = backup_treants;
+            }
+        } else {
+            // 操作失敗時は元に戻す
+            current_treants = backup_treants;
+        }
+
+        // 進捗表示
+        if (iteration % 1000 == 0) {
+            cerr << "Annealing iteration " << iteration
+                 << ", time: " << timer.elapsed() << "ms"
+                 << ", temperature: " << temperature
+                 << ", current score: " << current_score
+                 << ", best score: " << best_score
+                 << ", treants: " << current_treants.size() << endl;
+        }
+
+        iteration++;
+    }
+
+    cerr << "Simulated annealing completed after " << iteration
+         << " iterations in " << timer.elapsed()
+         << "ms. Final best score: " << best_score << endl;
+    cerr << "Operations - Move: " << move_operations
+         << ", Remove: " << remove_operations << ", Add: " << add_operations
+         << endl;
+    return best_treants;
+}
+
 // 最初のターンの処理
 void solve_first_turn(int pi, int pj, int /* n */,
                       const vector<pair<int, int>> &newly_confirmed) {
+    Timer timer; // タイマー開始
+
     for (const auto &p : newly_confirmed) {
         confirmed[p.first][p.second] = true;
     }
@@ -1151,30 +1501,68 @@ void solve_first_turn(int pi, int pj, int /* n */,
         current_maze = original_maze;
         best_treants = create_strategic_treants(pi, pj, 0, 0);
         cerr << "Spiral placement completed. Treants placed: "
-             << best_treants.size() << endl;
-
-        // 2. 機械的配置（斜め線状）を追加（動的間隔を使用）
-        cerr << "Adding mechanical diagonal treants after spiral placement..."
+             << best_treants.size() << " (time: " << timer.elapsed() << "ms)"
              << endl;
-        vector<pair<int, int>> mechanical_treants =
-            place_mechanical_treants(pi, pj, best_treants, dynamic_interval);
 
-        // 機械的配置のトレントを追加
-        for (const auto &p : mechanical_treants) {
-            best_treants.push_back(p);
-            current_maze[p.first][p.second] = 't';
-            cerr << "Added mechanical treant at (" << p.first << "," << p.second
-                 << ")" << endl;
+        // 時間制限チェック
+        if (timer.progress() > 0.8) {
+            cerr << "Time limit approaching, skipping mechanical placement and "
+                    "annealing"
+                 << endl;
+        } else {
+            // 2. 機械的配置（斜め線状）を追加（動的間隔を使用）
+            cerr << "Adding mechanical diagonal treants after spiral "
+                    "placement..."
+                 << endl;
+            vector<pair<int, int>> mechanical_treants =
+                place_mechanical_treants(pi, pj, best_treants,
+                                         dynamic_interval);
+
+            // 機械的配置のトレントを追加
+            for (const auto &p : mechanical_treants) {
+                best_treants.push_back(p);
+                current_maze[p.first][p.second] = 't';
+                cerr << "Added mechanical treant at (" << p.first << ","
+                     << p.second << ")" << endl;
+            }
+            cerr << "Mechanical placement completed (time: " << timer.elapsed()
+                 << "ms)" << endl;
+
+            // 時間制限チェック
+            if (timer.progress() > 0.6) {
+                cerr << "Time limit approaching, skipping diagonal corridor "
+                        "placement and annealing"
+                     << endl;
+            } else {
+                // 3. 斜め通路のための追加トレント配置
+                vector<pair<int, int>> additional_treants =
+                    place_diagonal_corridor_treants(pi, pj, best_treants);
+
+                // 追加配置のトレントを含める
+                best_treants.insert(best_treants.end(),
+                                    additional_treants.begin(),
+                                    additional_treants.end());
+                cerr << "Diagonal corridor placement completed (time: "
+                     << timer.elapsed() << "ms)" << endl;
+
+                // 時間制限チェック
+                if (timer.progress() > 0.4) {
+                    cerr << "Time limit approaching, skipping annealing"
+                         << endl;
+                } else {
+                    // 4. 焼きなましによる最適化
+                    cerr << "Starting simulated annealing optimization..."
+                         << endl;
+                    best_treants =
+                        simulated_annealing(pi, pj, best_treants, timer);
+                    cerr << "Simulated annealing optimization completed (time: "
+                         << timer.elapsed() << "ms)" << endl;
+                }
+            }
         }
-
-        // 3. 斜め通路のための追加トレント配置
-        vector<pair<int, int>> additional_treants =
-            place_diagonal_corridor_treants(pi, pj, best_treants);
 
         // 最終的なトレント配置
         vector<pair<int, int>> final_treants = best_treants;
-        final_treants.insert(final_treants.end(), additional_treants.begin(),
-                             additional_treants.end());
 
         // 出力
         cout << final_treants.size();
@@ -1206,6 +1594,8 @@ void solve_first_turn(int pi, int pj, int /* n */,
         }
         cout << endl;
     }
+
+    cerr << "Total processing time: " << timer.elapsed() << "ms" << endl;
 
     // 打ち切り出力を行ってプログラム終了
     cout << -1 << endl;
