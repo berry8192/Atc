@@ -43,13 +43,22 @@ const int UNREACHABLE_PENALTY = 1;
 const int DISTANCE_TO_FLOWER_WEIGHT = 5;
 
 // 機械的配置モード用の定数
-const int MECHANICAL_PLACEMENT_INTERVAL = 4; // デフォルトのトレント配置間隔
-const double TREE_DENSITY_THRESHOLD = 0.15;  // 木の密度の値
+const int MECHANICAL_PLACEMENT_INTERVAL = 3; // デフォルトのトレント配置間隔
+const double TREE_DENSITY_THRESHOLD = 0.15;  // 木の密度閾値
+const bool USE_MECHANICAL_MODE = true; // trueで機械的モード、falseで既存モード
 
-// 焼きなまし用の定数
-const int ANNEALING_ITERATIONS = 10000;   // 焼きなまし反復回数
-const double INITIAL_TEMPERATURE = 100.0; // 初期温度
-const double FINAL_TEMPERATURE = 1.0;     // 最終温度
+// 時間計測用
+chrono::high_resolution_clock::time_point start_time;
+const double TIME_LIMIT = 1800.0; // 1800ms
+
+// 時間制限チェック
+bool check_time_limit(double usage_ratio = 1.0) {
+    auto current_time = chrono::high_resolution_clock::now();
+    double elapsed =
+        chrono::duration_cast<chrono::milliseconds>(current_time - start_time)
+            .count();
+    return elapsed >= TIME_LIMIT * usage_ratio;
+}
 
 // サイクル履歴を記録する構造体
 struct CycleHistory {
@@ -57,26 +66,8 @@ struct CycleHistory {
     vector<pair<int, int>> corridors; // そのサイクルで確保された通路
 };
 
-// 時間管理
-auto start_time = chrono::high_resolution_clock::now();
-const double TIME_LIMIT = 2000.0; // 制限時間（ミリ秒）
-
-// 経過時間を取得
-double get_elapsed_time() {
-    auto now = chrono::high_resolution_clock::now();
-    auto duration =
-        chrono::duration_cast<chrono::microseconds>(now - start_time);
-    return duration.count() / 1000.0; // ミリ秒単位で返す
-}
-
-// 時間制限チェック
-bool check_time_limit(double threshold_ratio = 0.95) {
-    return get_elapsed_time() >= TIME_LIMIT * threshold_ratio;
-}
-
 // デバッグ用：サイクル履歴を表示する関数
 void debug_print_cycle_history(const vector<CycleHistory> &cycle_history) {
-
     for (int i = 0; i < cycle_history.size(); ++i) {
 
         for (const auto &treant : cycle_history[i].treants) {
@@ -280,49 +271,6 @@ int count_unreachable_cells(const vector<string> &maze, int start_r,
     return unreachable_count;
 }
 
-// 到達不能マスの座標を取得する
-set<pair<int, int>> get_unreachable_cells(const vector<string> &maze,
-                                          int start_r, int start_c) {
-    vector<vector<bool>> reachable(N, vector<bool>(N, false));
-    queue<pair<int, int>> q;
-    set<pair<int, int>> unreachable;
-
-    if (maze[start_r][start_c] != '.') {
-        return unreachable; // スタート地点が無効
-    }
-
-    reachable[start_r][start_c] = true;
-    q.push({start_r, start_c});
-
-    while (!q.empty()) {
-        pair<int, int> curr = q.front();
-        q.pop();
-        int r = curr.first;
-        int c = curr.second;
-
-        for (int i = 0; i < 4; ++i) {
-            int nr = r + dr[i];
-            int nc = c + dc[i];
-
-            if (nr >= 0 && nr < N && nc >= 0 && nc < N && !reachable[nr][nc] &&
-                maze[nr][nc] == '.') {
-                reachable[nr][nc] = true;
-                q.push({nr, nc});
-            }
-        }
-    }
-
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < N; ++j) {
-            if (maze[i][j] == '.' && !reachable[i][j]) {
-                unreachable.insert({i, j});
-            }
-        }
-    }
-
-    return unreachable;
-}
-
 // 経路中のマスの花からのマンハッタン距離の平均を計算する
 double calculate_average_distance_to_flower(int pi, int pj,
                                             const vector<string> &maze) {
@@ -509,28 +457,14 @@ vector<pair<int, int>> create_single_spiral_trial(int pi, int pj, int open_dir,
                 (tr != next_r || tc != next_c) &&
                 !(tr == adventurer_start_r && tc == adventurer_start_c)) {
 
-                // 4近傍チェック：既にトレントが密集している場合は配置を避ける
-                int neighbor_treant_count = 0;
-                for (int d = 0; d < 4; ++d) {
-                    int check_r = tr + dr[d];
-                    int check_c = tc + dc[d];
-                    if (check_r >= 0 && check_r < N && check_c >= 0 && check_c < N &&
-                        (current_maze[check_r][check_c] == 'T' || current_maze[check_r][check_c] == 't')) {
-                        neighbor_treant_count++;
-                    }
-                }
-
-                // 4近傍に既にトレントがある場合は配置を避ける
-                if (neighbor_treant_count == 0) {
-                    current_maze[tr][tc] = 't';
-                    if (calculate_path_length(pi, pj, ti, tj, current_maze) != -1) {
-                        treants_to_place.push_back({tr, tc});
-                        // 新しく設置したトレントを記録（優先度は段階的に下げる）
-                        int new_priority = max(10, 100 - step * 5);
-                        placed_treants.push_back({{tr, tc}, new_priority});
-                    } else {
-                        current_maze[tr][tc] = '.'; // 経路が途絶えるので元に戻す
-                    }
+                current_maze[tr][tc] = 't';
+                if (calculate_path_length(pi, pj, ti, tj, current_maze) != -1) {
+                    treants_to_place.push_back({tr, tc});
+                    // 新しく設置したトレントを記録（優先度は段階的に下げる）
+                    int new_priority = max(10, 100 - step * 5);
+                    placed_treants.push_back({{tr, tc}, new_priority});
+                } else {
+                    current_maze[tr][tc] = '.'; // 経路が途絶えるので元に戻す
                 }
             }
         }
@@ -778,28 +712,28 @@ place_mechanical_treants(int pi, int pj,
     // DSUを初期化
     WallDSU wall_dsu = initialize_wall_dsu(current_maze, existing_treants);
 
-    // 斜め線状に配置（左上から右下へ）
-    for (int diag = 1; diag < N + N - 2; diag += placement_interval) {
-        for (int r = 1; r < N - 1; ++r) {
-            int c = diag - r + 1;
+    // 斜め線状に配置（左上から右下へ）- 外周も含むすべてのマスに配置可能
+    for (int diag = 0; diag < N + N - 1; diag += placement_interval) {
+        for (int r = 0; r < N; ++r) {
+            int c = diag - r;
 
             // 範囲チェック
-            if (c <= 0 || c >= N - 1)
+            if (c < 0 || c >= N)
                 continue;
 
             // 既にトレントが配置されている場合はスキップ
             if (temp_maze[r][c] != '.') {
-
                 continue;
             }
 
             // 冒険者の初期位置は避ける
             if (r == adventurer_start_r && c == adventurer_start_c) {
-
                 continue;
             }
 
-            // 外周の木との8近傍隣接チェック
+            // 外周の木との8近傍隣接チェック - 一時的に無効化
+            // （外周配置を許可するため）
+            /*
             bool adjacent_to_boundary = false;
             for (int d = 0; d < 8; ++d) {
                 int nr = r + dr8[d];
@@ -815,37 +749,21 @@ place_mechanical_treants(int pi, int pj,
             }
 
             if (adjacent_to_boundary) {
-
                 continue;
             }
+            */
 
             // 到達不能エリア増加チェック
             if (increases_unreachable_area(r, c, temp_maze)) {
-
-                continue;
-            }
-
-            // 4近傍密集チェック：既にトレントがある場合は配置を避ける
-            int neighbor_treant_count = 0;
-            for (int d = 0; d < 4; ++d) {
-                int check_r = r + dr[d];
-                int check_c = c + dc[d];
-                if (check_r >= 0 && check_r < N && check_c >= 0 && check_c < N &&
-                    (temp_maze[check_r][check_c] == 'T' || temp_maze[check_r][check_c] == 't')) {
-                    neighbor_treant_count++;
-                }
-            }
-
-            // 4近傍に既にトレントがある場合は配置を避ける
-            if (neighbor_treant_count > 0) {
                 continue;
             }
 
             // トレント配置を試す
             temp_maze[r][c] = 't';
 
-            // 経路が確保されているかチェック
-            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+            // 経路が確保されているかチェック + 到達不能マスが増えないことを確認
+            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1 &&
+                count_unreachable_cells(temp_maze, adventurer_start_r, adventurer_start_c) == 0) {
                 placed_treants.push_back({r, c});
 
                 // DSUに新しいトレントを追加
@@ -859,7 +777,6 @@ place_mechanical_treants(int pi, int pj,
                         wall_dsu.merge(new_idx, coord_to_wall_index(nr, nc));
                     }
                 }
-
             } else {
                 // 経路が途絶える場合は元に戻す
                 temp_maze[r][c] = '.';
@@ -1064,17 +981,16 @@ bool place_treant_next_to_corridor(vector<pair<int, int>> &corridor_cells,
         current_cycle.corridors = new_corridors;
         cycle_history.push_back(current_cycle);
 
-        // デバッグ出力
+        // サイクル履歴が追加された
     }
 
     return placed_any_treant;
 }
 
-// 斜め通路を確保するための追加トレント配置（焼きなまし版）
+// 元のplace_diagonal_corridor_treants関数
 vector<pair<int, int>> place_diagonal_corridor_treants(
-    int pi, int pj, const vector<pair<int, int>> &existing_treants,
-    const vector<pair<int, int>> &spiral_treants) {
-    vector<pair<int, int>> current_treants = existing_treants;
+    int pi, int pj, const vector<pair<int, int>> &existing_treants) {
+    vector<pair<int, int>> additional_treants;
     vector<string> temp_maze = current_maze;
 
     // 冒険者の初期位置（森の入口）
@@ -1082,373 +998,229 @@ vector<pair<int, int>> place_diagonal_corridor_treants(
     int adventurer_start_c = N / 2;
 
     // 既存のトレントを仮配置
+    for (const auto &p : existing_treants) {
+        temp_maze[p.first][p.second] = 't';
+    }
+
+    // 8近傍隣接DSUを初期化
+    WallDSU wall_dsu = initialize_wall_dsu(current_maze, existing_treants);
+
+    // 通路として確保するマスのリスト
+    vector<pair<int, int>> corridor_cells;
+
+    // サイクル履歴を記録する配列
+    vector<CycleHistory> cycle_history;
+
+    // ステップ1: (1,1)にトレント設置（1回目のトレント設置処理）
+    int start_r = 1, start_c = 1;
+    if (start_r < N - 1 && start_c < N - 1 &&
+        temp_maze[start_r][start_c] == '.' &&
+        !(start_r == adventurer_start_r && start_c == adventurer_start_c)) {
+
+        // 外周との8近傍隣接チェック
+        bool adjacent_to_boundary = false;
+        for (int d = 0; d < 8; ++d) {
+            int nr = start_r + dr8[d];
+            int nc = start_c + dc8[d];
+            if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
+                if (wall_dsu.is_connected_to_boundary(
+                        coord_to_wall_index(nr, nc))) {
+                    adjacent_to_boundary = true;
+                    break;
+                }
+            }
+        }
+
+        if (!adjacent_to_boundary &&
+            !increases_unreachable_area(start_r, start_c, temp_maze)) {
+            temp_maze[start_r][start_c] = 't';
+            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1) {
+                additional_treants.push_back({start_r, start_c});
+
+                // DSUに新しいトレントを追加
+                int new_idx = coord_to_wall_index(start_r, start_c);
+                for (int d = 0; d < 8; ++d) {
+                    int nr = start_r + dr8[d];
+                    int nc = start_c + dc8[d];
+                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                        (temp_maze[nr][nc] == 'T' ||
+                         temp_maze[nr][nc] == 't')) {
+                        wall_dsu.merge(new_idx, coord_to_wall_index(nr, nc));
+                    }
+                }
+
+                // ステップ2: 通路確保処理
+                add_corridor_cells(start_r, start_c, corridor_cells, temp_maze);
+
+                // 初期サイクル履歴を記録
+                CycleHistory initial_cycle;
+                initial_cycle.treants.push_back({start_r, start_c});
+                initial_cycle.corridors = corridor_cells;
+                cycle_history.push_back(initial_cycle);
+
+                // 初期サイクル履歴を記録完了
+
+                // ステップ3: 以降のトレント設置処理
+                int max_iterations = N;
+                for (int iteration = 0;
+                     iteration < max_iterations && !corridor_cells.empty();
+                     ++iteration) {
+
+                    bool placed = place_treant_next_to_corridor(
+                        corridor_cells, temp_maze, additional_treants, wall_dsu,
+                        pi, pj, cycle_history);
+
+                    if (!placed) {
+                        break;
+                    }
+                }
+
+                // 最終的なサイクル履歴をデバッグ出力
+                debug_print_cycle_history(cycle_history);
+
+            } else {
+                temp_maze[start_r][start_c] =
+                    '.'; // 経路が途絶える場合は元に戻す
+            }
+        }
+    }
+
+    return additional_treants;
+}
+
+// 焼きなまし版：トレント配置最適化（渦巻きトレントを保護）
+vector<pair<int, int>> optimize_treants_with_annealing(
+    int pi, int pj, const vector<pair<int, int>> &all_treants,
+    const vector<pair<int, int>> &spiral_treants, int spiral_count) {
+
+    // 作業用迷路を準備
+    vector<string> temp_maze = current_maze;
+    vector<pair<int, int>> current_treants = all_treants;
+
+    // 冒険者の初期位置
+    int adventurer_start_r = 0;
+    int adventurer_start_c = N / 2;
+
+    // 既存のトレントを配置
     for (const auto &p : current_treants) {
         temp_maze[p.first][p.second] = 't';
     }
 
-    // 初期状態での到達不能マスを記録
-    set<pair<int, int>> initial_unreachable = get_unreachable_cells(
-        temp_maze, adventurer_start_r, adventurer_start_c);
-
-    // 渦巻きで確保された通路マスを特定（花の周囲と渦巻き経路）
-    set<pair<int, int>> protected_cells;
-    // 花の位置と花の周囲を保護
-    protected_cells.insert({ti, tj});
-    for (int d = 0; d < 4; ++d) {
-        int nr = ti + dr[d];
-        int nc = tj + dc[d];
-        if (nr >= 0 && nr < N && nc >= 0 && nc < N) {
-            if (temp_maze[nr][nc] == '.') {
-                protected_cells.insert({nr, nc});
-            }
-        }
-    }
-
-    // 渦巻きで設置したトレントも保護リストに追加
-    // 注：spiral_treantsにはすべての渦巻きトレントが含まれている必要がある
-    for (const auto &p : spiral_treants) {
-        protected_cells.insert(p);
+    // 保護するトレント（渦巻きトレント）のインデックスを記録
+    set<int> protected_indices;
+    for (int i = 0; i < spiral_count && i < current_treants.size(); ++i) {
+        protected_indices.insert(i);
     }
 
     // 乱数生成器
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<> pos_dist(1, N - 2); // 外周を避ける
+    // すべての範囲を対象（外周も含む）
+    uniform_int_distribution<> pos_dist(0, N - 1);
     uniform_real_distribution<> prob_dist(0.0, 1.0);
 
-    // 焼きなまし操作を繰り返す
-    const int MAX_OPERATIONS = 100; // 操作回数の上限
-    int operations = 0;
-    vector<pair<int, int>> new_treants;
+    // 焼きなまし処理
+    const int MAX_ITERATIONS = 100;
+    int iterations = 0;
 
-    while (operations < MAX_OPERATIONS && !check_time_limit(0.98)) {
-        operations++;
-        bool operation_performed = false;
+    while (iterations < MAX_ITERATIONS && !check_time_limit(0.95)) {
+        iterations++;
 
-        // ステップ1: ランダムな空きマスにトレントを設置
+        // 操作1: ランダムな空きマスにトレント追加
         int r = pos_dist(gen);
         int c = pos_dist(gen);
 
-        // 冒険者の初期位置や保護マスをスキップ
-        if ((r == adventurer_start_r && c == adventurer_start_c) ||
-            protected_cells.count({r, c}) || temp_maze[r][c] != '.') {
-            operations--; // スキップした場合はカウントしない
-            continue;
-        }
+        if (temp_maze[r][c] == '.' &&
+            !(r == adventurer_start_r && c == adventurer_start_c) &&
+            confirmed[r][c] == false) {
 
-        // 4近傍密集チェック：既にトレントがある場合は配置を避ける
-        int neighbor_treant_count = 0;
-        for (int d = 0; d < 4; ++d) {
-            int check_r = r + dr[d];
-            int check_c = c + dc[d];
-            if (check_r >= 0 && check_r < N && check_c >= 0 && check_c < N &&
-                (temp_maze[check_r][check_c] == 'T' || temp_maze[check_r][check_c] == 't')) {
-                neighbor_treant_count++;
-            }
-        }
-
-        // 4近傍に既にトレントがある場合は配置をスキップ
-        if (neighbor_treant_count > 0) {
-            operations--; // スキップした場合はカウントしない
-            continue;
-        }
-
-        // 条件を満たす空きマスにトレントを設置
-        temp_maze[r][c] = 't';
-        current_treants.push_back({r, c});
-        new_treants.push_back({r, c});
-
-        // ステップ2: マップ上のすべてのトレントをチェックし、密集しているものを削除
-        vector<pair<int, int>> treants_to_remove;
-
-        // マップ上のすべてのマスをチェック
-        for (int i = 0; i < N; ++i) {
-            for (int j = 0; j < N; ++j) {
-                // トレントがある場合のみ処理
-                if (temp_maze[i][j] != 't') {
-                    continue;
-                }
-
-                // 保護マス（渦巻きトレント）は削除しない
-                if (protected_cells.count({i, j})) {
-                    continue;
-                }
-
-                // 4近傍のトレント/木の数を数える
-                int adjacent_count = 0;
-                for (int d = 0; d < 4; ++d) {
-                    int nr = i + dr[d];
-                    int nc = j + dc[d];
-                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
-                        (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
-                        adjacent_count++;
-                    }
-                }
-
-                // 4近傍に2つ以上隣接している場合は削除候補に追加
-                if (adjacent_count >= 2) {
-                    treants_to_remove.push_back({i, j});
-                }
-            }
-        }
-
-        // 削除候補のトレントをtemp_mazeから削除
-        for (const auto &treant : treants_to_remove) {
-            temp_maze[treant.first][treant.second] = '.';
-            // current_treantsからも削除
-            auto it =
-                find(current_treants.begin(), current_treants.end(), treant);
-            if (it != current_treants.end()) {
-                current_treants.erase(it);
-            }
-            // new_treantsからも削除
-            auto it2 = find(new_treants.begin(), new_treants.end(), treant);
-            if (it2 != new_treants.end()) {
-                new_treants.erase(it2);
-            }
-        }
-
-        // ステップ3: 連結性チェック
-        set<pair<int, int>> current_unreachable = get_unreachable_cells(
-            temp_maze, adventurer_start_r, adventurer_start_c);
-        bool no_new_unreachable = true;
-        for (const auto &cell : current_unreachable) {
-            if (initial_unreachable.find(cell) == initial_unreachable.end()) {
-                no_new_unreachable = false;
-                break;
-            }
-        }
-
-        if (check_connectivity(temp_maze) &&
-            calculate_path_length(pi, pj, ti, tj, temp_maze) != -1 &&
-            no_new_unreachable) {
-            operation_performed = true;
-        } else {
-            // 問題がある場合は元に戻す
-            // 追加したトレントを削除
-            if (temp_maze[r][c] == 't') {
-                temp_maze[r][c] = '.';
-                current_treants.pop_back();
-                new_treants.pop_back();
-            }
-            // 削除したトレントを復元
-            for (const auto &treant : treants_to_remove) {
-                temp_maze[treant.first][treant.second] = 't';
-                current_treants.push_back(treant);
-            }
-        }
-
-        // 操作が失敗した場合はカウントしない
-        if (!operation_performed) {
-            operations--;
-        }
-    }
-
-    // 処理後のtemp_mazeから実際に配置されているトレントを収集
-    vector<pair<int, int>> final_treants;
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < N; ++j) {
-            if (temp_maze[i][j] == 't') {
-                final_treants.push_back({i, j});
-            }
-        }
-    }
-
-    return final_treants;
-}
-
-// 評価関数：トレント配置の評価値を計算
-double evaluate_treant_configuration(const vector<string> &maze) {
-    int adventurer_start_r = 0;
-    int adventurer_start_c = N / 2;
-
-    // スタート地点から花までの経路長
-    int path_length = calculate_path_length(adventurer_start_r,
-                                            adventurer_start_c, ti, tj, maze);
-    if (path_length == -1)
-        return -1e9; // 到達不能は最悪評価
-
-    // 到達不能エリアのペナルティ
-    int unreachable_count =
-        count_unreachable_cells(maze, adventurer_start_r, adventurer_start_c);
-
-    // トレント数（多いほど複雑な経路を作れる）
-    int treant_count = 0;
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            if (maze[i][j] == 't' || maze[i][j] == 'T') {
-                treant_count++;
-            }
-        }
-    }
-
-    // 評価値計算
-    double score = path_length * PATH_LENGTH_WEIGHT -
-                   unreachable_count * UNREACHABLE_PENALTY +
-                   treant_count * 0.1; // トレント数にも小さな重みを付ける
-
-    return score;
-}
-
-// 焼きなまし最適化
-vector<pair<int, int>> simulated_annealing_optimization(
-    const vector<pair<int, int>> &initial_treants) {
-
-    // 初期状態の設定
-    vector<pair<int, int>> current_treants = initial_treants;
-    vector<string> current_maze = ::current_maze;
-    for (const auto &t : current_treants) {
-        current_maze[t.first][t.second] = 'T';
-    }
-
-    double current_score = evaluate_treant_configuration(current_maze);
-
-    // 最良解の保持
-    vector<pair<int, int>> best_treants = current_treants;
-    double best_score = current_score;
-
-    // 乱数生成器
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_real_distribution<> prob_dist(0.0, 1.0);
-
-    int adventurer_start_r = 0;
-    int adventurer_start_c = N / 2;
-
-    // 焼きなまし反復
-    int iterations = 0;
-    int accepted = 0;
-    int improved = 0;
-
-    while (iterations < ANNEALING_ITERATIONS && !check_time_limit(0.95)) {
-        iterations++;
-
-        // 温度の計算（線形冷却）
-        double progress = (double)iterations / ANNEALING_ITERATIONS;
-        double temperature = INITIAL_TEMPERATURE * (1.0 - progress) +
-                             FINAL_TEMPERATURE * progress;
-
-        // 隣接解の生成（3つの操作からランダムに選択）
-        uniform_int_distribution<> op_dist(0, 2);
-        int operation = op_dist(gen);
-
-        vector<pair<int, int>> new_treants = current_treants;
-        vector<string> new_maze = ::current_maze;
-
-        bool valid_operation = false;
-
-        if (operation == 0 && !current_treants.empty()) {
-            // 操作1: トレントを移動（8近傍）
-            uniform_int_distribution<> treant_dist(0,
-                                                   current_treants.size() - 1);
-            int idx = treant_dist(gen);
-
-            uniform_int_distribution<> dir_dist(0, 7);
-            int dir = dir_dist(gen);
-
-            int old_r = current_treants[idx].first;
-            int old_c = current_treants[idx].second;
-            int new_r = old_r + dr8[dir];
-            int new_c = old_c + dc8[dir];
-
-            // 境界チェックと移動可能性チェック
-            if (new_r > 0 && new_r < N - 1 && new_c > 0 && new_c < N - 1 &&
-                ::current_maze[new_r][new_c] == '.' &&
-                !(new_r == adventurer_start_r && new_c == adventurer_start_c) &&
-                !(new_r == ti && new_c == tj)) {
-
-                new_treants[idx] = {new_r, new_c};
-                valid_operation = true;
-            }
-        } else if (operation == 1 && !current_treants.empty()) {
-            // 操作2: トレントを削除（周囲にトレント/木が3個以上ある場合のみ）
-            uniform_int_distribution<> treant_dist(0,
-                                                   current_treants.size() - 1);
-            int idx = treant_dist(gen);
-
-            int r = current_treants[idx].first;
-            int c = current_treants[idx].second;
-
-            // 周囲の木/トレント数を数える
-            int adjacent_count = 0;
-            for (int d = 0; d < 8; d++) {
-                int nr = r + dr8[d];
-                int nc = c + dc8[d];
+            // 4近傍チェック
+            int neighbor_count = 0;
+            for (int d = 0; d < 4; ++d) {
+                int nr = r + dr[d];
+                int nc = c + dc[d];
                 if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
-                    (::current_maze[nr][nc] == 'T' ||
-                     ::current_maze[nr][nc] == 't')) {
+                    (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
+                    neighbor_count++;
+                }
+            }
+
+            // 4近傍に既にトレントがある場合はスキップ
+            if (neighbor_count == 0) {
+                temp_maze[r][c] = 't';
+                // 経路が確保されており、到達不能マスが発生しないことを確認
+                if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1 &&
+                    count_unreachable_cells(temp_maze, adventurer_start_r, adventurer_start_c) == 0) {
+                    current_treants.push_back({r, c});
+                } else {
+                    temp_maze[r][c] = '.';
+                }
+            }
+        }
+
+        // 操作2: 密集したトレントを削除（保護トレント以外）
+        vector<int> removal_candidates;
+        for (int i = 0; i < current_treants.size(); ++i) {
+            // 保護されているトレントはスキップ
+            if (protected_indices.count(i))
+                continue;
+
+            int tr = current_treants[i].first;
+            int tc = current_treants[i].second;
+
+            // 4近傍の密集度チェック
+            int adjacent_count = 0;
+            for (int d = 0; d < 4; ++d) {
+                int nr = tr + dr[d];
+                int nc = tc + dc[d];
+                if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
+                    (temp_maze[nr][nc] == 'T' || temp_maze[nr][nc] == 't')) {
                     adjacent_count++;
                 }
             }
 
-            // 周囲に3個以上ある場合のみ削除
-            if (adjacent_count >= 3) {
-                new_treants.erase(new_treants.begin() + idx);
-                valid_operation = true;
+            // 4近傍に2つ以上隣接している場合は削除候補
+            if (adjacent_count >= 2) {
+                removal_candidates.push_back(i);
             }
-        } else {
-            // 操作3: トレントを追加（周囲にトレント/木が少ない空きマス）
-            uniform_int_distribution<> pos_dist(1, N - 2);
-            int r = pos_dist(gen);
-            int c = pos_dist(gen);
+        }
 
-            if (::current_maze[r][c] == '.' &&
-                !(r == adventurer_start_r && c == adventurer_start_c) &&
-                !(r == ti && c == tj)) {
+        // 削除候補からランダムに選んで削除
+        if (!removal_candidates.empty()) {
+            uniform_int_distribution<> idx_dist(0,
+                                                removal_candidates.size() - 1);
+            int idx_to_remove = removal_candidates[idx_dist(gen)];
+            int tr = current_treants[idx_to_remove].first;
+            int tc = current_treants[idx_to_remove].second;
 
-                // 周囲の木/トレント数を数える
-                int adjacent_count = 0;
-                for (int d = 0; d < 8; d++) {
-                    int nr = r + dr8[d];
-                    int nc = c + dc8[d];
-                    if (nr >= 0 && nr < N && nc >= 0 && nc < N &&
-                        (::current_maze[nr][nc] == 'T' ||
-                         ::current_maze[nr][nc] == 't')) {
-                        adjacent_count++;
+            // 削除前に到達可能性をチェック
+            temp_maze[tr][tc] = '.';
+
+            // 削除しても到達不能マスが発生しないか確認
+            if (calculate_path_length(pi, pj, ti, tj, temp_maze) != -1 &&
+                count_unreachable_cells(temp_maze, adventurer_start_r, adventurer_start_c) == 0) {
+                // 削除を確定
+                current_treants.erase(current_treants.begin() + idx_to_remove);
+
+                // protected_indicesの調整
+                set<int> new_protected;
+                for (int idx : protected_indices) {
+                    if (idx < idx_to_remove) {
+                        new_protected.insert(idx);
+                    } else if (idx > idx_to_remove) {
+                        new_protected.insert(idx - 1);
                     }
                 }
-
-                // 周囲に2個以下の場合のみ追加
-                if (adjacent_count <= 2) {
-                    new_treants.push_back({r, c});
-                    valid_operation = true;
-                }
-            }
-        }
-
-        if (!valid_operation)
-            continue;
-
-        // 新しい迷路を構築
-        for (const auto &t : new_treants) {
-            new_maze[t.first][t.second] = 'T';
-        }
-
-        // 連結性チェック
-        if (!check_connectivity(new_maze))
-            continue;
-
-        // 新しい解の評価
-        double new_score = evaluate_treant_configuration(new_maze);
-
-        // 受理判定
-        double delta = new_score - current_score;
-        if (delta > 0 || prob_dist(gen) < exp(delta / temperature)) {
-            current_treants = new_treants;
-            current_maze = new_maze;
-            current_score = new_score;
-            accepted++;
-
-            // 最良解の更新
-            if (new_score > best_score) {
-                best_treants = current_treants;
-                best_score = new_score;
-                improved++;
+                protected_indices = new_protected;
+            } else {
+                // 削除すると到達不能マスが発生するため、元に戻す
+                temp_maze[tr][tc] = 't';
             }
         }
     }
 
-    return best_treants;
+    return current_treants;
 }
 
 // 最初のターンの処理
@@ -1459,11 +1231,7 @@ void solve_first_turn(int pi, int pj, int /* n */,
     }
 
     vector<string> original_maze = current_maze;
-    vector<pair<int, int>> valid_treants;
-    vector<string> working_maze = original_maze;
-
-    // 時間計測開始
-    start_time = chrono::high_resolution_clock::now();
+    vector<pair<int, int>> best_treants;
 
     // 木の密度を計算して配置間隔を決定
     double tree_density = calculate_tree_density();
@@ -1471,155 +1239,98 @@ void solve_first_turn(int pi, int pj, int /* n */,
                                ? 4
                                : MECHANICAL_PLACEMENT_INTERVAL;
 
-    // 1. 渦巻きアルゴリズムを固定100回実行
-    current_maze = original_maze;
-    vector<pair<int, int>> spiral_treants_raw =
-        create_strategic_treants(pi, pj, 0, 0);
+    // 時間計測開始
+    start_time = chrono::high_resolution_clock::now();
 
-    // 渦巻きトレントを一つずつ検証して配置
-    vector<pair<int, int>> spiral_treants_validated;
-    for (const auto &p : spiral_treants_raw) {
-        working_maze[p.first][p.second] = 't';
-        if (check_connectivity(working_maze) &&
-            calculate_path_length(pi, pj, ti, tj, working_maze) != -1 &&
-            count_unreachable_cells(working_maze, 0, N / 2) == 0) {
-            valid_treants.push_back(p);
-            spiral_treants_validated.push_back(p); // 渦巻きトレントを別途保存
-        } else {
-            working_maze[p.first][p.second] =
-                '.'; // 連結性が失われる場合は元に戻す
+    if (USE_MECHANICAL_MODE) {
+
+        // 1. まず渦巻きアルゴリズムを実行
+        current_maze = original_maze;
+        vector<pair<int, int>> spiral_treants =
+            create_strategic_treants(pi, pj, 0, 0);
+        int spiral_count = spiral_treants.size();
+
+        // 2. 機械的配置（斜め線状）を追加（動的間隔を使用）
+        vector<pair<int, int>> mechanical_treants =
+            place_mechanical_treants(pi, pj, spiral_treants, dynamic_interval);
+
+        // すべてのトレントを統合
+        best_treants = spiral_treants;
+        for (const auto &p : mechanical_treants) {
+            best_treants.push_back(p);
         }
+
+        // 3. 焼きなまし処理で最適化（渦巻きトレントを保護）
+        vector<pair<int, int>> final_treants = optimize_treants_with_annealing(
+            pi, pj, best_treants, spiral_treants, spiral_count);
+
+        // 出力
+        cout << final_treants.size();
+        for (const auto &p : final_treants) {
+            cout << " " << p.first << " " << p.second;
+            current_maze[p.first][p.second] = 'T'; // 確定
+        }
+        cout << endl;
+    } else {
+        // 1回だけ確率的渦巻きを実行（内部で1000回試行）
+        current_maze = original_maze;
+        best_treants = create_strategic_treants(pi, pj, 0, 0);
+
+        // 斜め通路のための追加トレント配置
+        vector<pair<int, int>> additional_treants =
+            place_diagonal_corridor_treants(pi, pj, best_treants);
+
+        // 最終的なトレント配置
+        vector<pair<int, int>> final_treants = best_treants;
+        final_treants.insert(final_treants.end(), additional_treants.begin(),
+                             additional_treants.end());
+
+        // 出力
+        cout << final_treants.size();
+        for (const auto &p : final_treants) {
+            cout << " " << p.first << " " << p.second;
+            current_maze[p.first][p.second] = 'T'; // 確定
+        }
+        cout << endl;
     }
 
-    // 2. 機械的配置（斜め線状）を1度だけ実行
-    current_maze = working_maze; // 現在の状態を更新
-    vector<pair<int, int>> mechanical_treants =
-        place_mechanical_treants(pi, pj, valid_treants, dynamic_interval);
-
-    // 機械的配置トレントを一つずつ検証して配置
-    for (const auto &p : mechanical_treants) {
-        if (working_maze[p.first][p.second] == '.' &&
-            confirmed[p.first][p.second] == false) {
-            working_maze[p.first][p.second] = 't';
-            if (check_connectivity(working_maze) &&
-                calculate_path_length(pi, pj, ti, tj, working_maze) != -1 &&
-                count_unreachable_cells(working_maze, 0, N / 2) == 0) {
-                valid_treants.push_back(p);
-            } else {
-                working_maze[p.first][p.second] =
-                    '.'; // 連結性が失われる場合は元に戻す
-            }
-        }
-    }
-
-    // 3. 残り時間でplace_diagonal_corridor_treantsを繰り返し実行
-    // 焼きなまし処理で渦巻きトレントが削除される問題があるため一時的にコメントアウト
-    /*
-    while (!check_time_limit(0.90)) {
-        current_maze = working_maze; // 現在の状態を更新
-        vector<pair<int, int>> updated_treants =
-            place_diagonal_corridor_treants(pi, pj, valid_treants, spiral_treants_validated);
-
-        // 変化がない場合は終了
-        if (updated_treants.size() == valid_treants.size()) {
-            bool same = true;
-            set<pair<int, int>> old_set(valid_treants.begin(), valid_treants.end());
-            for (const auto &p : updated_treants) {
-                if (old_set.find(p) == old_set.end()) {
-                    same = false;
-                    break;
-                }
-            }
-            if (same) {
-                break; // 変化がない場合は終了
-            }
-        }
-
-        // updated_treantsが新しいトレント配置（焼きなまし処理済み）なので使用
-        valid_treants = updated_treants;
-
-        // working_mazeを再構築
-        working_maze = original_maze;
-        for (const auto &p : valid_treants) {
-            if (working_maze[p.first][p.second] == '.' &&
-                confirmed[p.first][p.second] == false) {
-                working_maze[p.first][p.second] = 't';
-            }
-        }
-    }
-    */
-
-    // 最終検証：全トレント配置後の連結性確認
-    vector<string> final_maze = original_maze;
-    vector<pair<int, int>> final_treants;
-
-    for (const auto &p : valid_treants) {
-        if (final_maze[p.first][p.second] == '.' &&
-            confirmed[p.first][p.second] == false) {
-            final_maze[p.first][p.second] = 't';
-            if (check_connectivity(final_maze) &&
-                calculate_path_length(pi, pj, ti, tj, final_maze) != -1 &&
-                count_unreachable_cells(final_maze, 0, N / 2) == 0) {
-                final_treants.push_back(p);
-            } else {
-                final_maze[p.first][p.second] = '.'; // 問題がある場合はスキップ
-            }
-        }
-    }
-
-    // 最終的なトレント配置を出力
-    cout << final_treants.size();
-    for (const auto &p : final_treants) {
-        cout << " " << p.first << " " << p.second;
-        current_maze[p.first][p.second] = 'T'; // 確定
-    }
-    cout << endl << flush; // flushを追加
-}
-
-// インタラクティブループ
-void solve() {
-    // ターン処理を継続
-    while (true) {
-        int pi, pj, n;
-        cin >> pi >> pj >> n;
-
-        // ゴールに到達したら終了
-        if (pi == ti && pj == tj) {
-
-            break;
-        }
-
-        // 新たに確認されたマスを読み込む
-        vector<pair<int, int>> newly_confirmed(n);
-        for (int i = 0; i < n; ++i) {
-            cin >> newly_confirmed[i].first >> newly_confirmed[i].second;
-            confirmed[newly_confirmed[i].first][newly_confirmed[i].second] =
-                true;
-        }
-
-        // 最初のターンの特別処理
-        if (pi == 0 && pj == N / 2) {
-            solve_first_turn(pi, pj, n, newly_confirmed);
-        } else {
-            // 2ターン目以降は打ち切り出力して終了
-            cout << -1 << endl << flush;
-            break;
-        }
-    }
+    // 打ち切り出力を行ってプログラム終了
+    cout << -1 << endl;
+    exit(0);
 }
 
 int main() {
-    // 入力
     cin >> N >> ti >> tj;
     current_maze.resize(N);
     confirmed.assign(N, vector<bool>(N, false));
-
     for (int i = 0; i < N; ++i) {
         cin >> current_maze[i];
     }
 
-    // インタラクティブループ開始
-    solve();
+    bool first_turn = true;
+
+    while (true) {
+        int pi, pj, n;
+        cin >> pi >> pj >> n;
+
+        if (pi == ti && pj == tj) {
+            return 0;
+        }
+
+        vector<pair<int, int>> newly_confirmed(n);
+        for (int k = 0; k < n; ++k) {
+            cin >> newly_confirmed[k].first >> newly_confirmed[k].second;
+        }
+
+        if (first_turn) {
+            solve_first_turn(pi, pj, n, newly_confirmed);
+            // この時点で exit(0) されるので、以下のコードは実行されない
+            first_turn = false;
+        } else {
+            // この部分はもう実行されないが、念のため残しておく
+            cout << 0 << endl;
+        }
+    }
 
     return 0;
 }
