@@ -428,8 +428,8 @@ int main() {
             vx = avx;
             vy = avy;
         } else {
-            vx = tvx;
-            vy = tvy;
+            vx = -tvx;
+            vy = -tvy;
         }
         // cout << "dxdy " << dx SP << dy << endl;
         // cout << "vxvy " << vx SP << vy << endl;
