@@ -159,6 +159,14 @@ struct MazeGenerator {
                             continue;
                         }
 
+                        // 花の斜め位置 (1,1), (1,-1), (-1,1), (-1,-1) もスキップ
+                        if ((nr == ti + 1 && nc == tj + 1) ||
+                            (nr == ti + 1 && nc == tj - 1) ||
+                            (nr == ti - 1 && nc == tj + 1) ||
+                            (nr == ti - 1 && nc == tj - 1)) {
+                            continue;
+                        }
+
                         available_dirs.push_back(d);
                     }
                 }
@@ -556,7 +564,7 @@ struct MazeGenerator {
             }
         }
 
-        // 花の周りの特定位置にトレントを配置
+        // 花の周りの特定位置にトレントを配置（優先的に配置）
         // (1,1), (1,-1), (-1,1), (-1,-1) の位置
         vector<pair<int, int>> diagonal_offsets = {
             {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
@@ -564,9 +572,8 @@ struct MazeGenerator {
             int tr = ti + dr;
             int tc = tj + dc;
             if (tr >= 0 && tr < N && tc >= 0 && tc < N &&
-                test_maze[tr][tc] == '.' && path_map[tr][tc] == -1 &&
-                path_end_forward_positions.find({tr, tc}) ==
-                    path_end_forward_positions.end()) {
+                test_maze[tr][tc] == '.') {
+                // 花の斜め位置は優先的に配置（pathを無視）
                 test_maze[tr][tc] = 'T';
                 if (check_reachability(0, N / 2, test_maze)) {
                     treant_positions.push_back({tr, tc});
