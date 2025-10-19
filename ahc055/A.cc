@@ -90,11 +90,11 @@ int main() {
         vector<Edge> edges;
         for (int i = 0; i < N; ++i) {
             for (int j = 0; j < N; ++j) {
-                if (i == j)
+                if (i == j) {
                     continue; // 武器は自分が入っている宝箱を開けられない
+                }
+                double randomized_power = A[i][j] * rng.next_double(0.9, 1.1);
                 for (int k = 0; k < C[i]; ++k) {
-                    double randomized_power =
-                        A[i][j] * rng.next_double(0.95, 1.05);
                     edges.push_back({randomized_power, i, j});
                 }
             }
@@ -187,6 +187,7 @@ int main() {
     for (const auto &attack : best_attacks) {
         cout << attack.first << " " << attack.second << endl;
     }
+    cerr << best_attacks.size() << endl;
 
     return 0;
 }
