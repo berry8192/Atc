@@ -76,7 +76,9 @@ int main() {
     unsigned int seed = 1;
 
     // --- 制限時間いっぱいまで最適解の探索を繰り返す ---
+    int loop = 0;
     while (true) {
+        loop++;
         auto current_time = chrono::high_resolution_clock::now();
         if (chrono::duration_cast<chrono::milliseconds>(current_time -
                                                         start_time)
@@ -187,7 +189,7 @@ int main() {
     for (const auto &attack : best_attacks) {
         cout << attack.first << " " << attack.second << endl;
     }
-    cerr << best_attacks.size() << endl;
+    cerr << "loop, score: " << loop << " " << best_attacks.size() << endl;
 
     return 0;
 }
