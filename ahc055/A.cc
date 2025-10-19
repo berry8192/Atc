@@ -82,7 +82,7 @@ int main() {
         auto current_time = chrono::high_resolution_clock::now();
         if (chrono::duration_cast<chrono::milliseconds>(current_time -
                                                         start_time)
-                .count() > 1950) {
+                .count() > 1920) {
             break;
         }
 
@@ -95,7 +95,7 @@ int main() {
                 if (i == j) {
                     continue; // 武器は自分が入っている宝箱を開けられない
                 }
-                double randomized_power = A[i][j] * rng.next_double(0.9, 1.1);
+                double randomized_power = A[i][j] * rng.next_double(0.8, 1.2);
                 for (int k = 0; k < C[i]; ++k) {
                     edges.push_back({randomized_power, i, j});
                 }
