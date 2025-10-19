@@ -18,6 +18,9 @@ struct XorShift {
         z = w;
         return w = (w ^ (w >> 19)) ^ (t ^ (t >> 8));
     }
+    int next_int(int min_val, int max_val) {
+        return min_val + (next() % (max_val - min_val));
+    }
     // [0, 1)の範囲でdouble型の乱数を生成
     double next_double() { return (double)next() / 0xFFFFFFFF; }
     // [min_val, max_val)の範囲でdouble型の乱数を生成
@@ -71,9 +74,20 @@ int main() {
         }
     }
 
+    XorShift rng(20251019);
+
     auto start_time = chrono::high_resolution_clock::now();
     vector<pair<int, int>> best_attacks;
-    unsigned int seed = 1;
+    // vector<vector<int>> weapon_use_limit(N, vector<int>(N));
+    // for (int i = 0; i < N; ++i) {
+    //     for (int j = 0; j < N; ++j) {
+    //         if (rng.next_int(0, 10) == 0) {
+    //             weapon_use_limit[i][j] = 0;
+    //         } else {
+    //             weapon_use_limit[i][j] = C[i];
+    //         }
+    //     }
+    // }
 
     // --- 制限時間いっぱいまで最適解の探索を繰り返す ---
     int loop = 0;
@@ -86,15 +100,18 @@ int main() {
             break;
         }
 
-        XorShift rng(seed++);
-
         // --- フェーズ1: 攻撃計画の策定 ---
+        // int WEAK_WEAPON_THRESHOLD = loop % 8 + 3;
+        int WEAK_WEAPON_THRESHOLD = 4;
         vector<Edge> edges;
         for (int i = 0; i < N; ++i) {
             for (int j = 0; j < N; ++j) {
-                if (i == j) {
-                    continue; // 武器は自分が入っている宝箱を開けられない
+                if (i == j || A[i][j] < WEAK_WEAPON_THRESHOLD) {
+                    continue; // 武器は自分が入っている宝箱を開けられない、かつ弱すぎる武器は無視
                 }
+                // if (weapon_use_limit[i][j] == 0) {
+                //     continue;
+                // }
                 double randomized_power = A[i][j] * rng.next_double(0.8, 1.2);
                 for (int k = 0; k < C[i]; ++k) {
                     edges.push_back({randomized_power, i, j});
