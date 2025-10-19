@@ -29,25 +29,6 @@ struct XorShift {
     }
 };
 
-// DFSによる閉路検出のためのパス探索
-// 依存関係グラフ`adj`において、`start`から`end`へのパスが存在するかを調べる。
-// これは、`b`から`w`へのパスが既に存在する場合に辺`w -> b`を追加すると、
-// 閉路(例: b -> ... -> w -> b)が形成されるのを防ぐために使用される。
-bool hasPath(int start, int end, int N, const vector<vector<int>> &adj,
-             vector<bool> &visited) {
-    if (start == end)
-        return true;
-    visited[start] = true;
-    for (int neighbor : adj[start]) {
-        if (!visited[neighbor]) {
-            if (hasPath(neighbor, end, N, adj, visited)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 // 1回の攻撃の可能性を表す構造体（概念的なグラフの「辺」に相当）
 struct Edge {
     double power; // この攻撃の評価値（ランダム性を含む）
@@ -120,8 +101,11 @@ int main() {
         }
         sort(edges.begin(), edges.end(), compareEdges);
 
-        vector<vector<int>> adj(N);
         vector<vector<pair<int, int>>> attack_plan(N);
+        vector<vector<bool>> R(N, vector<bool>(N, false));
+        for (int i = 0; i < N; ++i) {
+            R[i][i] = true; // 自分自身へは常に到達可能（推移閉包の更新に必要）
+        }
         vector<long long> planned_damage(N, 0);
         vector<int> weapon_uses(N, 0);
 
@@ -130,12 +114,27 @@ int main() {
             int b = edge.chest;
             vector<bool> visited(N, false);
             if (planned_damage[b] < initial_H[b] && weapon_uses[w] < C[w] &&
-                !hasPath(b, w, N, adj, visited)) {
+                !R[b][w]) { // 辺(w, b)を追加すると b -> ... -> w -> b
+                            // の閉路ができるか？
+
                 attack_plan[b].push_back(
                     {w, A[w][b]}); // 計画には元の攻撃力を保存
                 planned_damage[b] += A[w][b];
                 weapon_uses[w]++;
-                adj[w].push_back(b);
+                // adj[w].push_back(b); // <-- 削除
+
+                // 到達可能性行列 R を O(N^2) で更新
+                // 「xがwに到達可能」かつ「bがyに到達可能」ならば、
+                // 辺(w, b)が追加されたことで「xがyに到達可能」になる
+                for (int x = 0; x < N; ++x) {
+                    if (R[x][w]) { // x が w に到達可能なら
+                        for (int y = 0; y < N; ++y) {
+                            if (R[b][y]) {      // b が y に到達可能なら
+                                R[x][y] = true; // x は y に到達可能になる
+                            }
+                        }
+                    }
+                }
             }
         }
 
