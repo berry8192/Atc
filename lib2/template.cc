@@ -28,7 +28,6 @@ const double PI = acos(-1.0);
 // ========== マクロ ==========
 #define rep(i, n) for (int i = 0; i < (int)(n); i++)
 #define rep1(i, n) for (int i = 1; i <= (int)(n); i++)
-#define rep3(i, n, m) for (int i = m; i < (int)(n); i++)
 #define rrep(i, n) for (int i = (int)(n) - 1; i >= 0; i--)
 #define rrep1(i, n) for (int i = (int)(n); i >= 1; i--)
 #define all(x) (x).begin(), (x).end()
@@ -41,18 +40,19 @@ const double PI = acos(-1.0);
 
 // ========== デバッグ ==========
 #ifdef LOCAL
-#define debug(...) debug_print(#__VA_ARGS__, __VA_ARGS__)
-template <typename T> void debug_print(const char *name, T &&arg) {
-    cerr << name << " = " << arg << endl;
-}
-template <typename T, typename... Args>
-void debug_print(const char *names, T &&arg, Args &&...args) {
-    const char *comma = strchr(names, ',');
-    cerr.write(names, comma - names) << " = " << arg << ", ";
-    debug_print(comma + 1, args...);
-}
+    #define debug(...) debug_print(#__VA_ARGS__, __VA_ARGS__)
+    template<typename T>
+    void debug_print(const char* name, T&& arg) {
+        cerr << name << " = " << arg << endl;
+    }
+    template<typename T, typename... Args>
+    void debug_print(const char* names, T&& arg, Args&&... args) {
+        const char* comma = strchr(names, ',');
+        cerr.write(names, comma - names) << " = " << arg << ", ";
+        debug_print(comma + 1, args...);
+    }
 #else
-#define debug(...) void(0)
+    #define debug(...) void(0)
 #endif
 
 // ========== 入出力高速化 ==========
@@ -67,7 +67,8 @@ struct FastIO {
 // ========== 便利関数 ==========
 
 // 最大・最小値更新
-template <typename T> bool chmax(T &a, const T &b) {
+template<typename T>
+bool chmax(T& a, const T& b) {
     if (a < b) {
         a = b;
         return true;
@@ -75,7 +76,8 @@ template <typename T> bool chmax(T &a, const T &b) {
     return false;
 }
 
-template <typename T> bool chmin(T &a, const T &b) {
+template<typename T>
+bool chmin(T& a, const T& b) {
     if (a > b) {
         a = b;
         return true;
@@ -84,17 +86,20 @@ template <typename T> bool chmin(T &a, const T &b) {
 }
 
 // GCD・LCM
-ll gcd(ll a, ll b) { return b ? gcd(b, a % b) : a; }
+ll gcd(ll a, ll b) {
+    return b ? gcd(b, a % b) : a;
+}
 
-ll lcm(ll a, ll b) { return a / gcd(a, b) * b; }
+ll lcm(ll a, ll b) {
+    return a / gcd(a, b) * b;
+}
 
 // 累乗（mod付き）
 ll pow_mod(ll x, ll n, ll mod = MOD) {
     ll res = 1;
     x %= mod;
     while (n > 0) {
-        if (n & 1)
-            res = res * x % mod;
+        if (n & 1) res = res * x % mod;
         x = x * x % mod;
         n >>= 1;
     }
@@ -102,7 +107,9 @@ ll pow_mod(ll x, ll n, ll mod = MOD) {
 }
 
 // 逆元（フェルマーの小定理）
-ll inv_mod(ll x, ll mod = MOD) { return pow_mod(x, mod - 2, mod); }
+ll inv_mod(ll x, ll mod = MOD) {
+    return pow_mod(x, mod - 2, mod);
+}
 
 // 階乗とその逆元（前計算）
 struct Factorial {
@@ -121,14 +128,12 @@ struct Factorial {
     }
 
     ll nCr(int n, int r, ll mod = MOD) {
-        if (r < 0 || r > n)
-            return 0;
+        if (r < 0 || r > n) return 0;
         return fact[n] * inv_fact[r] % mod * inv_fact[n - r] % mod;
     }
 
     ll nPr(int n, int r, ll mod = MOD) {
-        if (r < 0 || r > n)
-            return 0;
+        if (r < 0 || r > n) return 0;
         return fact[n] * inv_fact[n - r] % mod;
     }
 };
@@ -136,49 +141,56 @@ struct Factorial {
 // ========== 入出力補助 ==========
 
 // vector出力
-template <typename T> ostream &operator<<(ostream &os, const vector<T> &v) {
+template<typename T>
+ostream& operator<<(ostream& os, const vector<T>& v) {
     for (int i = 0; i < sz(v); i++) {
         os << v[i];
-        if (i < sz(v) - 1)
-            os << " ";
+        if (i < sz(v) - 1) os << " ";
     }
     return os;
 }
 
 // pair出力
-template <typename T, typename U>
-ostream &operator<<(ostream &os, const pair<T, U> &p) {
+template<typename T, typename U>
+ostream& operator<<(ostream& os, const pair<T, U>& p) {
     os << "(" << p.first << ", " << p.second << ")";
     return os;
 }
 
 // vector入力
-template <typename T> istream &operator>>(istream &is, vector<T> &v) {
-    for (T &x : v)
-        is >> x;
+template<typename T>
+istream& operator>>(istream& is, vector<T>& v) {
+    for (T& x : v) is >> x;
     return is;
 }
 
 // pair入力
-template <typename T, typename U>
-istream &operator>>(istream &is, pair<T, U> &p) {
+template<typename T, typename U>
+istream& operator>>(istream& is, pair<T, U>& p) {
     is >> p.first >> p.second;
     return is;
 }
 
 // Yes/No出力
-void Yes(bool flag = true) { cout << (flag ? "Yes" : "No") << "\n"; }
+void Yes(bool flag = true) {
+    cout << (flag ? "Yes" : "No") << "\n";
+}
 
-void YES(bool flag = true) { cout << (flag ? "YES" : "NO") << "\n"; }
+void YES(bool flag = true) {
+    cout << (flag ? "YES" : "NO") << "\n";
+}
 
 // 座標圧縮（簡易版）
-template <typename T> vector<int> compress(vector<T> &v) {
+template<typename T>
+vector<int> compress(vector<T>& v) {
     vector<T> vals = v;
     sort(all(vals));
     vals.erase(unique(all(vals)), vals.end());
 
     vector<int> res(sz(v));
-    rep(i, sz(v)) { res[i] = lower_bound(all(vals), v[i]) - vals.begin(); }
+    rep(i, sz(v)) {
+        res[i] = lower_bound(all(vals), v[i]) - vals.begin();
+    }
     return res;
 }
 
@@ -198,11 +210,13 @@ void solve() {
     cin >> n;
 
     vi a(n);
-    cin >> a; // vector入力
+    cin >> a;  // vector入力
 
     // 例: 処理
     ll sum = 0;
-    rep(i, n) { sum += a[i]; }
+    rep(i, n) {
+        sum += a[i];
+    }
 
     // 例: 出力
     cout << sum << "\n";
@@ -219,12 +233,13 @@ int main() {
     solve();
 
     // 複数テストケース用（コメントアウト）
-
-    // int t;
-    // cin >> t;
-    // while (t--) {
-    //     solve();
-    // }
+    /*
+    int t;
+    cin >> t;
+    while (t--) {
+        solve();
+    }
+    */
 
     return 0;
 }
