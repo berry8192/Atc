@@ -1,0 +1,155 @@
+## 競技プログラミングライブラリ作成ガイドライン
+
+### 目的
+競技プログラミング用の再利用可能なライブラリをlib2/ディレクトリに整備する。
+
+### ディレクトリ構成
+- lib2/ : ライブラリファイルを格納するディレクトリ
+- prompts/ : 作業指示や仕様を記録するディレクトリ
+
+### ライブラリファイルの構成要件
+
+1. **検索用キーワード**
+   - ファイル先頭に最重要キーワード3-5個程度
+   - アルゴリズム名と主要な用途のみ
+   - 過度なタグ付けは避ける
+
+2. **ライブラリ部分**
+   - コピペして即座に使用可能な形式
+   - 関数/クラスとして独立して動作
+   - 必要最小限のinclude文を含める
+   - 簡潔な使用方法のコメントを含める
+
+3. **サンプルコード（main関数）**
+   - ライブラリの使用例を示す
+   - 典型的な使用パターンを網羅
+   - AtCoderやCodeforcesでの実用例を意識
+
+4. **コーディング規約**
+   - using namespace std; を使用
+   - 変数名はsnake_case
+   - 適切なエラーハンドリング
+   - 計算量をコメントで明記
+
+### 共通コンポーネントの扱い方
+
+**基本方針: 単一ファイル完結型**
+- 各ライブラリファイルは単独でコピペ可能にする
+- 共通構造体（Graph、ModIntなど）は各ファイルの先頭に含める
+- 共通部分と固有部分を明確に区切る
+
+**ファイル構成例:**
+```cpp
+// ===== 共通構造体 =====
+struct Graph { ... };  // 必要な場合のみ
+
+// ===== ライブラリ本体 =====
+// 固有の関数実装
+
+// ===== サンプルコード =====
+int main() { ... }
+```
+
+**グラフライブラリの場合:**
+- `graph_template.cc` に基本的なGraph構造体を定義
+- 各アルゴリズム（dijkstra.cc、bfs.cc等）は、このGraph構造体部分をコピーして含める
+- 将来的に構造体を更新する場合は、全ファイルで一貫性を保つ
+
+### 作成済みライブラリ
+
+#### テンプレート・入力補助
+- template_with_input.cc - 競技プログラミング用テンプレート（入力ヘルパーマクロ付き）
+- template_grid.cc - グリッドグラフ対応版テンプレート
+- grid_example.cc - グリッドグラフの使用例集
+
+#### 探索アルゴリズム
+- binary_search.cc - 二分探索
+- ternary_search.cc - 三分探索
+- permutation_search.cc - 順列全探索（next_permutation）
+- bit_search.cc - ビット全探索
+
+#### グラフアルゴリズム（27ファイル）
+- graph_template.cc - グラフ構造体テンプレート
+- bfs.cc - 幅優先探索
+- dfs.cc - 深さ優先探索
+- dijkstra.cc - ダイクストラ法
+- bellman_ford.cc - ベルマンフォード法
+- warshall_floyd.cc - ワーシャルフロイド法
+- kruskal.cc - クラスカル法
+- prim.cc - プリム法
+- tree_diameter.cc - 木の直径
+- euler_tour.cc - オイラーツアー
+- lca.cc - 最小共通祖先
+- tree_dp.cc - 木DP
+- rerooting.cc - 全方位木DP
+- centroid_decomposition.cc - 重心分解
+- scc.cc - 強連結成分分解
+- topological_sort.cc - トポロジカルソート
+- bipartite.cc - 二部グラフ判定
+- max_flow.cc - 最大流（Dinic法）
+- min_cost_flow.cc - 最小費用流
+- bipartite_matching.cc - 二部マッチング
+- bridges.cc - 橋検出
+- articulation_points.cc - 関節点検出
+- lowlink.cc - Low-link
+- cycle_detection.cc - サイクル検出
+- negative_cycle.cc - 負閉路検出
+- tree_hashing.cc - 木の同型判定
+- functional_graph.cc - Functional Graph
+
+#### データ構造（11ファイル）
+- union_find.cc - UnionFind
+- colored_union_find.cc - 色付きUnionFind（ABC380 E対応）
+- segtree.cc - セグメント木
+- lazy_segtree.cc - 遅延セグメント木
+- bit.cc - Binary Indexed Tree
+- sparse_table.cc - Sparse Table
+- sliding_window.cc - スライド最小値
+- trie.cc - Trie木
+- mo.cc - Mo's algorithm
+- coordinate_compression.cc - 座標圧縮
+- path_counter.cc - グリッド上のパス数え上げ（ABC378 D対応）
+
+#### 数学・整数論（12ファイル）
+- prime_sieve.cc - エラトステネスの篩
+- prime_factorization.cc - 素因数分解
+- miller_rabin.cc - ミラーラビン素数判定
+- pollard_rho.cc - ポラード・ロー素因数分解
+- modint.cc - ModInt
+- matrix.cc - 行列演算
+- convolution.cc - 畳み込み（FFT/NTT）
+- rational.cc - 有理数
+- base_conversion.cc - 進数変換
+- inclusion_exclusion.cc - 包除原理
+- permutation_power.cc - 順列の累乗（ABC377 E対応）
+- ring_dp.cc - 環状配列のDP（ABC376 F対応）
+
+#### 文字列処理（10ファイル）
+- kmp.cc - KMP法
+- z_algorithm.cc - Z-algorithm
+- rolling_hash.cc - ローリングハッシュ
+- manacher.cc - 最長回文
+- suffix_array.cc - 接尾辞配列
+- aho_corasick.cc - Aho-Corasick法
+- edit_distance.cc - 編集距離
+- longest_common_subsequence.cc - 最長共通部分列
+- run_length_encoding.cc - ランレングス圧縮
+- substring_sum.cc - 部分文字列の数値和（ABC379 E対応）
+
+#### ユーティリティ（8ファイル）
+- imos.cc - いもす法
+- cumsum.cc - 累積和
+- string_utils.cc - 文字列ユーティリティ
+- vector_utils.cc - vectorユーティリティ
+- interval_scheduling.cc - 区間スケジューリング
+- weighted_union_find.cc - 重み付きUnionFind
+- slope_trick.cc - Slope Trick
+- check_consistency.py - 共通構造体の一貫性チェックスクリプト
+
+### 最近の更新
+- AtCoder ABC問題の分析に基づく具体的な問題対応ライブラリを追加
+- ColoredUnionFind: ABC380 E（バケット塗りつぶし）
+- PermutationPower: ABC377 E（順列の累乗計算）
+- SubstringSum: ABC379 E（部分文字列の数値和）
+- PathCounter: ABC378 D（グリッド上の経路数え上げ）
+- RingDP: ABC376 F（環状配列での最適化）
