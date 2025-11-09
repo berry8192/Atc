@@ -135,7 +135,9 @@ generate_rules(const vector<pair<int, int>> &path, int N,
 
     // 必要なすべての方向リスト（接尾辞含む）を収集
     set<vector<int>> all_dir_lists;
-    for (auto &[pos, dirs] : cell_dirs) {
+    for (map<pair<int, int>, vector<int>>::iterator it = cell_dirs.begin();
+         it != cell_dirs.end(); ++it) {
+        const vector<int> &dirs = it->second;
         // すべての接尾辞を追加
         for (int i = 0; i < dirs.size(); i++) {
             vector<int> suffix(dirs.begin() + i, dirs.end());
@@ -160,7 +162,11 @@ generate_rules(const vector<pair<int, int>> &path, int N,
     }
 
     // 各方向リストに対する遷移規則を作成
-    for (auto &[dirs, color] : dirlist_to_color) {
+    for (map<vector<int>, int>::iterator it = dirlist_to_color.begin();
+         it != dirlist_to_color.end(); ++it) {
+        const vector<int> &dirs = it->first;
+        int color = it->second;
+
         if (dirs.empty()) continue;
 
         int move_dir = dirs[0]; // 最初の方向に移動
@@ -192,7 +198,10 @@ generate_rules(const vector<pair<int, int>> &path, int N,
 
     // 各マスに初期カラーを設定
     cerr << "\n=== Board Color Assignment ===" << endl;
-    for (auto &[pos, dirs] : cell_dirs) {
+    for (map<pair<int, int>, vector<int>>::iterator it = cell_dirs.begin();
+         it != cell_dirs.end(); ++it) {
+        const pair<int, int> &pos = it->first;
+        const vector<int> &dirs = it->second;
         board[pos.first][pos.second] = dirlist_to_color[dirs];
         cerr << "Cell (" << pos.first << "," << pos.second << ") = color "
              << dirlist_to_color[dirs] << " [dirs:";
@@ -249,7 +258,9 @@ int main() {
 
     // 盤面の色を設定 & 遷移規則を生成
     vector<vector<int>> board(N, vector<int>(N, 0)); // デフォルトは色0
-    auto [rules, C] = generate_rules(full_path, N, board);
+    pair<map<pair<int, int>, tuple<int, int, char>>, int> result = generate_rules(full_path, N, board);
+    map<pair<int, int>, tuple<int, int, char>> rules = result.first;
+    int C = result.second;
 
     // 状態数は1（状態0のみ）
     int Q = 1;
