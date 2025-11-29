@@ -125,20 +125,85 @@ int main() {
     int N, T, M, K_input, L;
     cin >> N >> T >> M >> K_input >> L;
     vector<Atom> atoms;
+    vector<double> x, y;
     for (int i = 0; i < N; ++i) {
         int xi, yi, vxi, vyi;
         cin >> xi >> yi >> vxi >> vyi;
         atoms.emplace_back(i, xi, yi, vxi, vyi);
+        x.push_back(xi);
+        y.push_back(yi);
     }
 
-    // 初期グループ分け: 1~30, 31~60, ...
-    vector<vector<int>> groups;
-    for (int i = 0; i < N; i += K) {
-        vector<int> g;
-        for (int j = i; j < i + K && j < N; ++j)
-            g.push_back(j);
-        groups.push_back(g);
+    // 初期グループ分け: クラスカル法でK個のグループをM個作る
+    struct Edge {
+        int u, v;
+        double score;
+    };
+    vector<Edge> edges;
+    for (int i = 0; i < N; ++i)
+        for (int j = i + 1; j < N; ++j) {
+            double cost = torus_dist(x[i], y[i], x[j], y[j], L);
+            edges.push_back({i, j, cost});
+        }
+    sort(edges.begin(), edges.end(),
+         [](const Edge &a, const Edge &b) { return a.score < b.score; });
+
+    dsu uf(N);
+    int group_target = M;
+    int group_cnt = N;
+    for (auto &e : edges) {
+        if (uf.leader(e.u) == uf.leader(e.v))
+            continue;
+        if ((int)uf.size(e.u) + (int)uf.size(e.v) > K)
+            continue;
+        if (group_cnt <= group_target)
+            break;
+        uf.merge(e.u, e.v);
+        --group_cnt;
     }
+    vector<vector<int>> groups = uf.groups();
+
+    // K個未満のグループをK個にする（大きい順にマージ）
+    vector<vector<int>> smalls;
+    for (auto &g : groups)
+        if ((int)g.size() < K)
+            smalls.push_back(g);
+
+    vector<pair<int, int>> size_idx;
+    for (int i = 0; i < (int)smalls.size(); ++i) {
+        size_idx.emplace_back(smalls[i].size(), i);
+    }
+    sort(size_idx.rbegin(), size_idx.rend());
+
+    vector<bool> used(smalls.size(), false);
+    vector<vector<int>> final_groups;
+    for (int si = 0; si < (int)size_idx.size(); ++si) {
+        int i = size_idx[si].second;
+        if (used[i])
+            continue;
+        vector<int> merged = smalls[i];
+        used[i] = true;
+        for (int sj = si + 1; sj < (int)size_idx.size(); ++sj) {
+            int j = size_idx[sj].second;
+            if (used[j])
+                continue;
+            if ((int)merged.size() + (int)smalls[j].size() > K)
+                continue;
+            merged.insert(merged.end(), smalls[j].begin(), smalls[j].end());
+            used[j] = true;
+            if ((int)merged.size() == K)
+                break;
+        }
+        if ((int)merged.size() == K) {
+            final_groups.push_back(merged);
+        }
+    }
+    // K個のグループはそのまま
+    for (auto &g : groups)
+        if ((int)g.size() == K)
+            final_groups.push_back(g);
+
+    groups = final_groups;
 
     // 3. 各グループで手順構築（時刻順にシミュレーションしながら結合）
     vector<vector<int>> best_groups = groups;
@@ -413,6 +478,12 @@ int main() {
                                    appear1, appear2);
             }
         }
+    }
+
+    // N個の頂点からM個のグループになるまでN-M回の結合が必要
+    int required = N - M;
+    if ((int)output.size() > required) {
+        output.resize(required);
     }
 
     for (auto &m : output) {
