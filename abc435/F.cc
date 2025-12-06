@@ -16,21 +16,9 @@ using vvll = vector<vll>;
 using vs = vector<string>;
 using vpii = vector<pii>;
 using vpll = vector<pll>;
-using tii = tuple<int, int>;
-using tiii = tuple<int, int, int>;
-using tiiii = tuple<int, int, int, int>;
-using tll = tuple<ll, ll>;
-using tlll = tuple<ll, ll, ll>;
-using tllll = tuple<ll, ll, ll, ll>;
-using vtii = vector<tii>;
-using vtiii = vector<tiii>;
-using vtiiii = vector<tiiii>;
-using vtll = vector<tll>;
-using vtlll = vector<tlll>;
-using vtllll = vector<tllll>;
 
 // ========== 定数 ==========
-const int INF = 2e9;
+const int INF = 1e9;
 const ll LINF = 1e18;
 const int MOD = 1000000007;
 const int MOD2 = 998244353;
@@ -178,27 +166,6 @@ istream &operator>>(istream &is, pair<T, U> &p) {
     return is;
 }
 
-// tuple入力（2要素）
-template <typename T1, typename T2>
-istream &operator>>(istream &is, tuple<T1, T2> &t) {
-    is >> get<0>(t) >> get<1>(t);
-    return is;
-}
-
-// tuple入力（3要素）
-template <typename T1, typename T2, typename T3>
-istream &operator>>(istream &is, tuple<T1, T2, T3> &t) {
-    is >> get<0>(t) >> get<1>(t) >> get<2>(t);
-    return is;
-}
-
-// tuple入力（4要素）
-template <typename T1, typename T2, typename T3, typename T4>
-istream &operator>>(istream &is, tuple<T1, T2, T3, T4> &t) {
-    is >> get<0>(t) >> get<1>(t) >> get<2>(t) >> get<3>(t);
-    return is;
-}
-
 // Yes/No出力
 void Yes(bool flag = true) { cout << (flag ? "Yes" : "No") << "\n"; }
 
@@ -230,13 +197,53 @@ void solve() {
     int n;
     cin >> n;
 
-    vi a(n);
-    cin >> a; // vector入力
+    vi p(n);
+    cin >> p; // vector入力
+    vector<pair<int, int>> inv;
+    rep(i, n) { inv.push_back({p[i] - 1, i}); }
+    sort(all(inv));
+    map<int, int> mp;
+    mp[-1] = -1;
+    mp[INF] = INF;
+    vector<pair<int, int>> next_to(n);
+    rrep(i, n) {
+        // cerr << "height: " << inv[i].first << endl;
+        mp[inv[i].second] = inv[i].first;
+        int nl = INF, nr = INF;
+        auto litr = mp.find(inv[i].second);
+        litr--;
+        pair<int, int> l = *litr;
+        // cerr << "l: " << l.first << " " << l.second << endl;
+        if (l.first != -1) {
+            nl = l.second;
+        }
+        auto ritr = mp.find(inv[i].second);
+        ritr++;
+        pair<int, int> r = *ritr;
+        // cerr << "r: " << r.first << " " << r.second << endl;
+        if (r.first != INF) {
+            nr = r.second;
+        }
+        next_to[inv[i].first] = {nl, nr};
+        // cerr << nl << " " << nr << endl;
+    }
 
-    rep(i, n) {}
-
-    // 例: デバッグ出力（ローカルのみ）
-    debug(n, sum, a);
+    vector<int> dp(n);
+    rrep(i, n - 1) {
+        int l = 0, r = 0;
+        if (next_to[i].first != INF) {
+            l = dp[next_to[i].first] +
+                abs(inv[next_to[i].first].second - inv[i].second);
+        }
+        if (next_to[i].second != INF) {
+            r = dp[next_to[i].second] +
+                abs(inv[next_to[i].second].second - inv[i].second);
+        }
+        dp[i] = max(l, r);
+    }
+    int ans = 0;
+    rep(i, n) { ans = max(ans, dp[i]); }
+    cout << ans << endl;
 }
 
 int main() {

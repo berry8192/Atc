@@ -16,21 +16,9 @@ using vvll = vector<vll>;
 using vs = vector<string>;
 using vpii = vector<pii>;
 using vpll = vector<pll>;
-using tii = tuple<int, int>;
-using tiii = tuple<int, int, int>;
-using tiiii = tuple<int, int, int, int>;
-using tll = tuple<ll, ll>;
-using tlll = tuple<ll, ll, ll>;
-using tllll = tuple<ll, ll, ll, ll>;
-using vtii = vector<tii>;
-using vtiii = vector<tiii>;
-using vtiiii = vector<tiiii>;
-using vtll = vector<tll>;
-using vtlll = vector<tlll>;
-using vtllll = vector<tllll>;
 
 // ========== 定数 ==========
-const int INF = 2e9;
+const int INF = 2000000000;
 const ll LINF = 1e18;
 const int MOD = 1000000007;
 const int MOD2 = 998244353;
@@ -178,27 +166,6 @@ istream &operator>>(istream &is, pair<T, U> &p) {
     return is;
 }
 
-// tuple入力（2要素）
-template <typename T1, typename T2>
-istream &operator>>(istream &is, tuple<T1, T2> &t) {
-    is >> get<0>(t) >> get<1>(t);
-    return is;
-}
-
-// tuple入力（3要素）
-template <typename T1, typename T2, typename T3>
-istream &operator>>(istream &is, tuple<T1, T2, T3> &t) {
-    is >> get<0>(t) >> get<1>(t) >> get<2>(t);
-    return is;
-}
-
-// tuple入力（4要素）
-template <typename T1, typename T2, typename T3, typename T4>
-istream &operator>>(istream &is, tuple<T1, T2, T3, T4> &t) {
-    is >> get<0>(t) >> get<1>(t) >> get<2>(t) >> get<3>(t);
-    return is;
-}
-
 // Yes/No出力
 void Yes(bool flag = true) { cout << (flag ? "Yes" : "No") << "\n"; }
 
@@ -223,20 +190,85 @@ const vi dy8 = {1, 1, 0, -1, -1, -1, 0, 1};
 
 // ========== メイン関数 ==========
 
+// 区間の合成を頑張っている
+set<pair<int, int>> itvs;
+int ans;
+
+void merge_itv(pair<int, int> oitv, pair<int, int> &nitv, bool &naihou) {
+    if (nitv.first <= oitv.second) {
+        if (nitv.second <= oitv.second) {
+            // cerr << "古いほうに内包されている" << endl;
+            naihou = true;
+        } else {
+            // cerr << "古いほうが左で重なる - " << nitv.second - oitv.second
+            //      << endl;
+            ans -= nitv.second - oitv.second;
+            itvs.erase(oitv);
+            itvs.insert({oitv.first, nitv.second});
+            nitv = {oitv.first, nitv.second};
+        }
+    } else {
+        // cerr << "古いほうが左すぎ" << endl;
+        // itvs.insert(nitv);
+        // ans -= nitv.second - nitv.first + 1;
+    }
+}
+bool merge_ritv(pair<int, int> oitv, pair<int, int> nitv) {
+    if (oitv.second <= nitv.second) {
+        // cerr << "古いほうが内包されている + " << oitv.second - oitv.first + 1
+        //      << endl;
+        ans += oitv.second - oitv.first + 1;
+        itvs.erase(oitv);
+        return false;
+    } else {
+        // cerr << "古いほうが右で重なる - " << oitv.first - nitv.first << endl;
+        ans -= oitv.first - nitv.first;
+        itvs.erase(oitv);
+        itvs.insert({nitv.first, oitv.second});
+        return true;
+    }
+}
+
 void solve() {
     // ここに問題を解くコードを書く
 
     // 例: 入力
-    int n;
-    cin >> n;
+    int n, q;
+    cin >> n >> q;
+    ans = n;
 
-    vi a(n);
-    cin >> a; // vector入力
+    itvs.insert({-1, -1});
+    itvs.insert({INF, INF});
 
-    rep(i, n) {}
+    vi l(q), r(q);
+    rep(i, q) { cin >> l[i] >> r[i]; }
 
-    // 例: デバッグ出力（ローカルのみ）
-    debug(n, sum, a);
+    rep(i, q) {
+        pair<int, int> itv = {l[i], r[i]};
+        auto litr = itvs.upper_bound(itv);
+        litr--;
+        auto litv = *litr;
+        bool naihou = false;
+        merge_itv(litv, itv, naihou);
+        while (!naihou) {
+            auto itr = itvs.lower_bound(itv);
+            auto oitv = *itr;
+            if (itv.second < oitv.first) {
+                // cerr << "古いほうが右すぎ - " << itv.second - itv.first + 1
+                //      << endl;
+                itvs.insert(itv);
+                ans -= itv.second - itv.first + 1;
+                break;
+            }
+            if (merge_ritv(oitv, itv)) {
+                break;
+            }
+        }
+        cout << ans << endl;
+        // for (auto itvp : itvs) {
+        //     cout << itvp.first << " " << itvp.second << endl;
+        // }
+    }
 }
 
 int main() {
