@@ -67,42 +67,31 @@ struct State {
         if (apples < cost)
             return -1e18;
 
-        double t = remaining_turns;
+        // 簡易計算: A * (500^level)
+        double base_value = A[id];
+        rep(i, level) { base_value *= 500.0; }
 
-        // 現在のパワーから1増えた場合の増加分を計算
-        if (level == 0) {
-            // Level 0: パワー1増加で毎ターン A[id] * B[0][id] 個増える
-            // 総生産 = A[id] * B[0][id] * t
-            return A[id] * B[0][id] * t / cost;
-        } else if (level == 1) {
-            // Level 1: パワー1増加で毎ターンB[1][id]個のLevel 0機械が増える
-            // k番目のターンに増えたLevel 0機械は残り(t-k)ターン稼働
-            // 総生産 = A[id] * B[1][id] * Σ(t-k) for k=1..t
-            //        = A[id] * B[1][id] * (t-1)*t/2
-            return A[id] * B[1][id] * (t - 1) * t / 2.0 / cost;
-        } else if (level == 2) {
-            // Level 2: パワー1増加で毎ターンB[2][id]個のLevel 1機械が増える
-            // k番目のターンに増えたLevel 1機械は残り(t-k)ターンで
-            // A[id] * B[1][id] * (t-k)*(t-k-1)/2 個のりんごを生産
-            // 総生産 = A[id] * B[2][id] * Σ((t-k)*(t-k-1)/2) for k=1..t
-            //        = A[id] * B[2][id] * t*(t-1)*(t-2)/6
-            return A[id] * B[2][id] * t * (t - 1) * (t - 2) / 6.0 / cost;
-        } else {
-            // Level 3: パワー1増加で毎ターンB[3][id]個のLevel 2機械が増える
-            // k番目のターンに増えたLevel 2機械は残り(t-k)ターンで
-            // A[id] * B[2][id] * (t-k)*(t-k-1)*(t-k-2)/6 個のりんごを生産
-            // 総生産 = A[id] * B[3][id] * Σ((t-k)*(t-k-1)*(t-k-2)/6) for k=1..t
-            //        = A[id] * B[3][id] * t*(t-1)*(t-2)*(t-3)/24
-            if (t >= 3) {
-                return A[id] * B[3][id] * t * (t - 1) * (t - 2) * (t - 3) /
-                       24.0 / cost;
-            } else {
-                return 0.0;
-            }
-        }
+        return base_value / cost;
     }
 
-    // 可能な行動を将来利得順に列挙
+    // 何ターン待てば購入できるか計算
+    int turns_until_affordable(int level, int id) const {
+        long long cost = C[level][id] * (P[level][id] + 1);
+        if (apples >= cost)
+            return 0;
+
+        long long production = 0;
+        rep(j, N) { production += A[j] * B[0][j] * P[0][j]; }
+
+        if (production == 0)
+            return 1000000; // 生産量0なら永遠に買えない
+
+        long long shortage = cost - apples;
+        int turns = (shortage + production - 1) / production; // 切り上げ
+        return turns;
+    }
+
+    // 可能な行動を将来利得順に列挙（待機近傍を含む）
     vector<pair<int, int>> get_actions_by_value(int remaining_turns) const {
         vector<pair<double, pair<int, int>>> value_actions;
 
@@ -113,9 +102,36 @@ struct State {
             rep(id, N) {
                 long long cost = C[level][id] * (P[level][id] + 1);
                 if (apples >= cost) {
+                    // 即座に購入可能
                     double value =
                         calculate_future_value(level, id, remaining_turns);
                     value_actions.push_back({value, {level, id}});
+                } else {
+                    // 将来購入可能か確認
+                    int wait_turns = turns_until_affordable(level, id);
+                    if (wait_turns > 0 && wait_turns <= 100 &&
+                        wait_turns < remaining_turns) {
+                        // 待機してから購入する価値を計算
+                        // wait_turns後に購入し、残りremaining_turns -
+                        // wait_turnsターンで稼ぐ
+                        int future_remaining = remaining_turns - wait_turns;
+                        if (future_remaining > 0) {
+                            // 待機コストを考慮（生産機会損失）
+                            double future_value = calculate_future_value(
+                                level, id, future_remaining);
+                            // 待機分を割り引く
+                            double discounted_value =
+                                future_value; // 待機のペナルティなし
+
+                            // 特殊な行動ID: (level, -id-2)
+                            // で「idのlevelを買うために待機」を表現
+                            // 負の値で待機ターン数をエンコード: -(id * 1000 +
+                            // wait_turns + 10)
+                            int encoded = -(id * 1000 + wait_turns + 10);
+                            value_actions.push_back(
+                                {discounted_value, {level, encoded}});
+                        }
+                    }
                 }
             }
         }
@@ -155,7 +171,7 @@ int main() {
     start_time = chrono::system_clock::now();
     inpt();
 
-    int beam_width = 100; // 幅を増やす
+    int beam_width = 100;
 
     vector<State> current_beam;
     current_beam.push_back(State());
@@ -182,21 +198,54 @@ int main() {
             vector<pair<int, int>> actions =
                 parent.get_actions_by_value(remaining_turns);
 
-            // 上位20個に増やす（より多くの選択肢を試す）
-            if (actions.size() > 20) {
-                actions.resize(20);
+            // 上位30個に増やす（待機近傍を含むため）
+            if (actions.size() > 30) {
+                actions.resize(30);
             }
 
             for (auto action : actions) {
-                State new_state = parent;
-
                 int level = action.first;
                 int id = action.second;
 
-                if (level != -1) {
-                    new_state.upgrade(level, id);
+                // 待機行動のデコード
+                bool is_wait_action = (id < -1);
+                int actual_id = id;
+                int wait_turns = 1;
+
+                if (is_wait_action) {
+                    int encoded = -id;
+                    encoded -= 10;
+                    wait_turns = encoded % 1000;
+                    actual_id = encoded / 1000;
                 }
-                new_state.produce();
+
+                // wait_turnsターン待機してから購入
+                State new_state = parent;
+
+                if (is_wait_action) {
+                    // wait_turnsターン分の生産を実行
+                    rep(w, wait_turns) {
+                        new_state.produce();
+                        if (w == wait_turns - 1) {
+                            // 最後のターンで購入
+                            if (new_state.apples >=
+                                C[level][actual_id] *
+                                    (new_state.P[level][actual_id] + 1)) {
+                                new_state.upgrade(level, actual_id);
+                            }
+                        }
+                    }
+                    // 行動記録は最初の待機として記録
+                    tree.push_back(
+                        Node(parent_tree_idx, {-1, -1})); // 待機の記録
+                } else {
+                    // 通常の行動
+                    if (level != -1) {
+                        new_state.upgrade(level, actual_id);
+                    }
+                    new_state.produce();
+                    tree.push_back(Node(parent_tree_idx, action));
+                }
 
                 // 評価関数：現在の生産量 + 将来利得の加重平均
                 new_state.score = new_state.evaluate();
@@ -208,15 +257,16 @@ int main() {
                         if (new_state.P[lv][id2] > 0) {
                             future_potential +=
                                 new_state.calculate_future_value(
-                                    lv, id2, remaining_turns - 1) *
+                                    lv, id2,
+                                    remaining_turns -
+                                        (is_wait_action ? wait_turns : 1)) *
                                 0.01;
                         }
                     }
                 }
                 new_state.score += future_potential;
 
-                int new_tree_idx = tree.size();
-                tree.push_back(Node(parent_tree_idx, action));
+                int new_tree_idx = tree.size() - 1;
 
                 score_pairs.push_back({new_state.score, next_beam.size()});
                 next_beam.push_back(new_state);
