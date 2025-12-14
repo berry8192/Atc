@@ -81,13 +81,14 @@ struct Factory {
     vector<vector<long long>> P; // 機械のパワー
     long long apples;            // りんごの数
     vector<int> selected_ids;    // 選択されたID
-    vector<pair<long long, pair<int, int>>>
-        target_machines; // {cost, {level, id}}
+    vector<int> target_machines; // 各レベルの目標機械のID
+    int current_target_level;    // 現在目標としているレベル
 
     Factory(const vector<int> &ids) : selected_ids(ids) {
         B.resize(L, vector<long long>(N, 1));
         P.resize(L, vector<long long>(N, 0));
         apples = K;
+        current_target_level = 0;
 
         // 各レベルで最もコストが小さい機械を選ぶ
         target_machines.resize(L);
@@ -100,7 +101,7 @@ struct Factory {
                     best_id = id;
                 }
             }
-            target_machines[level] = {min_cost, {level, best_id}};
+            target_machines[level] = best_id;
         }
     }
 
@@ -135,35 +136,54 @@ struct Factory {
         }
     }
 
-    // 最も効率の良い強化を探す（りんごの生産量を増やす）
+    // 最も効率の良い強化を探す（レベル内のパワー差を縮める）
     pair<int, int> find_best_upgrade() {
-        double best_efficiency = -1;
         int best_level = -1, best_id = -1;
+        int min_power_diff = imax;
 
+        // 選択されたIDごとにチェック
         for (int id : selected_ids) {
+            // このIDの各レベルのパワーを確認
+            long long min_power = llimax;
+            long long max_power = -1;
+
             rep(level, L) {
+                if (P[level][id] < min_power)
+                    min_power = P[level][id];
+                if (P[level][id] > max_power)
+                    max_power = P[level][id];
+            }
+
+            int current_diff = max_power - min_power;
+
+            // 購入可能なレベルを高い順にチェック
+            repr(level, L) {
                 long long cost = C[level][id] * (P[level][id] + 1);
                 if (apples >= cost) {
-                    // 効率を計算（生産量増加 / コスト）
-                    double efficiency = 0;
-                    if (level == 0) {
-                        // Level 0: 直接りんごを生産
-                        efficiency = (double)A[id] * B[level][id] / cost;
-                    } else {
-                        // Level 1以上: 下のレベルの機械を増やす
-                        // より正確に評価するため、下のレベルの機械の生産力を考慮
-                        long long increase = B[level][id];
-                        if (level == 1) {
-                            // Level 1なら、Level 0の機械が増える
-                            efficiency = (double)A[id] * increase * 0.01 / cost;
-                        } else {
-                            // Level 2以上は長期的な効果
-                            efficiency = (double)increase / cost * 0.001;
+                    // このレベルを購入した場合の新しい差を計算
+                    long long new_min = min_power;
+                    long long new_max = max_power;
+
+                    if (P[level][id] + 1 > new_max)
+                        new_max = P[level][id] + 1;
+                    if (P[level][id] == min_power) {
+                        // 最小値を更新する必要がある
+                        new_min = llimax;
+                        rep(l, L) {
+                            long long p =
+                                (l == level) ? P[l][id] + 1 : P[l][id];
+                            if (p < new_min)
+                                new_min = p;
                         }
                     }
 
-                    if (efficiency > best_efficiency) {
-                        best_efficiency = efficiency;
+                    int new_diff = new_max - new_min;
+
+                    // 差が小さくなる、または同じなら高いレベルを優先
+                    if (new_diff < min_power_diff ||
+                        (new_diff == min_power_diff &&
+                         (best_level == -1 || level > best_level))) {
+                        min_power_diff = new_diff;
                         best_level = level;
                         best_id = id;
                     }
@@ -181,33 +201,52 @@ struct Factory {
         rep(turn, T) {
             bool did_action = false;
 
-            // 各レベルの目標機械のコストをチェック
+            // 現在の目標レベルの機械のコストをチェック
             long long production = apples_per_turn();
-            long long min_target_cost = llimax;
+            long long target_cost = llimax;
 
-            rep(level, L) {
-                int id = target_machines[level].second.second;
-                if (id != -1) {
-                    long long cost = C[level][id] * (P[level][id] + 1);
-                    min_target_cost = min(min_target_cost, cost);
+            if (current_target_level < L) {
+                int target_id = target_machines[current_target_level];
+                if (target_id != -1) {
+                    target_cost = C[current_target_level][target_id] *
+                                  (P[current_target_level][target_id] + 1);
                 }
             }
 
-            // 生産量がコスト/10を上回っていれば待つ（ただし初期の低生産時は待たない）
-            if (production > 100 && production * 10 > min_target_cost) {
-                actions.push_back({-1, -1});
-            } else {
-                // 最も効率の良い強化を実行
-                pair<int, int> upgrade_pair = find_best_upgrade();
-                int level = upgrade_pair.first;
-                int id = upgrade_pair.second;
-                if (level != -1 && upgrade(level, id)) {
-                    actions.push_back({level, id});
+            // 目標の機械を購入できるか確認
+            if (current_target_level < L && apples >= target_cost) {
+                int target_id = target_machines[current_target_level];
+                if (target_id != -1 &&
+                    upgrade(current_target_level, target_id)) {
+                    actions.push_back({current_target_level, target_id});
                     did_action = true;
-                }
 
-                if (!did_action) {
+                    // 次のレベルに進むかどうか判断
+                    // 一定回数購入したら次のレベルへ
+                    if (P[current_target_level][target_id] >= 5) {
+                        current_target_level++;
+                    }
+                }
+            }
+
+            // 目標機械を購入できない場合、パワー差を縮める行動を取る
+            if (!did_action) {
+                // 生産量がコスト/10を上回っていれば待つ
+                if (production > 0 && production * 10 > target_cost) {
                     actions.push_back({-1, -1});
+                } else {
+                    // パワー差を縮める強化を実行
+                    pair<int, int> upgrade_pair = find_best_upgrade();
+                    int level = upgrade_pair.first;
+                    int id = upgrade_pair.second;
+                    if (level != -1 && upgrade(level, id)) {
+                        actions.push_back({level, id});
+                        did_action = true;
+                    }
+
+                    if (!did_action) {
+                        actions.push_back({-1, -1});
+                    }
                 }
             }
 
@@ -237,20 +276,31 @@ int main() {
 
     long long best_apples = 0;
     vector<pair<int, int>> best_actions;
+    vector<int> best_selected_ids;
 
-    // ID 0は固定、ID 6, 8を選択
-    vector<int> selected_ids = {0, 6, 8};
+    // ID 0は固定、ID 1~9を全探索 (2^9 = 512通り)
+    rep(mask, 1 << (N - 1)) {
+        vector<int> selected_ids = {0}; // ID 0は固定
+        rep(i, N - 1) {
+            if (mask & (1 << i)) {
+                selected_ids.push_back(i + 1);
+            }
+        }
 
-    Factory factory(selected_ids);
-    pair<long long, vector<pair<int, int>>> result = factory.simulate();
-    long long apples = result.first;
-    vector<pair<int, int>> actions = result.second;
+        Factory factory(selected_ids);
+        pair<long long, vector<pair<int, int>>> result = factory.simulate();
+        long long apples = result.first;
+        vector<pair<int, int>> actions = result.second;
 
-    best_apples = apples;
-    best_actions = actions;
+        if (apples > best_apples) {
+            best_apples = apples;
+            best_actions = actions;
+            best_selected_ids = selected_ids;
+        }
+    }
 
     // 最良の行動列を出力（デバッグ情報付き）
-    Factory replay_factory(selected_ids);
+    Factory replay_factory(best_selected_ids);
     rep(turn, T) {
         // デバッグ情報を出力
         cout << "# Turn " << turn << " Apples: " << replay_factory.apples;
