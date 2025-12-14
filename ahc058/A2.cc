@@ -17,10 +17,9 @@ vector<int> A;
 vector<vector<long long>> C;
 
 struct State {
-    vector<vector<long long>> B;    // 機械の個数
-    vector<vector<long long>> P;    // 機械のパワー
-    long long apples;               // りんごの数
-    vector<pair<int, int>> history; // 行動履歴
+    vector<vector<long long>> B; // 機械の個数
+    vector<vector<long long>> P; // 機械のパワー
+    long long apples;            // りんごの数
     double score;
 
     State() {
@@ -29,8 +28,6 @@ struct State {
         apples = K;
         score = 0.0;
     }
-
-    State(const State &other) = default;
 
     // 評価関数：1ターンあたりのりんご生産量
     double evaluate() {
@@ -63,25 +60,6 @@ struct State {
         }
     }
 
-    // 次の状態を生成
-    State next_state(int level, int id) const {
-        State new_state = *this;
-        if (level == -1) {
-            // 何もしない
-            new_state.history.push_back({-1, -1});
-        } else {
-            bool success = new_state.upgrade(level, id);
-            if (success) {
-                new_state.history.push_back({level, id});
-            } else {
-                new_state.history.push_back({-1, -1});
-            }
-        }
-        new_state.produce();
-        new_state.score = new_state.evaluate();
-        return new_state;
-    }
-
     // 可能な行動を列挙
     vector<pair<int, int>> get_actions() const {
         vector<pair<int, int>> actions;
@@ -97,8 +75,15 @@ struct State {
         return actions;
     }
 
-    bool operator<(const State &other) const { return score < other.score; }
     bool operator>(const State &other) const { return score > other.score; }
+};
+
+// 木構造用の軽量ノード
+struct Node {
+    int parent_idx;
+    pair<int, int> action;
+
+    Node(int p, pair<int, int> a) : parent_idx(p), action(a) {}
 };
 
 void inpt() {
@@ -115,41 +100,113 @@ int main() {
     start_time = chrono::system_clock::now();
     inpt();
 
-    int beam_width = 10;
+    int beam_width = 50; // メモリ削減のため幅を減らす
+
     vector<State> current_beam;
     current_beam.push_back(State());
 
+    vector<Node> tree; // 行動の木構造のみ保持
+    tree.push_back(Node(-1, {-1, -1}));
+
+    vector<int> current_tree_indices = {0};
+
     rep(turn, T) {
         vector<State> next_beam;
+        vector<int> next_tree_indices;
+        vector<pair<double, int>> score_pairs; // {score, index}
 
-        for (const State &st : current_beam) {
-            vector<pair<int, int>> actions = st.get_actions();
+        int base_tree_size = tree.size();
+
+        rep(beam_idx, current_beam.size()) {
+            const State &parent = current_beam[beam_idx];
+            int parent_tree_idx = current_tree_indices[beam_idx];
+
+            vector<pair<int, int>> actions = parent.get_actions();
+
+            // 行動数が多すぎる場合は間引く
+            if (actions.size() > 15) {
+                vector<pair<long long, pair<int, int>>> cost_actions;
+                for (auto action : actions) {
+                    int level = action.first;
+                    int id = action.second;
+                    if (level != -1) {
+                        long long cost =
+                            C[level][id] * (parent.P[level][id] + 1);
+                        cost_actions.push_back({cost, action});
+                    }
+                }
+                sort(all(cost_actions));
+                actions.clear();
+                actions.push_back({-1, -1});
+                rep(i, min(14, (int)cost_actions.size())) {
+                    actions.push_back(cost_actions[i].second);
+                }
+            }
+
             for (auto action : actions) {
+                State new_state = parent;
+
                 int level = action.first;
                 int id = action.second;
-                State new_state = st.next_state(level, id);
+
+                if (level != -1) {
+                    new_state.upgrade(level, id);
+                }
+                new_state.produce();
+                new_state.score = new_state.evaluate();
+
+                int new_tree_idx = tree.size();
+                tree.push_back(Node(parent_tree_idx, action));
+
+                score_pairs.push_back({new_state.score, next_beam.size()});
                 next_beam.push_back(new_state);
+                next_tree_indices.push_back(new_tree_idx);
             }
         }
 
         // スコアでソート（降順）
-        sort(all(next_beam), greater<State>());
+        sort(all(score_pairs), greater<pair<double, int>>());
 
         // beam_width個に絞る
-        if (next_beam.size() > beam_width) {
-            next_beam.resize(beam_width);
+        vector<State> selected_beam;
+        vector<int> selected_tree_indices;
+
+        rep(i, min(beam_width, (int)score_pairs.size())) {
+            int idx = score_pairs[i].second;
+            selected_beam.push_back(next_beam[idx]);
+            selected_tree_indices.push_back(next_tree_indices[idx]);
         }
 
-        current_beam = next_beam;
+        current_beam = move(selected_beam);
+        current_tree_indices = move(selected_tree_indices);
+
+        // 進捗表示
+        if (turn % 100 == 0) {
+            cerr << "Turn: " << turn << " / " << T << endl;
+        }
     }
 
-    // 最良の状態を出力
+    // 最良の状態から行動列を復元
     if (!current_beam.empty()) {
         State best = current_beam[0];
+        int best_tree_idx = current_tree_indices[0];
+
         long long final_score = round(1e5 * log2((double)best.apples));
         cerr << "Score: " << final_score << endl;
 
-        for (auto action : best.history) {
+        // 行動列を復元
+        vector<pair<int, int>> actions;
+        int idx = best_tree_idx;
+        while (idx != -1 && idx < tree.size()) {
+            if (tree[idx].action.first != -1 || tree[idx].action.second != -1) {
+                actions.push_back(tree[idx].action);
+            }
+            idx = tree[idx].parent_idx;
+        }
+        reverse(all(actions));
+
+        // 出力
+        for (auto action : actions) {
             int level = action.first;
             int id = action.second;
             if (level == -1) {
