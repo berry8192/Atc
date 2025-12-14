@@ -75,6 +75,9 @@ mt19937 mt(seed);
 int N, L, T, K;
 vector<int> A;
 vector<vector<long long>> C;
+vector<vector<long long>> B; // 機械の個数
+vector<vector<long long>> P; // 機械のパワー
+long long apples;            // りんごの数
 
 struct Grid {};
 
@@ -86,12 +89,68 @@ void inpt() {
     rep(i, L) {
         rep(j, N) { cin >> C[i][j]; }
     }
+
+    // 初期化
+    B.resize(L, vector<long long>(N, 1));
+    P.resize(L, vector<long long>(N, 0));
+    apples = K;
+}
+
+// 機械を強化できるかチェックして、できれば強化
+bool try_upgrade(int level, int id) {
+    long long cost = C[level][id] * (P[level][id] + 1);
+    if (apples >= cost) {
+        apples -= cost;
+        P[level][id]++;
+        return true;
+    }
+    return false;
+}
+
+// 各ターンの生産処理
+void produce() {
+    rep(i, L) {
+        rep(j, N) {
+            if (i == 0) {
+                // Level 0: りんごを生産
+                apples += A[j] * B[i][j] * P[i][j];
+            } else {
+                // Level 1以上: 下のレベルの機械を増やす
+                B[i - 1][j] += B[i][j] * P[i][j];
+            }
+        }
+    }
 }
 
 int main() {
     start = chrono::system_clock::now();
 
     inpt();
+
+    // T ターン実行
+    rep(turn, T) {
+        bool upgraded = false;
+
+        // レベルが高い順、IDが大きい順に探索
+        repr(i, L) {
+            repr(j, N) {
+                if (try_upgrade(i, j)) {
+                    cout << i SP << j << endl;
+                    upgraded = true;
+                    break;
+                }
+            }
+            if (upgraded)
+                break;
+        }
+
+        if (!upgraded) {
+            cout << -1 << endl;
+        }
+
+        // 生産処理
+        produce();
+    }
 
     return 0;
 }
