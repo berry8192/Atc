@@ -60,17 +60,72 @@ struct State {
         }
     }
 
-    // 可能な行動を列挙
-    vector<pair<int, int>> get_actions() const {
-        vector<pair<int, int>> actions;
-        actions.push_back({-1, -1}); // 待機
+    // 正確な将来利得計算（積分ベース）
+    double calculate_future_value(int level, int id,
+                                  int remaining_turns) const {
+        long long cost = C[level][id] * (P[level][id] + 1);
+        if (apples < cost)
+            return -1e18;
+
+        double t = remaining_turns;
+
+        // 現在のパワーから1増えた場合の増加分を計算
+        if (level == 0) {
+            // Level 0: パワー1増加で毎ターン A[id] * B[0][id] 個増える
+            // 総生産 = A[id] * B[0][id] * t
+            return A[id] * B[0][id] * t / cost;
+        } else if (level == 1) {
+            // Level 1: パワー1増加で毎ターンB[1][id]個のLevel 0機械が増える
+            // k番目のターンに増えたLevel 0機械は残り(t-k)ターン稼働
+            // 総生産 = A[id] * B[1][id] * Σ(t-k) for k=1..t
+            //        = A[id] * B[1][id] * (t-1)*t/2
+            return A[id] * B[1][id] * (t - 1) * t / 2.0 / cost;
+        } else if (level == 2) {
+            // Level 2: パワー1増加で毎ターンB[2][id]個のLevel 1機械が増える
+            // k番目のターンに増えたLevel 1機械は残り(t-k)ターンで
+            // A[id] * B[1][id] * (t-k)*(t-k-1)/2 個のりんごを生産
+            // 総生産 = A[id] * B[2][id] * Σ((t-k)*(t-k-1)/2) for k=1..t
+            //        = A[id] * B[2][id] * t*(t-1)*(t-2)/6
+            return A[id] * B[2][id] * t * (t - 1) * (t - 2) / 6.0 / cost;
+        } else {
+            // Level 3: パワー1増加で毎ターンB[3][id]個のLevel 2機械が増える
+            // k番目のターンに増えたLevel 2機械は残り(t-k)ターンで
+            // A[id] * B[2][id] * (t-k)*(t-k-1)*(t-k-2)/6 個のりんごを生産
+            // 総生産 = A[id] * B[3][id] * Σ((t-k)*(t-k-1)*(t-k-2)/6) for k=1..t
+            //        = A[id] * B[3][id] * t*(t-1)*(t-2)*(t-3)/24
+            if (t >= 3) {
+                return A[id] * B[3][id] * t * (t - 1) * (t - 2) * (t - 3) /
+                       24.0 / cost;
+            } else {
+                return 0.0;
+            }
+        }
+    }
+
+    // 可能な行動を将来利得順に列挙
+    vector<pair<int, int>> get_actions_by_value(int remaining_turns) const {
+        vector<pair<double, pair<int, int>>> value_actions;
+
+        // 待機
+        value_actions.push_back({0.0, {-1, -1}});
+
         rep(level, L) {
             rep(id, N) {
                 long long cost = C[level][id] * (P[level][id] + 1);
                 if (apples >= cost) {
-                    actions.push_back({level, id});
+                    double value =
+                        calculate_future_value(level, id, remaining_turns);
+                    value_actions.push_back({value, {level, id}});
                 }
             }
+        }
+
+        // 将来利得の大きい順にソート
+        sort(all(value_actions), greater<pair<double, pair<int, int>>>());
+
+        vector<pair<int, int>> actions;
+        for (auto [value, action] : value_actions) {
+            actions.push_back(action);
         }
         return actions;
     }
@@ -100,20 +155,22 @@ int main() {
     start_time = chrono::system_clock::now();
     inpt();
 
-    int beam_width = 50; // メモリ削減のため幅を減らす
+    int beam_width = 100; // 幅を増やす
 
     vector<State> current_beam;
     current_beam.push_back(State());
 
-    vector<Node> tree; // 行動の木構造のみ保持
+    vector<Node> tree;
     tree.push_back(Node(-1, {-1, -1}));
 
     vector<int> current_tree_indices = {0};
 
     rep(turn, T) {
+        int remaining_turns = T - turn;
+
         vector<State> next_beam;
         vector<int> next_tree_indices;
-        vector<pair<double, int>> score_pairs; // {score, index}
+        vector<pair<double, int>> score_pairs;
 
         int base_tree_size = tree.size();
 
@@ -121,26 +178,13 @@ int main() {
             const State &parent = current_beam[beam_idx];
             int parent_tree_idx = current_tree_indices[beam_idx];
 
-            vector<pair<int, int>> actions = parent.get_actions();
+            // 将来利得順に行動を取得
+            vector<pair<int, int>> actions =
+                parent.get_actions_by_value(remaining_turns);
 
-            // 行動数が多すぎる場合は間引く
-            if (actions.size() > 15) {
-                vector<pair<long long, pair<int, int>>> cost_actions;
-                for (auto action : actions) {
-                    int level = action.first;
-                    int id = action.second;
-                    if (level != -1) {
-                        long long cost =
-                            C[level][id] * (parent.P[level][id] + 1);
-                        cost_actions.push_back({cost, action});
-                    }
-                }
-                sort(all(cost_actions));
-                actions.clear();
-                actions.push_back({-1, -1});
-                rep(i, min(14, (int)cost_actions.size())) {
-                    actions.push_back(cost_actions[i].second);
-                }
+            // 上位20個に増やす（より多くの選択肢を試す）
+            if (actions.size() > 20) {
+                actions.resize(20);
             }
 
             for (auto action : actions) {
@@ -153,7 +197,23 @@ int main() {
                     new_state.upgrade(level, id);
                 }
                 new_state.produce();
+
+                // 評価関数：現在の生産量 + 将来利得の加重平均
                 new_state.score = new_state.evaluate();
+
+                // 将来の期待値も加味
+                double future_potential = 0.0;
+                rep(lv, L) {
+                    rep(id2, N) {
+                        if (new_state.P[lv][id2] > 0) {
+                            future_potential +=
+                                new_state.calculate_future_value(
+                                    lv, id2, remaining_turns - 1) *
+                                0.01;
+                        }
+                    }
+                }
+                new_state.score += future_potential;
 
                 int new_tree_idx = tree.size();
                 tree.push_back(Node(parent_tree_idx, action));
@@ -182,7 +242,8 @@ int main() {
 
         // 進捗表示
         if (turn % 100 == 0) {
-            cerr << "Turn: " << turn << " / " << T << endl;
+            cerr << "Turn: " << turn << " / " << T
+                 << ", Beam size: " << current_beam.size() << endl;
         }
     }
 
