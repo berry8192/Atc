@@ -60,18 +60,30 @@ struct State {
         }
     }
 
-    // 正確な将来利得計算（積分ベース）
+    // 正確な将来利得計算（シミュレーションベース）
     double calculate_future_value(int level, int id,
                                   int remaining_turns) const {
         long long cost = C[level][id] * (P[level][id] + 1);
         if (apples < cost)
             return -1e18;
 
-        // 簡易計算: A * (500^level)
-        double base_value = A[id];
-        rep(i, level) { base_value *= 500.0; }
+        // パワーを1増やさない場合のシミュレーション
+        State sim_without = *this;
+        long long apples_without = sim_without.apples;
+        rep(t, remaining_turns) { sim_without.produce(); }
+        long long total_without = sim_without.apples - apples_without;
 
-        return base_value / cost;
+        // パワーを1増やす場合のシミュレーション
+        State sim_with = *this;
+        sim_with.apples -= cost;
+        sim_with.P[level][id]++;
+        long long apples_with_start = sim_with.apples;
+        rep(t, remaining_turns) { sim_with.produce(); }
+        long long total_with = sim_with.apples - apples_with_start;
+
+        // 差分が将来利得
+        double gain = (double)(total_with - total_without);
+        return gain / cost; // コスト効率
     }
 
     // 何ターン待てば購入できるか計算
@@ -171,7 +183,7 @@ int main() {
     start_time = chrono::system_clock::now();
     inpt();
 
-    int beam_width = 100;
+    int beam_width = 2;
 
     vector<State> current_beam;
     current_beam.push_back(State());

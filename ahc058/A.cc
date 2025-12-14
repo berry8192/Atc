@@ -141,8 +141,31 @@ struct Factory {
         int best_level = -1, best_id = -1;
         int min_power_diff = imax;
 
-        // 選択されたIDごとにチェック
-        for (int id : selected_ids) {
+        // level1以上を購入済みか確認
+        bool has_level1_or_higher = false;
+        rep(level, L) {
+            if (level >= 1) {
+                rep(id, N) {
+                    if (P[level][id] > 0) {
+                        has_level1_or_higher = true;
+                        break;
+                    }
+                }
+            }
+            if (has_level1_or_higher)
+                break;
+        }
+
+        // level1を購入するまでは全IDを対象に、それ以降は選択されたIDのみ
+        vector<int> target_ids;
+        if (!has_level1_or_higher) {
+            rep(id, N) target_ids.push_back(id);
+        } else {
+            target_ids = selected_ids;
+        }
+
+        // 対象IDごとにチェック
+        for (int id : target_ids) {
             // このIDの各レベルのパワーを確認
             long long min_power = llimax;
             long long max_power = -1;
