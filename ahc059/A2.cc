@@ -4,6 +4,7 @@ using namespace std;
 int N;
 const int BLOCK_SIZE = 5;
 const int PAIR_COST_THRESHOLD = 3; // ペア回収の追加コスト閾値
+const int MAX_OUTSIDE_DIST = 15;   // ブロック外カード回収の最大距離
 vector<vector<int>> grid;
 map<int, vector<pair<int, int>>> card_pos;
 
@@ -293,21 +294,41 @@ int main() {
             }
 
             // フェーズ2: ブロック外の片割れの位置に山札から配置
-            int goal_h = block_h + BLOCK_SIZE / 2;
-            int goal_w = N / 2;
+            // 距離制限: ブロックの中心から一定距離内のみ処理
+            vector<pair<int, pair<int, int>>> nearby_targets;
+            vector<pair<int, pair<int, int>>> far_targets;
+
+            int center_h = block_h + BLOCK_SIZE / 2;
+            int center_w = N / 2;
+
+            for (auto &p : cards_to_distribute) {
+                int target_h = p.second.first;
+                int target_w = p.second.second;
+                int dist = abs(target_h - center_h) + abs(target_w - center_w);
+
+                if (dist <= MAX_OUTSIDE_DIST) {
+                    nearby_targets.push_back(p);
+                } else {
+                    far_targets.push_back(p);
+                }
+            }
+
+            // 近いカードのみを最適化して回収
+            int goal_h = center_h;
+            int goal_w = center_w;
 
             vector<int> optimal_order = optimize_collection_order(
-                cur_h, cur_w, cards_to_distribute, goal_h, goal_w);
+                cur_h, cur_w, nearby_targets, goal_h, goal_w);
 
             // 最適順序で配置（途中でペア回収も行う）
             for (int i = 0; i < optimal_order.size(); i++) {
                 int idx = optimal_order[i];
-                int target_h = cards_to_distribute[idx].second.first;
-                int target_w = cards_to_distribute[idx].second.second;
+                int target_h = nearby_targets[idx].second.first;
+                int target_w = nearby_targets[idx].second.second;
 
                 // 現在地から目標地点までの矩形領域でペアを探す
                 set<int> distribute_card_nums;
-                for (auto &p : cards_to_distribute) {
+                for (auto &p : nearby_targets) {
                     distribute_card_nums.insert(p.first);
                 }
 
@@ -324,7 +345,6 @@ int main() {
                                                     target_w, pos1, pos2);
 
                     if (extra_cost <= PAIR_COST_THRESHOLD) {
-                        // より良い順序を選択
                         int cost1 = abs(cur_h - pos1.first) +
                                     abs(cur_w - pos1.second) +
                                     abs(pos1.first - pos2.first) +
@@ -464,19 +484,34 @@ int main() {
                 }
             }
 
+            // 距離でフィルタリング
+            vector<pair<int, pair<int, int>>> nearby_targets;
+            int center_h = block_h + BLOCK_SIZE / 2;
+            int center_w = block_w + BLOCK_SIZE / 2;
+
+            for (auto &p : outside_targets) {
+                int target_h = p.second.first;
+                int target_w = p.second.second;
+                int dist = abs(target_h - center_h) + abs(target_w - center_w);
+
+                if (dist <= MAX_OUTSIDE_DIST) {
+                    nearby_targets.push_back(p);
+                }
+            }
+
             // ゴール地点（ブロックの中心）
-            int goal_h = block_h + BLOCK_SIZE / 2;
-            int goal_w = block_w + BLOCK_SIZE / 2;
+            int goal_h = center_h;
+            int goal_w = center_w;
 
             // 焼きなまし法で最適な回収順序を決定
             vector<int> optimal_order = optimize_collection_order(
-                cur_h, cur_w, outside_targets, goal_h, goal_w);
+                cur_h, cur_w, nearby_targets, goal_h, goal_w);
 
             // 最適順序でカードを回収（途中でペア回収も行う）
             for (int i = 0; i < optimal_order.size(); i++) {
                 int idx = optimal_order[i];
-                int target_h = outside_targets[idx].second.first;
-                int target_w = outside_targets[idx].second.second;
+                int target_h = nearby_targets[idx].second.first;
+                int target_w = nearby_targets[idx].second.second;
 
                 // 現在地から目標地点までの矩形領域でペアを探す
                 auto pairs = find_pairs_in_rect(cur_h, cur_w, target_h,
@@ -492,7 +527,6 @@ int main() {
                                                     target_w, pos1, pos2);
 
                     if (extra_cost <= PAIR_COST_THRESHOLD) {
-                        // より良い順序を選択
                         int cost1 = abs(cur_h - pos1.first) +
                                     abs(cur_w - pos1.second) +
                                     abs(pos1.first - pos2.first) +

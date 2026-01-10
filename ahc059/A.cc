@@ -145,6 +145,13 @@ int main() {
     int best_score = calc_score(current_order);
     vector<int> best_order = current_order;
 
+    // 初期解のデバッグ出力
+    cerr << "Initial best_order (score=" << best_score << "): ";
+    for (int card : best_order) {
+        cerr << card << " ";
+    }
+    cerr << endl;
+
     auto start_time = chrono::steady_clock::now();
     const double TIME_LIMIT = 1.9; // 秒
 
@@ -162,18 +169,25 @@ int main() {
         vector<int> new_order = current_order;
 
         // 近傍操作をランダムに選択
-        if (rng() % 2 == 0) {
+        int op = rng() % 3;
+        int swap_card = -1;
+
+        if (op == 0) {
             // スワップ操作
             int i = rng() % num_cards;
             int j = rng() % num_cards;
             swap(new_order[i], new_order[j]);
-        } else {
+        } else if (op == 1) {
             // 挿入操作
             int from = rng() % num_cards;
             int to = rng() % num_cards;
             int card = new_order[from];
             new_order.erase(new_order.begin() + from);
             new_order.insert(new_order.begin() + to, card);
+        } else {
+            // カードの1枚目と2枚目を入れ替える操作
+            swap_card = rng() % num_cards;
+            swap(card_pos[swap_card][0], card_pos[swap_card][1]);
         }
 
         int new_score = calc_score(new_order);
@@ -183,10 +197,15 @@ int main() {
             current_order = new_order;
             best_score = new_score;
             best_order = new_order;
+        } else {
+            // 受け入れなかった場合、カードの入れ替えを元に戻す
+            if (op == 2 && swap_card != -1) {
+                swap(card_pos[swap_card][0], card_pos[swap_card][1]);
+            }
         }
     }
 
-    cerr<< loop <<endl;
+    cerr << loop << endl;
     // 最良解を出力
     string ans = generate_moves(best_order);
     for (char c : ans) {
