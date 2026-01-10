@@ -153,6 +153,69 @@ optimize_collection_order(int start_h, int start_w,
     return best_order;
 }
 
+// 矩形領域内にある同じ番号のカードペアを探す
+vector<pair<int, pair<pair<int, int>, pair<int, int>>>>
+find_pairs_in_rect(int h1, int w1, int h2, int w2,
+                   const set<int> &block_card_nums) {
+
+    int min_h = min(h1, h2);
+    int max_h = max(h1, h2);
+    int min_w = min(w1, w2);
+    int max_w = max(w1, w2);
+
+    map<int, vector<pair<int, int>>> cards_in_rect;
+
+    // 矩形領域内のカードを収集
+    for (int h = min_h; h <= max_h; h++) {
+        for (int w = min_w; w <= max_w; w++) {
+            if (h < 0 || h >= N || w < 0 || w >= N)
+                continue;
+            if (removed_positions.count({h, w}))
+                continue;
+
+            int card = grid[h][w];
+
+            // ブロック内のカードは対象外
+            if (block_card_nums.count(card))
+                continue;
+
+            cards_in_rect[card].push_back({h, w});
+        }
+    }
+
+    // 2枚とも矩形内にあるカードペアを抽出
+    vector<pair<int, pair<pair<int, int>, pair<int, int>>>> pairs;
+    for (auto &p : cards_in_rect) {
+        if (p.second.size() == 2) {
+            pairs.push_back({p.first, {p.second[0], p.second[1]}});
+        }
+    }
+
+    return pairs;
+}
+
+// カードペアを回収するコストを計算
+int calc_pair_cost(int start_h, int start_w, int end_h, int end_w,
+                   pair<int, int> pos1, pair<int, int> pos2) {
+    // 最短距離
+    int direct_dist = abs(start_h - end_h) + abs(start_w - end_w);
+
+    // ペアを経由する距離（pos1 -> pos2の順）
+    int via_dist1 = abs(start_h - pos1.first) + abs(start_w - pos1.second) +
+                    abs(pos1.first - pos2.first) +
+                    abs(pos1.second - pos2.second) + abs(pos2.first - end_h) +
+                    abs(pos2.second - end_w);
+
+    // ペアを経由する距離（pos2 -> pos1の順）
+    int via_dist2 = abs(start_h - pos2.first) + abs(start_w - pos2.second) +
+                    abs(pos2.first - pos1.first) +
+                    abs(pos2.second - pos1.second) + abs(pos1.first - end_h) +
+                    abs(pos1.second - end_w);
+
+    int best_via = min(via_dist1, via_dist2);
+    return best_via - direct_dist;
+}
+
 int main() {
     cin >> N;
     grid.resize(N, vector<int>(N));
@@ -222,9 +285,12 @@ int main() {
             // フェーズ2: ブロック外から対応するカードを回収
             // 回収すべきカードの位置を収集
             vector<pair<int, pair<int, int>>>
-                outside_targets; // {card_num, {h, w}}
+                outside_targets;      // {card_num, {h, w}}
+            set<int> block_card_nums; // ブロック内のカード番号
+
             for (int i = 0; i < block_cards.size(); i++) {
                 int card = block_cards[i].first;
+                block_card_nums.insert(card);
                 pair<int, int> block_pos = block_cards[i].second;
 
                 for (int k = 0; k < card_pos[card].size(); k++) {
@@ -251,12 +317,56 @@ int main() {
             vector<int> optimal_order = optimize_collection_order(
                 cur_h, cur_w, outside_targets, goal_h, goal_w);
 
-            // 最適順序でカードを回収
-            for (int idx : optimal_order) {
-                int h = outside_targets[idx].second.first;
-                int w = outside_targets[idx].second.second;
-                move_to(h, w);
-                pick_card(h, w);
+            // 最適順序でカードを回収（途中でペア回収も行う）
+            for (int i = 0; i < optimal_order.size(); i++) {
+                int idx = optimal_order[i];
+                int target_h = outside_targets[idx].second.first;
+                int target_w = outside_targets[idx].second.second;
+
+                // 現在地から目標地点までの矩形領域でペアを探す
+                auto pairs = find_pairs_in_rect(cur_h, cur_w, target_h,
+                                                target_w, block_card_nums);
+
+                // コストが3以内のペアがあれば回収
+                for (auto &pair_info : pairs) {
+                    int card_num = pair_info.first;
+                    pair<int, int> pos1 = pair_info.second.first;
+                    pair<int, int> pos2 = pair_info.second.second;
+
+                    int extra_cost = calc_pair_cost(cur_h, cur_w, target_h,
+                                                    target_w, pos1, pos2);
+
+                    if (extra_cost <= 3) {
+                        // より良い順序を選択
+                        int cost1 = abs(cur_h - pos1.first) +
+                                    abs(cur_w - pos1.second) +
+                                    abs(pos1.first - pos2.first) +
+                                    abs(pos1.second - pos2.second);
+                        int cost2 = abs(cur_h - pos2.first) +
+                                    abs(cur_w - pos2.second) +
+                                    abs(pos2.first - pos1.first) +
+                                    abs(pos2.second - pos1.second);
+
+                        if (cost1 <= cost2) {
+                            move_to(pos1.first, pos1.second);
+                            pick_card(pos1.first, pos1.second);
+                            move_to(pos2.first, pos2.second);
+                            pick_card(pos2.first, pos2.second);
+                        } else {
+                            move_to(pos2.first, pos2.second);
+                            pick_card(pos2.first, pos2.second);
+                            move_to(pos1.first, pos1.second);
+                            pick_card(pos1.first, pos1.second);
+                        }
+
+                        // 1ペアのみ回収して次へ
+                        break;
+                    }
+                }
+
+                // 目標のカードを回収
+                move_to(target_h, target_w);
+                pick_card(target_h, target_w);
             }
 
             // フェーズ3: 山札が空になるまでブロック内のカードを回収
