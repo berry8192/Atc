@@ -3,6 +3,7 @@ using namespace std;
 
 int N;
 const int BLOCK_SIZE = 5;
+const int PAIR_COST_THRESHOLD = 3; // ペア回収の追加コスト閾値
 vector<vector<int>> grid;
 map<int, vector<pair<int, int>>> card_pos;
 
@@ -229,6 +230,160 @@ int main() {
 
     // ブロックごとに処理
     for (int block_h = 0; block_h < N; block_h += BLOCK_SIZE) {
+        // 最下段は特別処理（5×20のブロックとして処理）
+        if (block_h == N - BLOCK_SIZE) {
+            int bh_end = N;
+            int bw_end = N; // 横幅は全体
+
+            // フェーズ1: ブロック内のカードを回収（山札に積む）
+            vector<pair<int, pair<int, int>>>
+                cards_to_distribute;  // {card_num, 片割れの位置}
+            set<int> processed_cards; // 処理済みのカード番号
+
+            for (int h = block_h; h < bh_end; h++) {
+                for (int w = 0; w < bw_end; w++) {
+                    if (removed_positions.count({h, w}))
+                        continue;
+
+                    int card = grid[h][w];
+
+                    // 既に処理済みのカードはスキップ
+                    if (processed_cards.count(card))
+                        continue;
+
+                    // このカードの2枚の位置を確認
+                    int count_in_block = 0;
+                    vector<pair<int, int>> in_block_positions;
+                    pair<int, int> out_block_pos = {-1, -1};
+
+                    for (int k = 0; k < card_pos[card].size(); k++) {
+                        int ph = card_pos[card][k].first;
+                        int pw = card_pos[card][k].second;
+                        if (removed_positions.count({ph, pw}))
+                            continue;
+
+                        if (ph >= block_h && ph < bh_end) {
+                            count_in_block++;
+                            in_block_positions.push_back({ph, pw});
+                        } else {
+                            out_block_pos = {ph, pw};
+                        }
+                    }
+
+                    // 2枚ともブロック内にある場合、両方回収して消す
+                    if (count_in_block == 2) {
+                        move_to(in_block_positions[0].first,
+                                in_block_positions[0].second);
+                        pick_card(in_block_positions[0].first,
+                                  in_block_positions[0].second);
+                        move_to(in_block_positions[1].first,
+                                in_block_positions[1].second);
+                        pick_card(in_block_positions[1].first,
+                                  in_block_positions[1].second);
+                        processed_cards.insert(card);
+                    } else if (count_in_block == 1 &&
+                               out_block_pos.first != -1) {
+                        // ブロック内のカードを回収
+                        move_to(h, w);
+                        pick_card(h, w);
+                        cards_to_distribute.push_back({card, out_block_pos});
+                        processed_cards.insert(card);
+                    }
+                }
+            }
+
+            // フェーズ2: ブロック外の片割れの位置に山札から配置
+            int goal_h = block_h + BLOCK_SIZE / 2;
+            int goal_w = N / 2;
+
+            vector<int> optimal_order = optimize_collection_order(
+                cur_h, cur_w, cards_to_distribute, goal_h, goal_w);
+
+            // 最適順序で配置（途中でペア回収も行う）
+            for (int i = 0; i < optimal_order.size(); i++) {
+                int idx = optimal_order[i];
+                int target_h = cards_to_distribute[idx].second.first;
+                int target_w = cards_to_distribute[idx].second.second;
+
+                // 現在地から目標地点までの矩形領域でペアを探す
+                set<int> distribute_card_nums;
+                for (auto &p : cards_to_distribute) {
+                    distribute_card_nums.insert(p.first);
+                }
+
+                auto pairs = find_pairs_in_rect(cur_h, cur_w, target_h,
+                                                target_w, distribute_card_nums);
+
+                // コストが閾値以内のペアがあれば回収
+                for (auto &pair_info : pairs) {
+                    int card_num = pair_info.first;
+                    pair<int, int> pos1 = pair_info.second.first;
+                    pair<int, int> pos2 = pair_info.second.second;
+
+                    int extra_cost = calc_pair_cost(cur_h, cur_w, target_h,
+                                                    target_w, pos1, pos2);
+
+                    if (extra_cost <= PAIR_COST_THRESHOLD) {
+                        // より良い順序を選択
+                        int cost1 = abs(cur_h - pos1.first) +
+                                    abs(cur_w - pos1.second) +
+                                    abs(pos1.first - pos2.first) +
+                                    abs(pos1.second - pos2.second);
+                        int cost2 = abs(cur_h - pos2.first) +
+                                    abs(cur_w - pos2.second) +
+                                    abs(pos2.first - pos1.first) +
+                                    abs(pos2.second - pos1.second);
+
+                        if (cost1 <= cost2) {
+                            move_to(pos1.first, pos1.second);
+                            pick_card(pos1.first, pos1.second);
+                            move_to(pos2.first, pos2.second);
+                            pick_card(pos2.first, pos2.second);
+                        } else {
+                            move_to(pos2.first, pos2.second);
+                            pick_card(pos2.first, pos2.second);
+                            move_to(pos1.first, pos1.second);
+                            pick_card(pos1.first, pos1.second);
+                        }
+
+                        break;
+                    }
+                }
+
+                // 目標位置に移動して山札の最上位を配置
+                move_to(target_h, target_w);
+                pick_card(target_h, target_w);
+            }
+
+            // フェーズ3: 山札が空になるまでカードを回収
+            while (!deck.empty()) {
+                int top_card = deck.top();
+                bool found = false;
+
+                // 片割れを探す
+                for (int k = 0; k < card_pos[top_card].size(); k++) {
+                    int h = card_pos[top_card][k].first;
+                    int w = card_pos[top_card][k].second;
+
+                    if (removed_positions.count({h, w}))
+                        continue;
+
+                    move_to(h, w);
+                    pick_card(h, w);
+                    found = true;
+                    break;
+                }
+
+                if (!found) {
+                    break;
+                }
+            }
+
+            // 最下段処理完了後はループを抜ける
+            break;
+        }
+
+        // 通常の5×5ブロック処理
         for (int block_w = 0; block_w < N; block_w += BLOCK_SIZE) {
             int bh_end = min(block_h + BLOCK_SIZE, N);
             int bw_end = min(block_w + BLOCK_SIZE, N);
@@ -327,7 +482,7 @@ int main() {
                 auto pairs = find_pairs_in_rect(cur_h, cur_w, target_h,
                                                 target_w, block_card_nums);
 
-                // コストが3以内のペアがあれば回収
+                // コストが閾値以内のペアがあれば回収
                 for (auto &pair_info : pairs) {
                     int card_num = pair_info.first;
                     pair<int, int> pos1 = pair_info.second.first;
@@ -336,7 +491,7 @@ int main() {
                     int extra_cost = calc_pair_cost(cur_h, cur_w, target_h,
                                                     target_w, pos1, pos2);
 
-                    if (extra_cost <= 3) {
+                    if (extra_cost <= PAIR_COST_THRESHOLD) {
                         // より良い順序を選択
                         int cost1 = abs(cur_h - pos1.first) +
                                     abs(cur_w - pos1.second) +
