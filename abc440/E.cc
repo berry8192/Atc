@@ -227,85 +227,67 @@ struct cho {
     ll val;
     vector<int> v;
 
-    bool operator<(const cho &in) const {
-        if (val != in.val)
-            return val > in.val;
-        return v < in.v;
-    };
+    // priority_queue は「大きいものが先」
+    bool operator<(const cho &in) const { return val < in.val; }
 };
 
 void solve() {
-    // ここに問題を解くコードを書く
-
-    // 例: 入力
     ll n, k, x;
     cin >> n >> k >> x;
 
     vi a(n);
-    cin >> a; // vector入力
+    cin >> a;
     sort(all(a), greater<int>());
 
     vi ve(n);
     ve[0] = k;
-    multiset<cho> mst;
+
+    priority_queue<cho> pq;
     set<vector<int>> st;
+
     st.insert(ve);
-    mst.insert({1LL * k * a[0], ve});
+    pq.push({1LL * k * a[0], ve});
+
     vector<ll> ans;
-    while (!mst.empty()) {
-        auto itr = mst.begin();
-        cho choice = *itr;
-        mst.erase(itr);
+
+    while (!pq.empty()) {
+        auto choice = pq.top();
+        pq.pop();
 
         ans.push_back(choice.val);
         if (ans.size() == x) {
-            sort(all(ans), greater<int>());
-            rep(i, x) { cout << ans[i] << endl; }
+            sort(all(ans), greater<ll>());
+            rep(i, x) cout << ans[i] << '\n';
             return;
-            // cerr << "!" << xth << endl;
         }
 
-        if (choice.v[0] == 0) {
-            continue;
-        }
         rep(i, n - 1) {
-            if (choice.v[i] == 0) {
+            if (choice.v[i] == 0)
                 continue;
-            }
+
             ll new_val = choice.val;
             new_val -= a[i];
             new_val += a[i + 1];
+
             choice.v[i]--;
             choice.v[i + 1]++;
-            if (st.count(choice.v)) {
-                choice.v[i]++;
-                choice.v[i + 1]--;
-                continue;
+
+            if (!st.count(choice.v)) {
+                st.insert(choice.v);
+                pq.push({new_val, choice.v});
             }
-            st.insert(choice.v);
-            // cout << new_val << endl;
-            // cout << choice.v << endl;
-            mst.insert({new_val, choice.v});
+
+            // 戻す
             choice.v[i]++;
             choice.v[i + 1]--;
         }
     }
 
-    sort(all(ans), greater<int>());
-    rep(i, x) { cout << ans[i] << endl; }
+    sort(all(ans), greater<ll>());
+    rep(i, x) cout << ans[i] << '\n';
 }
 
 int main() {
-    // 単一テストケース
     solve();
-
-    // 複数テストケース用（コメントアウト）
-
-    // int t;
-    // cin >> t;
-    // while (t--) {
-    //     solve();
-    // }
-
     return 0;
 }
