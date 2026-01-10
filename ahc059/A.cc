@@ -100,10 +100,46 @@ int main() {
 
     int num_cards = N * N / 2;
 
-    // 初期解: 0, 1, 2, ..., num_cards-1 の順
-    vector<int> current_order(num_cards);
-    for (int i = 0; i < num_cards; i++) {
-        current_order[i] = i;
+    // 初期解: 貪欲法で生成
+    vector<int> current_order;
+    vector<bool> used(num_cards, false);
+
+    // (0,0)にあるカードから始める
+    int start_card = grid[0][0];
+    current_order.push_back(start_card);
+    used[start_card] = true;
+
+    // 最後の位置（2枚目のカードの位置）
+    int cur_h = card_pos[start_card][1].first;
+    int cur_w = card_pos[start_card][1].second;
+
+    // 残りのカードを貪欲に選択
+    for (int cnt = 1; cnt < num_cards; cnt++) {
+        int best_card = -1;
+        int best_dist = INT_MAX;
+
+        // 未使用のカードの中で最も近いものを探す
+        for (int card = 0; card < num_cards; card++) {
+            if (used[card])
+                continue;
+
+            // このカードの1枚目への距離
+            int h1 = card_pos[card][0].first;
+            int w1 = card_pos[card][0].second;
+            int dist = abs(cur_h - h1) + abs(cur_w - w1);
+
+            if (dist < best_dist) {
+                best_dist = dist;
+                best_card = card;
+            }
+        }
+
+        current_order.push_back(best_card);
+        used[best_card] = true;
+
+        // 次の位置を更新（2枚目のカードの位置）
+        cur_h = card_pos[best_card][1].first;
+        cur_w = card_pos[best_card][1].second;
     }
 
     int best_score = calc_score(current_order);
@@ -114,7 +150,9 @@ int main() {
 
     mt19937 rng(42);
 
+    int loop = 0;
     while (true) {
+        loop++;
         auto current_time = chrono::steady_clock::now();
         double elapsed =
             chrono::duration<double>(current_time - start_time).count();
@@ -148,6 +186,7 @@ int main() {
         }
     }
 
+    cerr<< loop <<endl;
     // 最良解を出力
     string ans = generate_moves(best_order);
     for (char c : ans) {
