@@ -153,124 +153,6 @@ optimize_collection_order(int start_h, int start_w,
     return best_order;
 }
 
-// 矩形領域内の空きマスを探す
-pair<int, int> find_best_empty_in_rect(int h1, int w1, int h2, int w2,
-                                       int target_h, int target_w) {
-    int min_h = min(h1, h2);
-    int max_h = max(h1, h2);
-    int min_w = min(w1, w2);
-    int max_w = max(w1, w2);
-
-    int best_dist = 1e9;
-    pair<int, int> best_pos = {-1, -1};
-
-    for (int h = min_h; h <= max_h; h++) {
-        for (int w = min_w; w <= max_w; w++) {
-            if (h < 0 || h >= N || w < 0 || w >= N)
-                continue;
-            if (removed_positions.count({h, w})) {
-                int dist = abs(h - target_h) + abs(w - target_h);
-                if (dist < best_dist) {
-                    best_dist = dist;
-                    best_pos = {h, w};
-                }
-            }
-        }
-    }
-
-    return best_pos;
-}
-
-// 最適なカード移動を見つける
-pair<pair<int, int>, int>
-find_best_card_to_move(int h1, int w1, pair<int, int> empty_pos,
-                       const set<int> &block_card_nums) {
-
-    int min_h = min(h1, empty_pos.first);
-    int max_h = max(h1, empty_pos.first);
-    int min_w = min(w1, empty_pos.second);
-    int max_w = max(w1, empty_pos.second);
-
-    int best_improvement = 1e9;
-    pair<int, int> best_card_pos = {-1, -1};
-    int best_card_num = -1;
-
-    for (int h = min_h; h <= max_h; h++) {
-        for (int w = min_w; w <= max_w; w++) {
-            if (h < 0 || h >= N || w < 0 || w >= N)
-                continue;
-            if (removed_positions.count({h, w}))
-                continue;
-
-            int card = grid[h][w];
-
-            // ブロック内のカードは対象外
-            if (block_card_nums.count(card))
-                continue;
-
-            // 片割れの位置を探す
-            int pair_h = -1, pair_w = -1;
-            for (int k = 0; k < card_pos[card].size(); k++) {
-                int ph = card_pos[card][k].first;
-                int pw = card_pos[card][k].second;
-                if (ph != h || pw != w) {
-                    if (!removed_positions.count({ph, pw})) {
-                        pair_h = ph;
-                        pair_w = pw;
-                        break;
-                    }
-                }
-            }
-
-            if (pair_h == -1)
-                continue;
-
-            // 改善度を計算
-            int orig_dist = abs(h - pair_h) + abs(w - pair_w);
-            int new_dist =
-                abs(empty_pos.first - pair_h) + abs(empty_pos.second - pair_w);
-            int improvement = orig_dist - new_dist;
-
-            if (improvement < best_improvement) {
-                best_improvement = improvement;
-                best_card_pos = {h, w};
-                best_card_num = card;
-            }
-        }
-    }
-
-    return {{best_card_pos.first, best_card_pos.second}, best_card_num};
-}
-
-// カードを移動させる（取って置く）
-void move_card_to_empty(int from_h, int from_w, int to_h, int to_w) {
-    int card = grid[from_h][from_w];
-
-    // カードを取る
-    move_to(from_h, from_w);
-    ans += 'Z';
-    removed_positions.insert({from_h, from_w});
-    deck.push(card);
-
-    // 空きマスに置く
-    move_to(to_h, to_w);
-    ans += 'X';
-    deck.pop();
-    removed_positions.erase({to_h, to_w});
-
-    // grid情報を更新
-    grid[to_h][to_w] = card;
-
-    // card_pos情報を更新
-    for (int k = 0; k < card_pos[card].size(); k++) {
-        if (card_pos[card][k].first == from_h &&
-            card_pos[card][k].second == from_w) {
-            card_pos[card][k] = {to_h, to_w};
-            break;
-        }
-    }
-}
-
 int main() {
     cin >> N;
     grid.resize(N, vector<int>(N));
@@ -340,12 +222,9 @@ int main() {
             // フェーズ2: ブロック外から対応するカードを回収
             // 回収すべきカードの位置を収集
             vector<pair<int, pair<int, int>>>
-                outside_targets;      // {card_num, {h, w}}
-            set<int> block_card_nums; // ブロック内のカード番号
-
+                outside_targets; // {card_num, {h, w}}
             for (int i = 0; i < block_cards.size(); i++) {
                 int card = block_cards[i].first;
-                block_card_nums.insert(card);
                 pair<int, int> block_pos = block_cards[i].second;
 
                 for (int k = 0; k < card_pos[card].size(); k++) {
@@ -372,32 +251,12 @@ int main() {
             vector<int> optimal_order = optimize_collection_order(
                 cur_h, cur_w, outside_targets, goal_h, goal_w);
 
-            // 最適順序でカードを回収（途中でカード移動も行う）
-            for (int i = 0; i < optimal_order.size(); i++) {
-                int idx = optimal_order[i];
-                int target_h = outside_targets[idx].second.first;
-                int target_w = outside_targets[idx].second.second;
-
-                // 現在地から目標地点までの矩形領域で最適な空きマスを探す
-                pair<int, int> empty_pos = find_best_empty_in_rect(
-                    cur_h, cur_w, target_h, target_w, target_h, target_w);
-
-                // 空きマスが見つかった場合、カード移動を試みる
-                if (empty_pos.first != -1) {
-                    auto [card_pos_pair, card_num] = find_best_card_to_move(
-                        cur_h, cur_w, empty_pos, block_card_nums);
-
-                    // 改善が見込める場合のみカードを移動
-                    if (card_pos_pair.first != -1) {
-                        move_card_to_empty(card_pos_pair.first,
-                                           card_pos_pair.second,
-                                           empty_pos.first, empty_pos.second);
-                    }
-                }
-
-                // 目標のカードを回収
-                move_to(target_h, target_w);
-                pick_card(target_h, target_w);
+            // 最適順序でカードを回収
+            for (int idx : optimal_order) {
+                int h = outside_targets[idx].second.first;
+                int w = outside_targets[idx].second.second;
+                move_to(h, w);
+                pick_card(h, w);
             }
 
             // フェーズ3: 山札が空になるまでブロック内のカードを回収
