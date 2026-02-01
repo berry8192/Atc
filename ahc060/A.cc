@@ -90,35 +90,65 @@ int main() {
     // 乱数の準備
     mt19937 mt(12345);
 
-    // 現在位置と前の位置
-    int current_pos = 0;
-    int prev_pos = -1;
+    // 経路ベースの移動
+    int current_shop = 0; // 現在いる店
+    int prev_vertex = -1; // 前の経路の最後から2番目の頂点
+    int turn = 0;         // 使用したターン数
 
-    // T回行動
-    rep(step, T) {
-        // 移動可能な頂点のリスト
-        vector<int> candidates;
-        for (int next : graph[current_pos]) {
-            // 前回の移動元には戻れない
-            if (next != prev_pos) {
-                candidates.push_back(next);
+    while (turn < T) {
+        // 現在の店から行ける経路を探す
+        vector<pair<int, vector<int>>> candidates; // {経路長, 経路}
+
+        rep(goal, K) {
+            if (goal == current_shop)
+                continue; // 同じ店には行けない
+
+            // この店への経路から最短のものを選ぶ
+            if (!paths[current_shop][goal].empty()) {
+                int min_len = INT_MAX;
+                vector<int> best_path;
+                for (const auto &path : paths[current_shop][goal]) {
+                    // 経路の2番目の頂点が前の経路の最後から2番目と同じならダメ
+                    if (prev_vertex != -1 && path.size() >= 2 &&
+                        path[1] == prev_vertex) {
+                        continue;
+                    }
+
+                    if (path.size() < min_len) {
+                        min_len = path.size();
+                        best_path = path;
+                    }
+                }
+
+                if (!best_path.empty()) {
+                    candidates.push_back({min_len, best_path});
+                }
             }
         }
 
-        // ランダムに次の頂点を選択
-        if (!candidates.empty()) {
-            int idx = mt() % candidates.size();
-            int next_pos = candidates[idx];
-
-            cout << next_pos << endl;
-
-            // 位置を更新
-            prev_pos = current_pos;
-            current_pos = next_pos;
-        } else {
-            // 念のため（基本的には起こらない）
+        if (candidates.empty()) {
+            // 行ける経路がない場合は終了
+            cerr << "No valid path found at turn " << turn << endl;
             break;
         }
+
+        // 最短の経路を選択
+        sort(all(candidates));
+        vector<int> chosen_path = candidates[0].second;
+
+        // 経路に沿って移動（開始点以外を出力）
+        for (int i = 1; i < chosen_path.size() && turn < T; i++) {
+            cout << chosen_path[i] << endl;
+            turn++;
+        }
+
+        // 次の経路のために、この経路の最後から2番目の頂点を記録
+        if (chosen_path.size() >= 2) {
+            prev_vertex = chosen_path[chosen_path.size() - 2];
+        }
+
+        // 次の店に移動
+        current_shop = chosen_path.back();
     }
 
     return 0;
