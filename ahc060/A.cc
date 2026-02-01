@@ -5,7 +5,7 @@
 
 using namespace std;
 
-const int MAX_PATH_LENGTH = 20;
+const int MAX_PATH_LENGTH = 15;
 
 int main() {
     int N, M, K, T;
@@ -26,7 +26,7 @@ int main() {
         cin >> x >> y;
     }
 
-    // 店から店への経路を列挙（BFSで経路長10未満のみ）
+    // 店から店への経路を列
     // paths[出発店][ゴール店] = {経路1, 経路2, ...}
     // 各経路は頂点番号の列
     vector<vector<vector<vector<int>>>> paths(K,
