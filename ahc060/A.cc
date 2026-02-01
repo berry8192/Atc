@@ -38,7 +38,7 @@ int main() {
         q.push({start});
 
         int path_count = 0; // この出発点から見つけた経路数
-        const int MAX_PATHS_PER_START = 1000;
+        const int MAX_PATHS_PER_START = 2000;
 
         while (!q.empty() && path_count < MAX_PATHS_PER_START) {
             vector<int> path = q.front();
@@ -152,6 +152,15 @@ int main() {
         }
     }
 
+    // デバッグ出力：各アイスの木が含まれる経路数
+    cerr << "Vertex path counts:" << endl;
+    rep(v, N) {
+        if (v >= K) {
+            cerr << "Vertex " << v << ": " << vertex_to_paths[v].size()
+                 << " paths" << endl;
+        }
+    }
+
     // 経路を辿った場合のアイスの順列を計算する関数
     auto get_ice_sequence = [&](const vector<int> &path) -> string {
         string result = "";
@@ -229,18 +238,19 @@ int main() {
             skip_count++;
         }
 
-        // 100回連続でスキップした場合、強制的に使う
+        // 10回連続でスキップした場合、強制的に使う
         if (chosen_path.empty() && !pq.empty()) {
-            cerr << "Force using path at turn " << turn << " after "
-                 << skip_count << " skips" << endl;
+            // cerr << "Force using path at turn " << turn << " after "
+            //      << skip_count << " skips" << endl;
             chosen_path = pq.top().second;
             used_paths.insert(chosen_path);
         }
 
         // それでも経路がない場合：現在の店の経路を復活させる
         if (chosen_path.empty()) {
-            cerr << "Reviving paths from shop " << current_shop << " at turn "
-                 << turn << endl;
+            // cerr << "Reviving paths from shop " << current_shop << " at turn
+            // "
+            //      << turn << endl;
 
             // 現在の店から出る経路を復活
             rep(goal, K) {
