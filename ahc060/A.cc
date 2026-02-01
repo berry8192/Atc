@@ -7,7 +7,7 @@ using namespace std;
 
 // パラメータ定数
 const int MAX_PATH_LENGTH = 20;
-const int TIME_LIMIT_MS = 1200;
+const int TIME_LIMIT_MS = 1400;
 
 // 経路構造体
 struct Route {
@@ -60,15 +60,17 @@ Result run_simulation(int N, int M, int K, int T,
                       int COLOR_START_TURN, int COLOR_INTERVAL, mt19937 &mt) {
     Result result;
     result.score = 0;
+    result.output.reserve(T);
 
     // 使用済み経路を管理（IDで管理）
-    set<int> used_route_ids;
+    unordered_set<int> used_route_ids;
+    used_route_ids.reserve(all_routes.size());
 
     // 木の着色状態（true: ストロベリー味に変更済み）
     vector<bool> is_colored(N, false);
 
     // 各ショップの在庫集合（納品済みのアイスの順列）
-    vector<set<string>> shop_inventory(K);
+    vector<unordered_set<string>> shop_inventory(K);
 
     // 経路ベースの移動
     int current_shop = 0; // 現在いる店
@@ -262,6 +264,9 @@ Result run_simulation(int N, int M, int K, int T,
 }
 
 int main() {
+    ios_base::sync_with_stdio(false);
+    cin.tie(nullptr);
+
     auto start_time = chrono::high_resolution_clock::now();
     int N, M, K, T;
     cin >> N >> M >> K >> T;
@@ -273,6 +278,11 @@ int main() {
         cin >> a >> b;
         graph[a].push_back(b);
         graph[b].push_back(a);
+    }
+
+    // グラフのメモリ確保を最適化
+    for (auto &adj : graph) {
+        adj.shrink_to_fit();
     }
 
     // 座標情報（使わないけど読み込む）
@@ -319,7 +329,10 @@ int main() {
         rep(start, K) {
             // 開始店からBFSで経路を探索
             queue<vector<int>> q;
-            q.push({start});
+            vector<int> init_path;
+            init_path.reserve(MAX_PATH_LENGTH);
+            init_path.push_back(start);
+            q.push(init_path);
 
             int path_count = 0; // この出発点から見つけた経路数
 
@@ -339,7 +352,9 @@ int main() {
                     if (path.size() >= 2 && next == path[path.size() - 2])
                         continue;
 
-                    vector<int> new_path = path;
+                    vector<int> new_path;
+                    new_path.reserve(path.size() + 1);
+                    new_path = path;
                     new_path.push_back(next);
 
                     // nextが店なら経路として保存（ただし探索は続けない）
@@ -359,6 +374,7 @@ int main() {
 
         // 経路をID化して管理
         vector<Route> all_routes;
+        all_routes.reserve(K * K * MAX_PATHS_PER_START / 2);
         vector<vector<int>> route_ids_by_sg(K *
                                             K); // [start*K+goal] = route_ids
 
@@ -433,9 +449,10 @@ int main() {
     cerr << "Total iterations: " << iteration << endl;
     cerr << "Best score: " << best_result.score << endl;
 
-    // 最良の結果を出力
-    for (int v : best_result.output) {
-        cout << v << endl;
+    // 最良の結果を出力（T回まで）
+    int output_count = min((int)best_result.output.size(), T);
+    for (int i = 0; i < output_count; i++) {
+        cout << best_result.output[i] << endl;
     }
 
     return 0;
