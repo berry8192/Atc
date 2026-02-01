@@ -121,6 +121,28 @@ int main() {
     // 使用済み経路を管理するためのセット
     set<vector<int>> used_paths;
 
+    // 木の着色状態（true: ストロベリー味に変更済み）
+    vector<bool> is_colored(N, false);
+
+    // 各ショップの在庫集合（納品済みのアイスの順列）
+    vector<set<string>> shop_inventory(K);
+
+    // 経路を辿った場合のアイスの順列を計算する関数
+    auto get_ice_sequence = [&](const vector<int> &path) -> string {
+        string result = "";
+        for (int i = 1; i < path.size() - 1; i++) { // 開始店と終了店は除く
+            int vertex = path[i];
+            if (vertex >= K) { // アイスの木の場合
+                if (is_colored[vertex]) {
+                    result += 'R';
+                } else {
+                    result += 'W';
+                }
+            }
+        }
+        return result;
+    };
+
     // 乱数の準備
     mt19937 mt(12345);
 
@@ -149,6 +171,13 @@ int main() {
                     // 経路の2番目の頂点が前の経路の最後から2番目と同じならダメ
                     if (prev_vertex != -1 && path.size() >= 2 &&
                         path[1] == prev_vertex) {
+                        continue;
+                    }
+
+                    // この経路でのアイスの順列を計算
+                    string ice_seq = get_ice_sequence(path);
+                    // 目的地のショップに既に同じアイスがあればスキップ
+                    if (shop_inventory[goal].count(ice_seq)) {
                         continue;
                     }
 
@@ -197,7 +226,26 @@ int main() {
         for (int i = 1; i < chosen_path.size() && turn < T; i++) {
             cout << chosen_path[i] << endl;
             turn++;
+
+            // 1000ターン以降、100の倍数のターン数で着色処理
+            if (turn >= 1000 && turn % 100 == 0) {
+                int current_pos = chosen_path[i];
+                // 現在位置がアイスの木（K以上）で、未着色の場合
+                if (current_pos >= K && !is_colored[current_pos]) {
+                    cout << -1 << endl;
+                    is_colored[current_pos] = true;
+                    turn++;
+
+                    if (turn >= T)
+                        break;
+                }
+            }
         }
+
+        // この経路で集めたアイスの順列を計算して在庫に追加
+        string ice_seq = get_ice_sequence(chosen_path);
+        int goal_shop = chosen_path.back();
+        shop_inventory[goal_shop].insert(ice_seq);
 
         // 次の経路のために、この経路の最後から2番目の頂点を記録
         if (chosen_path.size() >= 2) {
@@ -207,6 +255,11 @@ int main() {
         // 次の店に移動
         current_shop = chosen_path.back();
     }
+
+    // 最終スコアを出力
+    int total_score = 0;
+    rep(i, K) { total_score += shop_inventory[i].size(); }
+    cerr << "Final score: " << total_score << endl;
 
     return 0;
 }
