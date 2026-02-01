@@ -187,38 +187,115 @@ int main() {
         }
 
         vector<int> chosen_path;
+        int skip_count = 0;
+        const int MAX_SKIP = 10;
 
-        // 未使用経路がある場合
-        if (!pq.empty()) {
+        // priority_queueから経路を取り出して検証
+        while (!pq.empty() && skip_count < MAX_SKIP) {
+            auto candidate = pq.top();
+            pq.pop();
+
+            // 使用済みでないかチェック（二重チェック）
+            if (!used_paths.count(candidate.second)) {
+                chosen_path = candidate.second;
+                used_paths.insert(chosen_path);
+                break;
+            }
+            skip_count++;
+        }
+
+        // 100回連続でスキップした場合、強制的に使う
+        if (chosen_path.empty() && !pq.empty()) {
+            cerr << "Force using path at turn " << turn << " after "
+                 << skip_count << " skips" << endl;
             chosen_path = pq.top().second;
             used_paths.insert(chosen_path);
-        } else {
-            // フォールバック：最短経路を使用
-            cerr << "Fallback at turn " << turn << endl;
-            int min_len = INT_MAX;
+        }
+
+        // それでも経路がない場合：現在の店の経路を復活させる
+        if (chosen_path.empty()) {
+            cerr << "Reviving paths from shop " << current_shop << " at turn "
+                 << turn << endl;
+
+            // 現在の店から出る経路を復活
+            rep(goal, K) {
+                if (goal == current_shop)
+                    continue;
+                if (!paths[current_shop][goal].empty()) {
+                    for (const auto &path : paths[current_shop][goal]) {
+                        used_paths.erase(path);
+                    }
+                }
+            }
+
+            // 再度経路探索（復活させた経路から選択）
+            priority_queue<pair<int, vector<int>>,
+                           vector<pair<int, vector<int>>>,
+                           greater<pair<int, vector<int>>>>
+                pq2;
 
             rep(goal, K) {
                 if (goal == current_shop)
                     continue;
-                if (shortest_path[current_shop][goal].empty())
-                    continue;
 
-                auto &path = shortest_path[current_shop][goal];
-                // 戻り制約チェック
-                if (prev_vertex != -1 && path.size() >= 2 &&
-                    path[1] == prev_vertex) {
-                    continue;
-                }
-
-                if (path.size() < min_len) {
-                    min_len = path.size();
-                    chosen_path = path;
+                if (!paths[current_shop][goal].empty()) {
+                    for (const auto &path : paths[current_shop][goal]) {
+                        if (prev_vertex != -1 && path.size() >= 2 &&
+                            path[1] == prev_vertex) {
+                            continue;
+                        }
+                        pq2.push({path.size(), path});
+                    }
                 }
             }
 
-            if (chosen_path.empty()) {
-                cerr << "No valid path found at turn " << turn << endl;
-                break;
+            if (!pq2.empty()) {
+                chosen_path = pq2.top().second;
+                used_paths.insert(chosen_path);
+            } else {
+                // 最終フォールバック：最短経路を使用
+                cerr << "Final fallback at turn " << turn << endl;
+                int min_len = INT_MAX;
+
+                rep(goal, K) {
+                    if (goal == current_shop)
+                        continue;
+                    if (shortest_path[current_shop][goal].empty())
+                        continue;
+
+                    auto &path = shortest_path[current_shop][goal];
+                    if (prev_vertex != -1 && path.size() >= 2 &&
+                        path[1] == prev_vertex) {
+                        continue;
+                    }
+
+                    if (path.size() < min_len) {
+                        min_len = path.size();
+                        chosen_path = path;
+                    }
+                }
+
+                // 戻り制約でも見つからない場合は、制約を緩めて再探索
+                if (chosen_path.empty()) {
+                    cerr << "Relaxing constraints at turn " << turn << endl;
+                    rep(goal, K) {
+                        if (goal == current_shop)
+                            continue;
+                        if (shortest_path[current_shop][goal].empty())
+                            continue;
+
+                        auto &path = shortest_path[current_shop][goal];
+                        if (path.size() < min_len) {
+                            min_len = path.size();
+                            chosen_path = path;
+                        }
+                    }
+                }
+
+                if (chosen_path.empty()) {
+                    cerr << "No valid path found at turn " << turn << endl;
+                    break;
+                }
             }
         }
 
@@ -227,8 +304,8 @@ int main() {
             cout << chosen_path[i] << endl;
             turn++;
 
-            // 1000ターン以降、100の倍数のターン数で着色処理
-            if (turn >= 1000 && turn % 100 == 0) {
+            // 1000ターン以降、99の倍数のターン数で着色処理
+            if (turn >= 1000 && turn % 99 == 0) {
                 int current_pos = chosen_path[i];
                 // 現在位置がアイスの木（K以上）で、未着色の場合
                 if (current_pos >= K && !is_colored[current_pos]) {
