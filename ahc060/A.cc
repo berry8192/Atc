@@ -5,7 +5,14 @@
 
 using namespace std;
 
+// パラメータ定数
 const int MAX_PATH_LENGTH = 20;
+const int MAX_PATHS_PER_START = 3000;
+const int MAX_SKIP = 10;
+const int COLOR_START_TURN = 1000;
+const int COLOR_INTERVAL = 81;
+const int PRIORITY_PATH_WEIGHT = 10;
+const int RARE_SHOP_VISIT_INTERVAL = 10; // N回に1回レアショップに行く
 
 int main() {
     int N, M, K, T;
@@ -38,7 +45,6 @@ int main() {
         q.push({start});
 
         int path_count = 0; // この出発点から見つけた経路数
-        const int MAX_PATHS_PER_START = 2000;
 
         while (!q.empty() && path_count < MAX_PATHS_PER_START) {
             vector<int> path = q.front();
@@ -152,15 +158,6 @@ int main() {
         }
     }
 
-    // デバッグ出力：各アイスの木が含まれる経路数
-    cerr << "Vertex path counts:" << endl;
-    rep(v, N) {
-        if (v >= K) {
-            cerr << "Vertex " << v << ": " << vertex_to_paths[v].size()
-                 << " paths" << endl;
-        }
-    }
-
     // 経路を辿った場合のアイスの順列を計算する関数
     auto get_ice_sequence = [&](const vector<int> &path) -> string {
         string result = "";
@@ -225,7 +222,6 @@ int main() {
 
         vector<int> chosen_path;
         int skip_count = 0;
-        const int MAX_SKIP = 10;
 
         // priority_queueから経路を取り出して検証
         while (!pq.empty() && skip_count < MAX_SKIP) {
@@ -241,19 +237,18 @@ int main() {
             skip_count++;
         }
 
-        // 10回連続でスキップした場合、強制的に使う
+        // MAX_SKIP回連続でスキップした場合、強制的に使う
         if (chosen_path.empty() && !pq.empty()) {
-            // cerr << "Force using path at turn " << turn << " after "
-            //      << skip_count << " skips" << endl;
+            cerr << "Force using path at turn " << turn << " after "
+                 << skip_count << " skips" << endl;
             chosen_path = pq.top().second;
             used_paths.insert(chosen_path);
         }
 
         // それでも経路がない場合：現在の店の経路を復活させる
         if (chosen_path.empty()) {
-            // cerr << "Reviving paths from shop " << current_shop << " at turn
-            // "
-            //      << turn << endl;
+            cerr << "Reviving paths from shop " << current_shop << " at turn "
+                 << turn << endl;
 
             // 現在の店から出る経路を復活
             rep(goal, K) {
@@ -339,13 +334,11 @@ int main() {
 
         // 経路に沿って移動（開始点以外を出力）
         for (int i = 1; i < chosen_path.size() && turn < T; i++) {
-            int current_vertex = chosen_path[i];
-            cout << current_vertex << endl;
-            visit_count[current_vertex]++; // 訪問回数をカウント
+            cout << chosen_path[i] << endl;
             turn++;
 
-            // 1000ターン以降、99の倍数のターン数で着色処理
-            if (turn >= 1000 && turn % 99 == 0) {
+            // COLOR_START_TURN以降、COLOR_INTERVALの倍数のターン数で着色処理
+            if (turn >= COLOR_START_TURN && turn % COLOR_INTERVAL == 0) {
                 int current_pos = chosen_path[i];
                 // 現在位置がアイスの木（K以上）で、未着色の場合
                 if (current_pos >= K && !is_colored[current_pos]) {
@@ -385,20 +378,6 @@ int main() {
     int total_score = 0;
     rep(i, K) { total_score += shop_inventory[i].size(); }
     cerr << "Final score: " << total_score << endl;
-
-    // 各頂点の訪問回数を出力
-    cerr << "\nVertex visit counts:" << endl;
-    rep(v, N) {
-        if (visit_count[v] > 0) {
-            cerr << "Vertex " << v << ": " << visit_count[v] << " visits";
-            if (v >= K) {
-                cerr << " (Tree, " << (is_colored[v] ? "Red" : "White") << ")";
-            } else {
-                cerr << " (Shop)";
-            }
-            cerr << endl;
-        }
-    }
 
     return 0;
 }
