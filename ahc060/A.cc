@@ -5,7 +5,7 @@
 
 using namespace std;
 
-const int MAX_PATH_LENGTH = 15;
+const int MAX_PATH_LENGTH = 20;
 
 int main() {
     int N, M, K, T;
@@ -37,7 +37,10 @@ int main() {
         queue<vector<int>> q;
         q.push({start});
 
-        while (!q.empty()) {
+        int path_count = 0; // この出発点から見つけた経路数
+        const int MAX_PATHS_PER_START = 1000;
+
+        while (!q.empty() && path_count < MAX_PATHS_PER_START) {
             vector<int> path = q.front();
             q.pop();
 
@@ -59,6 +62,9 @@ int main() {
                 // nextが店なら経路として保存（ただし探索は続けない）
                 if (next < K && next != start) {
                     paths[start][next].push_back(new_path);
+                    path_count++;
+                    if (path_count >= MAX_PATHS_PER_START)
+                        break;
                     // 店に到達したらそこで探索終了（キューに入れない）
                 } else {
                     // 木のマスなら探索を続ける
@@ -126,6 +132,25 @@ int main() {
 
     // 各ショップの在庫集合（納品済みのアイスの順列）
     vector<set<string>> shop_inventory(K);
+
+    // 各頂点を含む経路のリスト（頂点K~N-1について）
+    vector<vector<vector<int>>> vertex_to_paths(N);
+
+    // 経路を列挙して、各頂点を含む経路を記録
+    rep(start, K) {
+        rep(goal, K) {
+            if (start == goal)
+                continue;
+            for (const auto &path : paths[start][goal]) {
+                // この経路に含まれるアイスの木（K~N-1）を記録
+                for (int v : path) {
+                    if (v >= K) {
+                        vertex_to_paths[v].push_back(path);
+                    }
+                }
+            }
+        }
+    }
 
     // 経路を辿った場合のアイスの順列を計算する関数
     auto get_ice_sequence = [&](const vector<int> &path) -> string {
@@ -312,6 +337,14 @@ int main() {
                     cout << -1 << endl;
                     is_colored[current_pos] = true;
                     turn++;
+
+                    // この頂点を含む経路を復活させる
+                    cerr << "Colored vertex " << current_pos << ", reviving "
+                         << vertex_to_paths[current_pos].size() << " paths"
+                         << endl;
+                    for (const auto &path : vertex_to_paths[current_pos]) {
+                        used_paths.erase(path);
+                    }
 
                     if (turn >= T)
                         break;
