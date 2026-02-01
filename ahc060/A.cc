@@ -87,6 +87,40 @@ int main() {
     }
     cerr << "Total paths: " << total_paths << endl;
 
+    // フォールバック用：店間の最短経路を1つずつ保持（BFS）
+    vector<vector<vector<int>>> shortest_path(K, vector<vector<int>>(K));
+    rep(start, K) {
+        // BFSで最短経路を求める
+        queue<vector<int>> q;
+        vector<bool> visited(N, false);
+        q.push({start});
+        visited[start] = true;
+
+        while (!q.empty()) {
+            vector<int> path = q.front();
+            q.pop();
+            int current = path.back();
+
+            // 店に到達したら記録
+            if (current < K && current != start &&
+                shortest_path[start][current].empty()) {
+                shortest_path[start][current] = path;
+            }
+
+            for (int next : graph[current]) {
+                if (!visited[next]) {
+                    visited[next] = true;
+                    vector<int> new_path = path;
+                    new_path.push_back(next);
+                    q.push(new_path);
+                }
+            }
+        }
+    }
+
+    // 使用済み経路を管理するためのセット
+    set<vector<int>> used_paths;
+
     // 乱数の準備
     mt19937 mt(12345);
 
@@ -96,45 +130,68 @@ int main() {
     int turn = 0;         // 使用したターン数
 
     while (turn < T) {
-        // 現在の店から行ける経路を探す
-        vector<pair<int, vector<int>>> candidates; // {経路長, 経路}
+        // 現在の店から行ける経路を探す（priority_queue使用）
+        priority_queue<pair<int, vector<int>>, vector<pair<int, vector<int>>>,
+                       greater<pair<int, vector<int>>>>
+            pq; // {経路長, 経路}（小さい順）
 
         rep(goal, K) {
             if (goal == current_shop)
                 continue; // 同じ店には行けない
 
-            // この店への経路から最短のものを選ぶ
+            // この店への未使用経路を全て追加
             if (!paths[current_shop][goal].empty()) {
-                int min_len = INT_MAX;
-                vector<int> best_path;
                 for (const auto &path : paths[current_shop][goal]) {
+                    // 使用済みならスキップ
+                    if (used_paths.count(path))
+                        continue;
+
                     // 経路の2番目の頂点が前の経路の最後から2番目と同じならダメ
                     if (prev_vertex != -1 && path.size() >= 2 &&
                         path[1] == prev_vertex) {
                         continue;
                     }
 
-                    if (path.size() < min_len) {
-                        min_len = path.size();
-                        best_path = path;
-                    }
-                }
-
-                if (!best_path.empty()) {
-                    candidates.push_back({min_len, best_path});
+                    pq.push({path.size(), path});
                 }
             }
         }
 
-        if (candidates.empty()) {
-            // 行ける経路がない場合は終了
-            cerr << "No valid path found at turn " << turn << endl;
-            break;
-        }
+        vector<int> chosen_path;
 
-        // 最短の経路を選択
-        sort(all(candidates));
-        vector<int> chosen_path = candidates[0].second;
+        // 未使用経路がある場合
+        if (!pq.empty()) {
+            chosen_path = pq.top().second;
+            used_paths.insert(chosen_path);
+        } else {
+            // フォールバック：最短経路を使用
+            cerr << "Fallback at turn " << turn << endl;
+            int min_len = INT_MAX;
+
+            rep(goal, K) {
+                if (goal == current_shop)
+                    continue;
+                if (shortest_path[current_shop][goal].empty())
+                    continue;
+
+                auto &path = shortest_path[current_shop][goal];
+                // 戻り制約チェック
+                if (prev_vertex != -1 && path.size() >= 2 &&
+                    path[1] == prev_vertex) {
+                    continue;
+                }
+
+                if (path.size() < min_len) {
+                    min_len = path.size();
+                    chosen_path = path;
+                }
+            }
+
+            if (chosen_path.empty()) {
+                cerr << "No valid path found at turn " << turn << endl;
+                break;
+            }
+        }
 
         // 経路に沿って移動（開始点以外を出力）
         for (int i = 1; i < chosen_path.size() && turn < T; i++) {
