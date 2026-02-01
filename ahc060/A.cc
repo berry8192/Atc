@@ -5,6 +5,8 @@
 
 using namespace std;
 
+const int MAX_PATH_LENGTH = 20;
+
 int main() {
     int N, M, K, T;
     cin >> N >> M >> K >> T;
@@ -41,8 +43,8 @@ int main() {
 
             int current = path.back();
 
-            // 経路長が10以上なら打ち切り
-            if (path.size() >= 10)
+            // 経路長が上限以上なら打ち切り
+            if (path.size() >= MAX_PATH_LENGTH)
                 continue;
 
             // 隣接頂点を探索
