@@ -88,6 +88,34 @@ int main() {
         int id, start, goal, length;
         vector<int> path;
         vector<int> ice_vertices;
+        mutable unordered_map<int, string>
+            ice_seq_cache; // 訪問済みパターンのみ保存
+
+        // 現在の盤面状態からice_sequenceを取得（キャッシュ付き）
+        string get_ice_seq(const vector<bool> &is_colored) const {
+            // ビットマスク計算
+            int mask = 0;
+            for (int i = 0; i < ice_vertices.size(); i++) {
+                if (is_colored[ice_vertices[i]]) {
+                    mask |= (1 << i);
+                }
+            }
+
+            // キャッシュ確認
+            auto it = ice_seq_cache.find(mask);
+            if (it != ice_seq_cache.end()) {
+                return it->second; // キャッシュヒット
+            }
+
+            // 初回のみ文字列生成
+            string seq = "";
+            seq.reserve(ice_vertices.size());
+            for (int i = 0; i < ice_vertices.size(); i++) {
+                seq += (mask & (1 << i)) ? 'R' : 'W';
+            }
+            ice_seq_cache[mask] = seq;
+            return seq;
+        }
     };
 
     vector<Route> all_routes;
@@ -157,19 +185,6 @@ int main() {
         }
     }
 
-    // 経路を辿った場合のアイスの順列を計算する関数（Route版）
-    auto get_ice_sequence = [&](const Route &route) -> string {
-        string result = "";
-        for (int v : route.ice_vertices) {
-            if (is_colored[v]) {
-                result += 'R';
-            } else {
-                result += 'W';
-            }
-        }
-        return result;
-    };
-
     // 各頂点の訪問回数をカウント
     vector<int> visit_count(N, 0);
 
@@ -207,7 +222,7 @@ int main() {
                 }
 
                 // この経路でのアイスの順列を計算
-                string ice_seq = get_ice_sequence(route);
+                string ice_seq = route.get_ice_seq(is_colored);
                 // 目的地のショップに既に同じアイスがあればスキップ
                 if (shop_inventory[goal].count(ice_seq)) {
                     continue;
@@ -357,7 +372,7 @@ int main() {
         }
 
         // この経路で集めたアイスの順列を計算して在庫に追加
-        string ice_seq = get_ice_sequence(chosen_route);
+        string ice_seq = chosen_route.get_ice_seq(is_colored);
         int goal_shop = chosen_route.goal;
         shop_inventory[goal_shop].insert(ice_seq);
 
