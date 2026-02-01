@@ -177,6 +177,9 @@ int main() {
         return result;
     };
 
+    // 各頂点の訪問回数をカウント
+    vector<int> visit_count(N, 0);
+
     // 乱数の準備
     mt19937 mt(12345);
 
@@ -336,7 +339,9 @@ int main() {
 
         // 経路に沿って移動（開始点以外を出力）
         for (int i = 1; i < chosen_path.size() && turn < T; i++) {
-            cout << chosen_path[i] << endl;
+            int current_vertex = chosen_path[i];
+            cout << current_vertex << endl;
+            visit_count[current_vertex]++; // 訪問回数をカウント
             turn++;
 
             // 1000ターン以降、99の倍数のターン数で着色処理
@@ -380,6 +385,20 @@ int main() {
     int total_score = 0;
     rep(i, K) { total_score += shop_inventory[i].size(); }
     cerr << "Final score: " << total_score << endl;
+
+    // 各頂点の訪問回数を出力
+    cerr << "\nVertex visit counts:" << endl;
+    rep(v, N) {
+        if (visit_count[v] > 0) {
+            cerr << "Vertex " << v << ": " << visit_count[v] << " visits";
+            if (v >= K) {
+                cerr << " (Tree, " << (is_colored[v] ? "Red" : "White") << ")";
+            } else {
+                cerr << " (Shop)";
+            }
+            cerr << endl;
+        }
+    }
 
     return 0;
 }
