@@ -110,11 +110,11 @@ double evaluate_cell(int x, int y, int top_rival) {
     if (x == piece_pos[0].first && y == piece_pos[0].second) return 0.0;
     double v = V[x][y];
     if (owner[x][y] == -1) {
-        return v * 0.3;
+        return v;
     } else if (owner[x][y] == 0) {
-        return (level[x][y] < U) ? v * 0.25 : 0.0;
+        return (level[x][y] < U) ? v : 0.0;
     } else if (owner[x][y] == top_rival) {
-        return (level[x][y] == 1) ? v * 0.25 : v * 0.2;
+        return (level[x][y] == 1) ? v : v * 0.8;
     } else {
         return 0.0;
     }
