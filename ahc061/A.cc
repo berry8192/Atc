@@ -109,13 +109,12 @@ double evaluate_cell(int x, int y, int top_rival) {
     // 現在位置にとどまるのは無意味
     if (x == piece_pos[0].first && y == piece_pos[0].second) return 0.0;
     double v = V[x][y];
-    double D = center_weight(x, y);
     if (owner[x][y] == -1) {
-        return v * D * 0.3;
+        return v * 0.3;
     } else if (owner[x][y] == 0) {
-        return (level[x][y] < U) ? v * D * 0.25 : 0.0;
+        return (level[x][y] < U) ? v * 0.25 : 0.0;
     } else if (owner[x][y] == top_rival) {
-        return (level[x][y] == 1) ? v * D * 0.25 : v * D * 0.2;
+        return (level[x][y] == 1) ? v * 0.25 : v * 0.2;
     } else {
         return 0.0;
     }
