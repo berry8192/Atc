@@ -160,13 +160,17 @@ void read_turn_result() {
 }
 
 // ---- ボードロジック ----
-int get_top_rival() {
+vector<ll> calc_scores() {
     vector<ll> scores(M, 0);
     rep(i, N) rep(j, N) {
-        if (owner[i][j] >= 1) {
+        if (owner[i][j] >= 0) {
             scores[owner[i][j]] += (ll)V[i][j] * level[i][j];
         }
     }
+    return scores;
+}
+
+int get_top_rival(const vector<ll>& scores) {
     int top = 1;
     for (int p = 2; p < M; p++) {
         if (scores[p] > scores[top]) top = p;
@@ -235,12 +239,12 @@ vector<CellInfo> make_cell_infos(int player, vector<pair<int, int>>& movable) {
 }
 
 // ---- 自分の評価関数 ----
-double evaluate_cell(int x, int y, int top_rival) {
+double evaluate_cell(int x, int y, int turn, int top_rival) {
     if (x == piece_pos[0].first && y == piece_pos[0].second) return 0.0;
     double v = V[x][y];
     if (owner[x][y] == -1) return v;
     if (owner[x][y] == 0) return (level[x][y] < U) ? v : 0.0;
-    if (owner[x][y] == top_rival) return (level[x][y] == 1) ? v : v * 0.8;
+    if (owner[x][y] == top_rival) return (level[x][y] == 1) ? v * 1.8 : v * 1.0;
     return 0.0;
 }
 
@@ -271,16 +275,18 @@ int main() {
         }
 
         // 自分の手を決定
-        int top_rival = get_top_rival();
+        auto scores = calc_scores();
+        int top_rival = get_top_rival(scores);
         auto movable = get_movable(0);
 
         pair<int, int> best_move = piece_pos[0];
         double best_score = -1;
         for (auto& [x, y] : movable) {
-            double score = evaluate_cell(x, y, top_rival);
+            double score = evaluate_cell(x, y, turn, top_rival);
+            (void)turn; // 将来のフェーズ別戦略用
             // AIが向かう先で自分の領土でない → 衝突リスク
             if (predicted.count({x, y}) && owner[x][y] != 0) {
-                score *= 0.5;
+                score *= 0.3;
             }
             if (score > best_score) {
                 best_score = score;
