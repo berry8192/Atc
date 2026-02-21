@@ -238,8 +238,33 @@ vector<CellInfo> make_cell_infos(int player, vector<pair<int, int>>& movable) {
     return cells;
 }
 
+// ---- 距離計算 ----
+// プレイヤーの到達可能領土からの拡張距離（空きマスのみ通過）
+vector<vector<int>> calc_expand_dist(int player) {
+    vector<vector<int>> dist(N, vector<int>(N, 999));
+    queue<pair<int, int>> q;
+    auto reach = get_reachable(player);
+    for (auto& [rx, ry] : reach) {
+        dist[rx][ry] = 0;
+        q.push({rx, ry});
+    }
+    while (!q.empty()) {
+        auto [cx, cy] = q.front(); q.pop();
+        rep(d, 4) {
+            int nx = cx + dx[d], ny = cy + dy[d];
+            if (nx < 0 || nx >= N || ny < 0 || ny >= N) continue;
+            if (dist[cx][cy] + 1 >= dist[nx][ny]) continue;
+            if (owner[nx][ny] == -1) {
+                dist[nx][ny] = dist[cx][cy] + 1;
+                q.push({nx, ny});
+            }
+        }
+    }
+    return dist;
+}
+
 // ---- 自分の評価関数 ----
-double evaluate_cell(int x, int y, int turn, int top_rival) {
+double evaluate_cell(int x, int y, int top_rival) {
     if (x == piece_pos[0].first && y == piece_pos[0].second) return 0.0;
     double v = V[x][y];
     if (owner[x][y] == -1) return v;
@@ -274,16 +299,51 @@ int main() {
             predicted.insert(pred);
         }
 
+        // 各敵の拡張距離を計算
+        vector<vector<vector<int>>> enemy_dist(M);
+        for (int p = 1; p < M; p++) {
+            enemy_dist[p] = calc_expand_dist(p);
+        }
+
+        // 空きマスのポテンシャル（敵が遠いほど高い）
+        vector<vector<double>> potential(N, vector<double>(N, 0));
+        rep(i, N) rep(j, N) {
+            if (owner[i][j] == -1) {
+                int min_ed = 999;
+                for (int p = 1; p < M; p++)
+                    min_ed = min(min_ed, enemy_dist[p][i][j]);
+                potential[i][j] = V[i][j] * (1.0 + 0.15 * min(min_ed, 6));
+            }
+        }
+
         // 自分の手を決定
         auto scores = calc_scores();
         int top_rival = get_top_rival(scores);
         auto movable = get_movable(0);
 
         pair<int, int> best_move = piece_pos[0];
-        double best_score = -1;
+        double best_score = -1e18;
         for (auto& [x, y] : movable) {
-            double score = evaluate_cell(x, y, turn, top_rival);
-            (void)turn; // 将来のフェーズ別戦略用
+            double score = evaluate_cell(x, y, top_rival);
+
+            // 空きマスに敵距離ボーナス（敵が来ないほど安全に取れる）
+            if (owner[x][y] == -1) {
+                int min_ed = 999;
+                for (int p = 1; p < M; p++)
+                    min_ed = min(min_ed, enemy_dist[p][x][y]);
+                score *= (1.0 + 0.15 * min(min_ed, 6));
+            }
+
+            // 方向ボーナス: この方向に進むと将来どれだけ良い空きマスがあるか
+            double future = 0;
+            rep(i, N) rep(j, N) {
+                if (potential[i][j] > 0) {
+                    int md = abs(x - i) + abs(y - j);
+                    if (md > 0) future += potential[i][j] / (md + 1);
+                }
+            }
+            score += future * 0.05;
+
             // AIが向かう先で自分の領土でない → 衝突リスク
             if (predicted.count({x, y}) && owner[x][y] != 0) {
                 score *= 0.3;
