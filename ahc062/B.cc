@@ -1,91 +1,93 @@
 #include <bits/stdc++.h>
 using namespace std;
 
-const int N = 200;
-int A[N][N];
-
-struct P {
-    int x, y;
+struct Move {
+    int dir;
+    int step;
 };
 
-vector<P> path;
-
-bool adj(P a, P b) { return max(abs(a.x - b.x), abs(a.y - b.y)) == 1; }
-
-long long calc_delta(int l, int r) {
-    long long delta = 0;
-    for (int k = l; k <= r; k++) {
-        int nx = l + r - k;
-        delta += (long long)(nx - k) * A[path[k].x][path[k].y];
-    }
-    return delta;
-}
-
 int main() {
-
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    int n;
-    cin >> n;
+    int N;
+    cin >> N;
 
-    for (int i = 0; i < n; i++)
-        for (int j = 0; j < n; j++)
-            cin >> A[i][j];
+    vector<vector<int>> A(N, vector<int>(N));
+    for (auto &r : A)
+        for (auto &x : r)
+            cin >> x;
 
-    // 蛇行
-    for (int i = 0; i < n; i++) {
-        if (i % 2 == 0) {
-            for (int j = 0; j < n; j++)
-                path.push_back({i, j});
-        } else {
-            for (int j = n - 1; j >= 0; j--)
-                path.push_back({i, j});
+    // 方向 (右 下 左 上)
+    int dx[4] = {0, 1, 0, -1};
+    int dy[4] = {1, 0, -1, 0};
+
+    // 移動シーケンス
+    vector<Move> seq = {
+        {0, N - 1},   {1, N - 1},   {2, N - 1},   {3, N - 5},   {0, N - 5},
+        {1, N - 9},   {2, N - 9},   {3, N - 13},  {0, N - 13},  {1, N - 17},
+        {2, N - 17},  {3, N - 21},  {0, N - 21},  {1, N - 25},  {2, N - 25},
+        {3, N - 29},  {0, N - 29},  {1, N - 33},  {2, N - 33},  {3, N - 37},
+        {0, N - 37},  {1, N - 41},  {2, N - 41},  {3, N - 45},  {0, N - 45},
+        {1, N - 49},  {2, N - 49},  {3, N - 53},  {0, N - 53},  {1, N - 57},
+        {2, N - 57},  {3, N - 61},  {0, N - 61},  {1, N - 65},  {2, N - 65},
+        {3, N - 69},  {0, N - 69},  {1, N - 73},  {2, N - 73},  {3, N - 77},
+        {0, N - 77},  {1, N - 81},  {2, N - 81},  {3, N - 85},  {0, N - 85},
+        {1, N - 89},  {2, N - 89},  {3, N - 93},  {0, N - 93},  {1, N - 97},
+        {2, N - 97},  {3, N - 101}, {0, N - 101}, {1, N - 105}, {2, N - 105},
+        {3, N - 109}, {0, N - 109}, {1, N - 113}, {2, N - 113}, {3, N - 117},
+        {0, N - 117}, {1, N - 121}, {2, N - 121}, {3, N - 125}, {0, N - 125},
+        {1, N - 129}, {2, N - 129}, {3, N - 133}, {0, N - 133}, {1, N - 137},
+        {2, N - 137}, {3, N - 141}, {0, N - 141}, {1, N - 145}, {2, N - 145},
+        {3, N - 149}, {0, N - 149}, {1, N - 153}, {2, N - 153}, {3, N - 157},
+        {0, N - 157}, {1, N - 161}, {2, N - 161}, {3, N - 165}, {0, N - 165},
+        {1, N - 169}, {2, N - 169}, {3, N - 173}, {0, N - 173}, {1, N - 177},
+        {2, N - 177}, {3, N - 181}, {0, N - 181}, {1, N - 185}, {2, N - 185},
+        {3, N - 189}, {0, N - 189}, {1, N - 193}, {2, N - 193}, {3, N - 197},
+        {0, N - 195}, {3, N - 198}, {2, N - 193}, {1, N - 193}, {0, N - 189},
+        {3, N - 189}, {2, N - 185}, {1, N - 185}, {0, N - 181}, {3, N - 181},
+        {2, N - 177}, {1, N - 177}, {0, N - 173}, {3, N - 173}, {2, N - 169},
+        {1, N - 169}, {0, N - 165}, {3, N - 165}, {2, N - 161}, {1, N - 161},
+        {0, N - 157}, {3, N - 157}, {2, N - 153}, {1, N - 153}, {0, N - 149},
+        {3, N - 149}, {2, N - 145}, {1, N - 145}, {0, N - 141}, {3, N - 141},
+        {2, N - 137}, {1, N - 137}, {0, N - 133}, {3, N - 133}, {2, N - 129},
+        {1, N - 129}, {0, N - 125}, {3, N - 125}, {2, N - 121}, {1, N - 121},
+        {0, N - 117}, {3, N - 117}, {2, N - 113}, {1, N - 113}, {0, N - 109},
+        {3, N - 109}, {2, N - 105}, {1, N - 105}, {0, N - 101}, {3, N - 101},
+        {2, N - 97},  {1, N - 97},  {0, N - 93},  {3, N - 93},  {2, N - 89},
+        {1, N - 89},  {0, N - 85},  {3, N - 85},  {2, N - 81},  {1, N - 81},
+        {0, N - 77},  {3, N - 77},  {2, N - 73},  {1, N - 73},  {0, N - 69},
+        {3, N - 69},  {2, N - 65},  {1, N - 65},  {0, N - 61},  {3, N - 61},
+        {2, N - 57},  {1, N - 57},  {0, N - 53},  {3, N - 53},  {2, N - 49},
+        {1, N - 49},  {0, N - 45},  {3, N - 45},  {2, N - 41},  {1, N - 41},
+        {0, N - 37},  {3, N - 37},  {2, N - 33},  {1, N - 33},  {0, N - 29},
+        {3, N - 29},  {2, N - 25},  {1, N - 25},  {0, N - 21},  {3, N - 21},
+        {2, N - 17},  {1, N - 17},  {0, N - 13},  {3, N - 13},  {2, N - 9},
+        {1, N - 9},   {0, N - 5},   {3, N - 5},   {2, N - 3}};
+    // ===== ここに骨格を作るロジックを書く =====
+
+    // ===== 再生 =====
+    vector<pair<int, int>> path;
+    path.reserve(N * N);
+
+    int x = 0;
+    int y = 0;
+    path.emplace_back(x, y);
+
+    for (auto &m : seq) {
+        for (int k = 0; k < m.step; k++) {
+            x += dx[m.dir];
+            y += dy[m.dir];
+
+            if (x < 0 || x >= N || y < 0 || y >= N)
+                continue;
+
+            path.emplace_back(x, y);
         }
     }
 
-    int M = n * n;
-
-    auto start = chrono::steady_clock::now();
-
-    double TL = 2.9;
-
-    mt19937 rng(0);
-
-    while (true) {
-
-        auto now = chrono::steady_clock::now();
-        double t = chrono::duration<double>(now - start).count();
-        if (t > TL)
-            break;
-
-        int l = rng() % M;
-        int len = rng() % 100;
-        int r = l + len;
-        if (r >= M)
-            continue;
-        if (l == 0 || r == M - 1)
-            continue;
-
-        P a = path[l - 1];
-        P b = path[l];
-        P c = path[r];
-        P d = path[r + 1];
-
-        if (!adj(a, c))
-            continue;
-        if (!adj(b, d))
-            continue;
-
-        long long delta = calc_delta(l, r);
-
-        double temp = 1000 * (1 - t / TL);
-
-        if (delta > 0 || exp(delta / temp) > (double)rng() / rng.max()) {
-            reverse(path.begin() + l, path.begin() + r + 1);
-        }
+    // 出力
+    for (auto &p : path) {
+        cout << p.first << " " << p.second << "\n";
     }
-
-    for (auto &p : path)
-        cout << p.x << " " << p.y << "\n";
 }
