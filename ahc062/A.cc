@@ -84,5 +84,15 @@ int main() {
     start = chrono::system_clock::now();
     inpt();
 
+    rep(i, N) {
+        if (i % 2) {
+            for (int j = N - 1; j >= 0; j--) {
+                cout << i SP << j << endl;
+            }
+        } else {
+            rep(j, N) { cout << i SP << j << endl; }
+        }
+    }
+
     return 0;
 }
