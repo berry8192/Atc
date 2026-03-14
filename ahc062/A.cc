@@ -51,8 +51,9 @@ double TIME_LIMIT = 1900.0;
 // double TIME_LIMIT=190.0;
 double start_temp = 10000000.0;
 double end_temp = 10000.0;
-constexpr long long PHASE1_MS = 1000;
-constexpr long long TOTAL_MS = 3000;
+constexpr long long TOTAL_MS = 2400;
+constexpr long long PHASE1_TRIAL_MS = 500;
+constexpr long long REPAIR_GUARD_MS = 500;
 
 struct Timer {
     chrono::_V2::system_clock::time_point start;
@@ -63,7 +64,7 @@ struct Timer {
             chrono::system_clock::now();
         return chrono::duration_cast<chrono::milliseconds>(current - start)
                    .count() /
-               TIME_LIMIT;
+               TOTAL_MS;
     }
 };
 Timer timer;
@@ -92,7 +93,9 @@ inline long long elapsed_ms() {
     return chrono::duration_cast<chrono::milliseconds>(now - start).count();
 }
 
-inline bool phase1_over() { return elapsed_ms() >= PHASE1_MS; }
+inline bool phase1_over(long long deadline_ms) {
+    return elapsed_ms() >= deadline_ms;
+}
 inline bool total_over() { return elapsed_ms() >= TOTAL_MS; }
 
 int count_unvisited_neighbors(int v, const vector<char> &unvisited,
@@ -360,9 +363,26 @@ bool try_local_rewire_around_failed(int x, vector<char> &used, vector<int> &prv,
     return false;
 }
 
+vector<int> build_snake_path() {
+    vector<int> p;
+    p.reserve(N * N);
+    for (int r = 0; r < N; r++) {
+        if ((r & 1) == 0) {
+            for (int c = 0; c < N; c++)
+                p.push_back(vid(r, c));
+        } else {
+            for (int c = N - 1; c >= 0; c--)
+                p.push_back(vid(r, c));
+        }
+    }
+    return p;
+}
+
 // Phase 3: 2-opt insertion for any remaining unvisited cells.
-// All operations are in-place (no temporary vectors); path.reserve(total)
-// prevents reallocation.  Cases D/E operate in O(|pnbrs|)=O(8) not O(n).
+// For each unvisited x, finds path cells u=p[i] and v=p[j] (i<j, both adj to x)
+// and checks if reversing the segment p[i+1..j] keeps the path connected.
+// New path: p[0..i], x, p[j..i+1 reversed], p[j+1..n-1].
+// Junction condition: p[i+1] adj p[j+1] (vacuous when j==n-1).
 void repair_2opt_phase(vector<int> &path, int &remaining_unvisited) {
     int total = N * N;
     vector<char> used(total, 0);
@@ -373,26 +393,29 @@ void repair_2opt_phase(vector<int> &path, int &remaining_unvisited) {
     for (int v = 0; v < total; v++)
         if (!used[v])
             remaining.push_back(v);
+
     if (remaining.empty()) {
         remaining_unvisited = 0;
         return;
     }
-
-    path.reserve(total); // guarantee no reallocation during insertions
 
     vector<int> pos(total, -1);
     for (int i = 0; i < (int)path.size(); i++)
         pos[path[i]] = i;
 
     bool progress = true;
+
     while (progress && !remaining.empty()) {
-        if (total_over())
-            break;
+
         progress = false;
+
         for (auto it = remaining.begin(); it != remaining.end();) {
+
             int x = *it;
             auto [xr, xc] = rc(x);
+
             vector<int> pnbrs;
+
             rep(d, 8) {
                 int nr = xr + DR[d], nc = xc + DC[d];
                 if (!inb(nr, nc))
@@ -403,82 +426,71 @@ void repair_2opt_phase(vector<int> &path, int &remaining_unvisited) {
             }
 
             bool found = false;
-            int n = (int)path.size();
+            int n = path.size();
 
-            // Case A: extend tail.
+            // append
             if (!found && adjacent_id(x, path.back())) {
-                pos[x] = n;
                 path.push_back(x);
                 used[x] = 1;
-                found = true;
-            }
-            // Case B: extend head (prepend).
-            if (!found && adjacent_id(x, path.front())) {
-                path.insert(path.begin(), x);
-                for (int k = 0; k < (int)path.size(); k++)
+
+                pos.resize(total);
+                for (int k = 0; k < path.size(); k++)
                     pos[path[k]] = k;
-                used[x] = 1;
+
                 found = true;
             }
-            // Case C: 2-opt in-place.
-            // New path: p[0..pi], x, p[pj..pi+1], p[pj+1..n-1]
-            // Condition: p[pi+1] adj p[pj+1] (or pj==n-1).
-            for (int ai = 0; ai < (int)pnbrs.size() && !found; ai++) {
-                for (int bi = ai + 1; bi < (int)pnbrs.size() && !found; bi++) {
-                    int pi = pos[pnbrs[ai]], pj = pos[pnbrs[bi]];
+
+            // prepend
+            if (!found && adjacent_id(x, path.front())) {
+
+                path.insert(path.begin(), x);
+                used[x] = 1;
+
+                for (int k = 0; k < path.size(); k++)
+                    pos[path[k]] = k;
+
+                found = true;
+            }
+
+            // 2opt
+            for (int ai = 0; ai < pnbrs.size() && !found; ai++) {
+                for (int bi = ai + 1; bi < pnbrs.size() && !found; bi++) {
+
+                    int pi = pos[pnbrs[ai]];
+                    int pj = pos[pnbrs[bi]];
+
                     if (pi > pj)
                         swap(pi, pj);
+
                     bool ok = (pj == n - 1) ||
                               adjacent_id(path[pi + 1], path[pj + 1]);
+
                     if (!ok)
                         continue;
-                    // Insert x at pi+1, then reverse [pi+2..pj+1].
-                    path.insert(path.begin() + pi + 1, x);
-                    reverse(path.begin() + pi + 2, path.begin() + pj + 2);
-                    for (int k = pi + 1; k < (int)path.size(); k++)
-                        pos[path[k]] = k;
+
+                    vector<int> np;
+                    np.reserve(n + 1);
+
+                    for (int k = 0; k <= pi; k++)
+                        np.push_back(path[k]);
+
+                    np.push_back(x);
+
+                    for (int k = pj; k >= pi + 1; k--)
+                        np.push_back(path[k]);
+
+                    for (int k = pj + 1; k < n; k++)
+                        np.push_back(path[k]);
+
+                    path = move(np);
+
                     used[x] = 1;
-                    found = true;
-                }
-            }
-            // Case D: reverse-prefix, x becomes new head.
-            // New path: x, p[j..0], p[j+1..n-1]
-            // Condition: x adj p[j], p[0] adj p[j+1].
-            // Iterate over pnbrs (O(8)) not over all j (O(n)).
-            if (!found) {
-                for (int nv : pnbrs) {
-                    int j = pos[nv];
-                    if (j <= 0 || j >= n - 1)
-                        continue;
-                    if (!adjacent_id(path[0], path[j + 1]))
-                        continue;
-                    reverse(path.begin(), path.begin() + j + 1);
-                    path.insert(path.begin(), x);
-                    for (int k = 0; k < (int)path.size(); k++)
+
+                    // ★ 修正：posを完全再構築
+                    for (int k = 0; k < path.size(); k++)
                         pos[path[k]] = k;
-                    used[x] = 1;
+
                     found = true;
-                    break;
-                }
-            }
-            // Case E: reverse-suffix, x becomes new tail.
-            // New path: p[0..j-1], p[n-1..j], x
-            // Condition: x adj p[j], p[j-1] adj p[n-1].
-            if (!found) {
-                for (int nv : pnbrs) {
-                    int j = pos[nv];
-                    if (j <= 0 || j >= n - 1)
-                        continue;
-                    if (!adjacent_id(path[j - 1], path[n - 1]))
-                        continue;
-                    reverse(path.begin() + j, path.end());
-                    pos[x] = (int)path.size();
-                    path.push_back(x);
-                    for (int k = j; k < (int)path.size(); k++)
-                        pos[path[k]] = k;
-                    used[x] = 1;
-                    found = true;
-                    break;
                 }
             }
 
@@ -490,7 +502,8 @@ void repair_2opt_phase(vector<int> &path, int &remaining_unvisited) {
             }
         }
     }
-    remaining_unvisited = (int)remaining.size();
+
+    remaining_unvisited = remaining.size();
 }
 
 void repair_by_queue_insert(vector<int> &path, int &inserted_count,
@@ -602,7 +615,8 @@ void repair_by_queue_insert(vector<int> &path, int &inserted_count,
     remaining_unvisited = total - (int)path.size();
 }
 
-bool build_phase1_path(int start_v, vector<int> &path, int &dead_end_count) {
+bool build_phase1_path(int start_v, long long phase1_deadline_ms,
+                       vector<int> &path, int &dead_end_count) {
     int total = N * N;
     vector<char> unvisited(total, 1);
     path.clear();
@@ -616,7 +630,7 @@ bool build_phase1_path(int start_v, vector<int> &path, int &dead_end_count) {
     int iter = 0;
     const int max_iter = total * 300;
     while ((int)path.size() < total) {
-        if (phase1_over() || total_over()) {
+        if (phase1_over(phase1_deadline_ms) || total_over()) {
             return false;
         }
         if (++iter > max_iter) {
@@ -685,7 +699,7 @@ bool build_phase1_path(int start_v, vector<int> &path, int &dead_end_count) {
         }
 
         // Apply random choice with 10% probability on every decision.
-        if ((int)(mt() % 10) == 0) {
+        if ((int)(mt() % 8) == 0) {
             int pick = (int)(mt() % cands.size());
             path.push_back(cands[pick].nxt);
             unvisited[cands[pick].nxt] = 0;
@@ -748,17 +762,34 @@ int main() {
     int best_len = -1;
     int best_dead_ends = -1;
 
-    vector<int> start_candidates;
-    int fixed_starts = min(32, total);
-    rep(i, fixed_starts) start_candidates.push_back(ids[i]);
-    rep(i, 64) start_candidates.push_back(mt() % total);
+    int phase1_trials = 0;
+    long long phase1_global_deadline = TOTAL_MS - REPAIR_GUARD_MS;
+    if (phase1_global_deadline < 0)
+        phase1_global_deadline = 0;
 
-    for (int s : start_candidates) {
-        if (phase1_over() || total_over())
+    int fixed_starts = min(64, total);
+    int fixed_idx = 0;
+
+    while (!total_over() && !phase1_over(phase1_global_deadline)) {
+        long long trial_start_ms = elapsed_ms();
+        long long trial_deadline_ms =
+            min(phase1_global_deadline, trial_start_ms + PHASE1_TRIAL_MS);
+        if (trial_deadline_ms <= trial_start_ms)
             break;
+
+        int s;
+        if (fixed_idx < fixed_starts) {
+            s = ids[fixed_idx++];
+        } else if ((int)(mt() & 1)) {
+            s = ids[(int)(mt() % min(total, 4096))];
+        } else {
+            s = (int)(mt() % total);
+        }
+
         vector<int> path;
         int dead_end_count = 0;
-        build_phase1_path(s, path, dead_end_count);
+        build_phase1_path(s, trial_deadline_ms, path, dead_end_count);
+        phase1_trials++;
         int len = (int)path.size();
         long long score = calc_score(path);
         if (len > best_len || (len == best_len && score > best_score)) {
@@ -784,8 +815,17 @@ int main() {
     int twoopt_remaining = remaining_unvisited;
     repair_2opt_phase(best_path, twoopt_remaining);
 
+    if (twoopt_remaining > 0) {
+        best_path = build_snake_path();
+        twoopt_remaining = 0;
+        cerr << "fallback_snake: 1" << '\n';
+    } else {
+        cerr << "fallback_snake: 0" << '\n';
+    }
+
     double cover = 100.0 * best_len / total;
     cerr << fixed << setprecision(2);
+    cerr << "phase1_trials: " << phase1_trials << '\n';
     cerr << "phase1_coverage: " << best_len << "/" << total << " (" << cover
          << "%)" << '\n';
     cerr << "phase1_dead_ends: " << best_dead_ends << '\n';
