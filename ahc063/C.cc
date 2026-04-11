@@ -64,7 +64,7 @@ int prefix_match(const Snake &snake) {
 }
 
 const int BEAM_WIDTH = 100;
-const int BEAM_DEPTH = 60;
+const int BEAM_DEPTH = 90;
 
 struct BeamState {
     Snake snake;
