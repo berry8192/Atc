@@ -12,5 +12,6 @@ test.txt
 stb_image_write.h
 txtToPng
 calcXY
+problem_statement*
 
 stb_image.h
