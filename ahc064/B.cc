@@ -32,25 +32,39 @@ struct State {
 int total_score(const State &s) {
     int sc = 0;
     int locked[R];
+    // Starting lines: locked prefix + same-line consecutive pairs
     for (int r = 0; r < R; r++) {
         int n = s.Sn[r];
         int L = 0;
         while (L < n && s.S[r][L] == 10 * r + L) L++;
         locked[r] = L;
         sc += L * 10;
-        for (int c = L; c < n; c++) {
-            if (s.S[r][c] / 10 == r) sc++;
+        for (int c = 0; c + 1 < n; c++) {
+            int a = s.S[r][c], b = s.S[r][c + 1];
+            if (b == a + 1 && a / 10 == b / 10) sc += 5;
         }
     }
-    // Bonus for standby cars at head that match a needed car
+    // Standby lines: same-line consecutive pairs + head deploy-readiness
     for (int j = 0; j < R; j++) {
-        int tn = s.Tn[j];
-        if (tn == 0) continue;
-        int t = s.T[j][0] / 10;
-        int needed = 10 * t + locked[t];
-        int k = 0;
-        while (k < tn && s.T[j][k] == needed + k) k++;
-        sc += k * 5;
+        int n = s.Tn[j];
+        for (int c = 0; c + 1 < n; c++) {
+            int a = s.T[j][c], b = s.T[j][c + 1];
+            if (b == a + 1 && a / 10 == b / 10) sc += 5;
+        }
+        if (n > 0) {
+            int t = s.T[j][0] / 10;
+            if (locked[t] >= 10) {
+                sc -= 1;
+            } else {
+                int needed = 10 * t + locked[t];
+                int k = 0;
+                while (k < n && s.T[j][k] == needed + k &&
+                       locked[t] + k < 10)
+                    k++;
+                sc += k * 2;
+                if (k == 0) sc -= 1;
+            }
+        }
     }
     return sc;
 }
@@ -142,8 +156,8 @@ int main() {
     int best_idx = 0;
     int best_score = init.score;
 
-    const int BEAM_WIDTH = 100;
-    const int MAX_DEPTH = 2000;
+    const int BEAM_WIDTH = 40;
+    const int MAX_DEPTH = 4000;
 
     unordered_set<uint64_t> visited;
     visited.reserve(500000);
@@ -300,14 +314,29 @@ int main() {
         }
     }
 
-    // Pack into turns: only consecutive moves that are line-disjoint and
-    // non-crossing can share a turn
+    // Pack into turns via dependency-graph list scheduling.
+    // For each move, schedule it into the earliest turn t such that:
+    //   (a) t > last_turn[m.i] and t > last_turn[m.j]   (line dependency)
+    //   (b) no move in turn t shares a line with m
+    //   (c) no move in turn t crosses with m
+    int M = (int)combined.size();
+    vector<int> last_turn_for_S(R, -1), last_turn_for_T(R, -1);
     vector<vector<Move>> turns;
-    for (const auto &m : combined) {
-        if (!turns.empty()) {
-            auto &last = turns.back();
+    for (int idx = 0; idx < M; idx++) {
+        const Move &m = combined[idx];
+        int min_turn = 0;
+        if (last_turn_for_S[m.i] >= 0)
+            min_turn = max(min_turn, last_turn_for_S[m.i] + 1);
+        if (last_turn_for_T[m.j] >= 0)
+            min_turn = max(min_turn, last_turn_for_T[m.j] + 1);
+        int t = min_turn;
+        while (true) {
+            if (t >= (int)turns.size()) {
+                turns.push_back({});
+                break;
+            }
             bool ok = true;
-            for (const auto &tm : last) {
+            for (const auto &tm : turns[t]) {
                 if (tm.i == m.i || tm.j == m.j) {
                     ok = false;
                     break;
@@ -318,12 +347,12 @@ int main() {
                     break;
                 }
             }
-            if (ok) {
-                last.push_back(m);
-                continue;
-            }
+            if (ok) break;
+            t++;
         }
-        turns.push_back({m});
+        turns[t].push_back(m);
+        last_turn_for_S[m.i] = t;
+        last_turn_for_T[m.j] = t;
     }
 
     // Output
