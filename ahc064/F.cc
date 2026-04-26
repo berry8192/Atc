@@ -222,16 +222,13 @@ int main() {
     vector<vector<Move>> best_turns = pack_ops(ops);
     int best_T = (int)best_turns.size();
 
-    // Randomized restarts within the time budget. Mix several noise scales so
-    // we get both fine tweaks and larger structural jumps.
+    // Randomized restarts. Empirical analysis (100 seeds) showed NOISE=5000
+    // wins 56% of seeds, NOISE=1000 wins 37%, larger noises (20k/50k) almost
+    // never win — so we drop them and split trials between 1000 and 5000.
     int trials = 0;
     while (elapsed_ms() < TIME_LIMIT_MS) {
         trials++;
-        int phase = trials & 3;
-        if (phase == 0) NOISE = 1000;
-        else if (phase == 1) NOISE = 5000;
-        else if (phase == 2) NOISE = 20000;
-        else NOISE = 50000;
+        NOISE = (trials & 1) ? 5000 : 1000;
 
         run_solver();
         auto t = pack_ops(ops);
