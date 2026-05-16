@@ -14,12 +14,11 @@ static const int N = 20;
 static const int NN = N * N;
 static const int EXIT_R = 0, EXIT_C = N / 2;
 static const int LOOP_LEN = 2 * N;
-static const int BEAM_WIDTH = 30;
-static const int TOP_K_BOXES = 30;
+static const int BEAM_WIDTH = 25;
+static const int TOP_K_BOXES = 10;
 static const int TOP_K_EVAL = NN;
 static const int MAX_DEPTH = 100000;
 static const double TIME_LIMIT_SEC = 2.0;
-static const int STUCK_THRESHOLD = 90;
 
 vector<vector<pair<int, int>>> belts;
 
@@ -29,15 +28,14 @@ uint64_t zobrist[NN][NN];
 // MD テーブル: md_table[cell_idx] = |r - EXIT_R| + |c - EXIT_C|
 int md_table[NN];
 // 逆ランクテーブル: inv_rank[k] = 1.0 / k^RANK_POWER
-static const double RANK_POWER = 0.75;
+static const double RANK_POWER = 0.65;
 double inv_rank[NN + 1];
 void init_tables() {
     for (int i = 0; i < N; i++)
         for (int j = 0; j < N; j++)
             md_table[i * N + j] = abs(i - EXIT_R) + abs(j - EXIT_C);
     inv_rank[0] = 0.0;
-    for (int k = 1; k <= NN; k++)
-        inv_rank[k] = 1.0 / pow((double)k, RANK_POWER);
+    for (int k = 1; k <= NN; k++) inv_rank[k] = 1.0 / pow((double)k, RANK_POWER);
 }
 
 // open-addressing ハッシュ集合（線形探査）。0 は未使用。
@@ -46,15 +44,15 @@ struct HashSet {
     static constexpr size_t MASK = CAP - 1;
     uint64_t *data;
     size_t count = 0;
-    HashSet() { data = (uint64_t *)calloc(CAP, sizeof(uint64_t)); }
+    HashSet() {
+        data = (uint64_t *)calloc(CAP, sizeof(uint64_t));
+    }
     ~HashSet() { free(data); }
     bool insert(uint64_t h) {
-        if (h == 0)
-            h = 0x9E3779B97F4A7C15ULL; // 0 は予約値なので別値に
+        if (h == 0) h = 0x9E3779B97F4A7C15ULL; // 0 は予約値なので別値に
         size_t idx = h & MASK;
         while (data[idx] != 0) {
-            if (data[idx] == h)
-                return false;
+            if (data[idx] == h) return false;
             idx = (idx + 1) & MASK;
         }
         data[idx] = h;
@@ -137,8 +135,7 @@ void apply_op(State &s, int m, int d) {
     int cur = s.current_target;
     int end = min(cur + TOP_K_EVAL, NN);
 
-    // 差分で h を更新: ベルト m 上のセルを走査し、評価窓 [cur, end)
-    // 内の箱だけ寄与
+    // 差分で h を更新: ベルト m 上のセルを走査し、評価窓 [cur, end) 内の箱だけ寄与
     double delta_h = 0.0;
     for (int p = 0; p < L; p++) {
         int c_idx = cells[p].first * N + cells[p].second;
@@ -179,121 +176,6 @@ void apply_op(State &s, int m, int d) {
         s.grid[exit_idx] = -1;
         s.current_target++;
         s.h = compute_h(s);
-    }
-}
-
-// === 愚直 fallback（A.cc の戦略を流用） ===
-// State の grid と current_target のみ更新（hash/pos/h は使わない）
-static inline int v_pos_belt(int r, int c) {
-    if (c % 2 == 0)
-        return r;
-    return N + (N - 1 - r);
-}
-static inline int h_pos_belt(int r, int c) {
-    if (r % 2 == 0)
-        return c;
-    return N + (N - 1 - c);
-}
-
-void greedy_rotate_step(State &s, vector<pair<int, int>> &ops, int m, int d) {
-    auto &cells = belts[m];
-    int L = (int)cells.size();
-    if (d == 1) {
-        int16_t carry = s.grid[cells[L - 1].first * N + cells[L - 1].second];
-        for (int x = L - 1; x >= 1; x--) {
-            int dst = cells[x].first * N + cells[x].second;
-            int src = cells[x - 1].first * N + cells[x - 1].second;
-            s.grid[dst] = s.grid[src];
-        }
-        s.grid[cells[0].first * N + cells[0].second] = carry;
-    } else {
-        int16_t carry = s.grid[cells[0].first * N + cells[0].second];
-        for (int x = 0; x < L - 1; x++) {
-            int dst = cells[x].first * N + cells[x].second;
-            int src = cells[x + 1].first * N + cells[x + 1].second;
-            s.grid[dst] = s.grid[src];
-        }
-        s.grid[cells[L - 1].first * N + cells[L - 1].second] = carry;
-    }
-    ops.push_back({m, d});
-    int exit_idx = EXIT_R * N + EXIT_C;
-    if (s.current_target < NN && s.grid[exit_idx] == s.current_target) {
-        s.grid[exit_idx] = -1;
-        s.current_target++;
-    }
-}
-
-void greedy_rotate_min(State &s, vector<pair<int, int>> &ops, int m,
-                       int delta_signed) {
-    int L = (int)belts[m].size();
-    int d = ((delta_signed % L) + L) % L;
-    if (d == 0)
-        return;
-    int dir, cnt;
-    if (d <= L - d) {
-        dir = 1;
-        cnt = d;
-    } else {
-        dir = -1;
-        cnt = L - d;
-    }
-    for (int i = 0; i < cnt; i++)
-        greedy_rotate_step(s, ops, m, dir);
-}
-
-void do_greedy(State &s, vector<pair<int, int>> &ops) {
-    while (s.current_target < NN) {
-        int k = s.current_target;
-        // 箱 k の位置を grid から探す
-        int br = -1, bc = -1;
-        for (int i = 0; i < NN; i++) {
-            if (s.grid[i] == k) {
-                br = i / N;
-                bc = i % N;
-                break;
-            }
-        }
-        if (br < 0)
-            break;
-
-        int hb = h_belt_id(br);
-        int vb = v_belt_id(EXIT_C);
-        int h_from = h_pos_belt(br, bc);
-        int v_to_target = v_pos_belt(EXIT_R, EXIT_C);
-
-        int best_total = INT_MAX;
-        int best_tr = br, best_tc = bc;
-        for (int dr = 0; dr < 2; dr++) {
-            int tr = 2 * (br / 2) + dr;
-            for (int tc : {EXIT_C, EXIT_C + 1}) {
-                int h_to = h_pos_belt(tr, tc);
-                int hd = ((h_to - h_from) % LOOP_LEN + LOOP_LEN) % LOOP_LEN;
-                int hops = min(hd, LOOP_LEN - hd);
-                int v_from = v_pos_belt(tr, tc);
-                int vd =
-                    ((v_to_target - v_from) % LOOP_LEN + LOOP_LEN) % LOOP_LEN;
-                int vops = min(vd, LOOP_LEN - vd);
-                int total = hops + vops;
-                if (total < best_total) {
-                    best_total = total;
-                    best_tr = tr;
-                    best_tc = tc;
-                }
-            }
-        }
-
-        int h_to = h_pos_belt(best_tr, best_tc);
-        int hd = ((h_to - h_from) % LOOP_LEN + LOOP_LEN) % LOOP_LEN;
-        greedy_rotate_min(s, ops, hb, hd);
-        if (s.current_target != k)
-            continue;
-
-        int v_from = v_pos_belt(best_tr, best_tc);
-        int vd = ((v_to_target - v_from) % LOOP_LEN + LOOP_LEN) % LOOP_LEN;
-        greedy_rotate_min(s, ops, vb, vd);
-
-        if (s.current_target == k)
-            break; // 念のため無限ループ防止
     }
 }
 
@@ -354,10 +236,6 @@ int main() {
     auto t_start = chrono::steady_clock::now();
     bool timed_out = false;
 
-    int best_progress_target = init.current_target;
-    int last_progress_step = 0;
-    bool stuck = false;
-
     for (int step = 1; step <= MAX_DEPTH; step++) {
         // 実行時間チェック（1.8 秒で打ち切り）
         double elapsed =
@@ -366,12 +244,6 @@ int main() {
         if (elapsed > TIME_LIMIT_SEC) {
             cerr << "TIMEOUT step=" << step << " elapsed=" << elapsed << "\n";
             timed_out = true;
-            break;
-        }
-        if (step - last_progress_step > STUCK_THRESHOLD) {
-            cerr << "STUCK step=" << step
-                 << " best_target=" << best_progress_target << "\n";
-            stuck = true;
             break;
         }
 
@@ -428,8 +300,7 @@ int main() {
         if (best_done_depth < INT_MAX)
             break;
 
-        // 上位 BEAM_WIDTH 個だけ取り出す（インデックスで nth_element して State
-        // 自体は動かさない）
+        // 上位 BEAM_WIDTH 個だけ取り出す（インデックスで nth_element して State 自体は動かさない）
         int K = min((int)candidates.size(), BEAM_WIDTH);
         if ((int)candidates.size() > BEAM_WIDTH) {
             vector<int> idx(candidates.size());
@@ -449,16 +320,6 @@ int main() {
             frontier = std::move(next_frontier);
         } else {
             frontier = std::move(candidates);
-        }
-
-        // 進捗追跡: frontier に最良 current_target が更新されているか
-        int max_target = best_progress_target;
-        for (auto &s : frontier)
-            if (s.current_target > max_target)
-                max_target = s.current_target;
-        if (max_target > best_progress_target) {
-            best_progress_target = max_target;
-            last_progress_step = step;
         }
     }
 
@@ -484,16 +345,6 @@ int main() {
         idx = tree[idx].parent;
     }
     reverse(ops.begin(), ops.end());
-
-    // 詰まりや時間切れで未完了なら愚直 fallback
-    if (best_ptr->current_target < NN) {
-        State gs = *best_ptr;
-        size_t ops_before = ops.size();
-        do_greedy(gs, ops);
-        cerr << "GREEDY appended=" << (ops.size() - ops_before)
-             << " final_T=" << ops.size()
-             << " final_target=" << gs.current_target << "\n";
-    }
 
     cout << ops.size() << "\n";
     for (auto &[m, d] : ops)
