@@ -12,7 +12,7 @@ using namespace std;
 #define all(v) v.begin(),v.end()
 #define ll long long
 
-double TIME_LIMIT=1900.0;
+double TIME_LIMIT=1850.0;
 struct Timer{chrono::system_clock::time_point st;Timer(){st=chrono::system_clock::now();}
     double ms(){return chrono::duration_cast<chrono::microseconds>(chrono::system_clock::now()-st).count()/1000.0;}};
 Timer timer;
