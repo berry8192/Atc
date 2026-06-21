@@ -350,10 +350,8 @@ int main() {
     }
 
     // ===== 構築試行(ランダム化)。返り値 topSw、out に doors/switches =====
-    auto attempt = [&](mt19937 &rng, int jit, const vector<int> &forced,
-                       vector<Door> &outDoors, vector<Switch> &outSwitches,
-                       vector<int> &outAssign) -> int {
-        outAssign.assign(D, -1);
+    auto attempt = [&](mt19937 &rng, int jit, vector<Door> &outDoors,
+                       vector<Switch> &outSwitches) -> int {
         vector<Door> doors;
         set<int> usedEdge;
         auto addDoor = [&](int ah, int aw, int bh, int bw, int g) -> bool {
@@ -373,7 +371,7 @@ int main() {
     // ターゲット T へ向かう排他コリドーを構築。gtypes[i] = 内側から i 番目のゲートの型。
     // 壁 = コリドー辺 e_i を跨ぐ非木辺のみ(深い枝の再接続もこれで検出)。
     auto buildCorridor = [&](int T, const vector<int> &gtypes, vector<int> &chain,
-                             vector<array<int, 5>> &gates, vector<array<int, 4>> &walls) -> bool {
+                             vector<array<int, 5>> &gates, vector<array<int, 5>> &walls) -> bool {
         int need = (int)gtypes.size();
         chain.assign(1, T);
         int cur = T;
@@ -396,31 +394,33 @@ int main() {
             if (usedEdge.count(edgeKey(a / N, a % N, b / N, b % N))) return false;
             gates.push_back({a / N, a % N, b / N, b % N, gtypes[i]});
         }
+        // 迂回(非木辺)を封鎖。単一跨ぎ=条件複製ゲート(その辺の型)、多重跨ぎ=壁(wallType)
         walls.clear();
         for (auto &e : nonTree) {
             int u = e[0], v = e[1];
-            bool straddle = false;
+            int straddleIdx = -1, straddleCnt = 0;
             for (int i = 0; i < need; i++)
-                if (inSub(chain[i], u) != inSub(chain[i], v)) { straddle = true; break; }
-            if (!straddle) continue;
+                if (inSub(chain[i], u) != inSub(chain[i], v)) { straddleIdx = i; straddleCnt++; }
+            if (straddleCnt == 0) continue;
             int k = edgeKey(u / N, u % N, v / N, v % N);
-            if (usedEdge.count(k) && !wallSet.count(k)) return false;  // 非壁扉と衝突
-            walls.push_back({u / N, u % N, v / N, v % N});
+            if (usedEdge.count(k) && !wallSet.count(k)) return false;  // 非封鎖扉と衝突
+            int sealType = (straddleCnt == 1) ? gtypes[straddleIdx] : wallType;
+            walls.push_back({u / N, u % N, v / N, v % N, sealType});
         }
         return true;
     };
-    auto newWallCount = [&](vector<array<int, 4>> &walls) {
+    auto newWallCount = [&](vector<array<int, 5>> &walls) {
         int c = 0;
         for (auto &w : walls)
             if (!wallSet.count(edgeKey(w[0], w[1], w[2], w[3]))) c++;
         return c;
     };
     auto commitCorridor = [&](vector<int> &chain, vector<array<int, 5>> &gates,
-                              vector<array<int, 4>> &walls) {
+                              vector<array<int, 5>> &walls) {
         for (auto &g : gates) addDoor(g[0], g[1], g[2], g[3], g[4]);
         for (auto &w : walls) {
             int k = edgeKey(w[0], w[1], w[2], w[3]);
-            if (!wallSet.count(k)) { addDoor(w[0], w[1], w[2], w[3], wallType); wallSet.insert(k); }
+            if (!wallSet.count(k)) { addDoor(w[0], w[1], w[2], w[3], w[4]); wallSet.insert(k); }
         }
         for (int i = 0; i + 1 < (int)chain.size(); i++) claimedIdx[chain[i]] = 1;
     };
@@ -473,14 +473,13 @@ int main() {
         int bestT = -1;
         vector<int> bch;
         vector<array<int, 5>> bg;
-        vector<array<int, 4>> bw;
+        vector<array<int, 5>> bw;
         for (Pos P : da) {
             int Pi = P.h * N + P.w;
-            if (forced[n] >= 0 && Pi != forced[n]) continue;  // 摂動: 固定ポケット
             if (usedDeadIdx[Pi] || claimedIdx[Pi] || goalReserved[Pi]) continue;
             vector<int> chain;
             vector<array<int, 5>> gates;
-            vector<array<int, 4>> walls;
+            vector<array<int, 5>> walls;
             if (!buildCorridor(Pi, gt, chain, gates, walls)) continue;
             // コリドーセルがゴール予約域に入らない
             bool inReserved = false;
@@ -510,7 +509,6 @@ int main() {
         usedDeadIdx[bestT] = 1;
         switches.push_back({bestT / N, bestT % N, n});
         placedOuter.push_back((n >= 1) ? bch[n - 1] : bestT);
-        outAssign[n] = bestT;
         topSw = n;
     }
 
@@ -550,7 +548,7 @@ int main() {
             for (int i = 1; i < m; i++) types.push_back(2 * (topSw - i));  // 高位 unpressed
             vector<int> ch;
             vector<array<int, 5>> gates;
-            vector<array<int, 4>> walls;
+            vector<array<int, 5>> walls;
             if (buildCorridor(goalIdx, types, ch, gates, walls) &&
                 (int)doors.size() + (int)types.size() + newWallCount(walls) <= M) {
                 commitCorridor(ch, gates, walls);
@@ -621,33 +619,22 @@ int main() {
         return topSw;
     };  // ===== end attempt =====
 
-    // ===== 時間いっぱい探索: ランダム多スタート + 最良割当の接尾辞摂動(山登り) =====
+    // ===== 時間いっぱい探索: ランダム構築 → calcT → 最良保持 =====
     mt19937 rng(20260621u);
     vector<Door> bestD;
     vector<Switch> bestS;
-    vector<int> bestAssign(D, -1);
     long long bestT = -1;
-    int iters = 0, bestTop = 0, lastImp = 0;
+    int iters = 0, bestTop = -1, lastImp = 0;
     while (true) {
         current = chrono::system_clock::now();
         double el =
             chrono::duration_cast<chrono::milliseconds>(current - start).count();
         if (el > TIME_LIMIT) break;
-        // forced 割当を決定: 最良があれば 3/4 の確率で「接尾辞から再構築」(摂動)
-        vector<int> forced(D, -1);
-        if (bestT >= 0 && (iters % 4 != 0)) {
-            int m = 1 + (int)(rng() % max(1, bestTop));  // m 以降を再 greedy
-            for (int k = 1; k < m; k++) forced[k] = bestAssign[k];
-        }
         vector<Door> d;
         vector<Switch> s;
-        vector<int> assign(D, -1);
-        int top = attempt(rng, iters == 0 ? 0 : 2000, forced, d, s, assign);
+        int top = attempt(rng, iters == 0 ? 0 : 2000, d, s);
         long long T = calcT(d, s);
-        if (T > bestT) {
-            bestT = T; bestD = d; bestS = s; bestTop = top;
-            bestAssign = assign; lastImp = iters;
-        }
+        if (T > bestT) { bestT = T; bestD = d; bestS = s; bestTop = top; lastImp = iters; }
         iters++;
     }
     cerr << "iters=" << iters << " bestT=" << bestT << " bestTop=" << bestTop
