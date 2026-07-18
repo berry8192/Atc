@@ -166,12 +166,201 @@ void inpt() {
     }
 }
 
+// ---- 前計算・評価用 ----
+int b[20][20];       // 現在の盤面（可変）
+int dst[400][400];   // 壁を考慮した全マス間距離（cell index 間）
+int PV[21][21];      // vwall の2次元累積和
+int PH[21][21];      // hwall の2次元累積和
+
+void precompute() {
+    rep(i, N) rep(j, N) b[i][j] = a[i][j];
+
+    // 全マス起点 BFS（壁のない辺のみ通行可）
+    rep(s, N * N) {
+        int *d = dst[s];
+        rep(t, N * N) d[t] = -1;
+        queue<int> q;
+        d[s] = 0;
+        q.push(s);
+        while (!q.empty()) {
+            int cur = q.front();
+            q.pop();
+            int ci = cur / N, cj = cur % N, dc = d[cur];
+            if (ci > 0 && !hwall[ci - 1][cj] && d[cur - N] < 0) {
+                d[cur - N] = dc + 1;
+                q.push(cur - N);
+            }
+            if (ci < N - 1 && !hwall[ci][cj] && d[cur + N] < 0) {
+                d[cur + N] = dc + 1;
+                q.push(cur + N);
+            }
+            if (cj > 0 && !vwall[ci][cj - 1] && d[cur - 1] < 0) {
+                d[cur - 1] = dc + 1;
+                q.push(cur - 1);
+            }
+            if (cj < N - 1 && !vwall[ci][cj] && d[cur + 1] < 0) {
+                d[cur + 1] = dc + 1;
+                q.push(cur + 1);
+            }
+        }
+    }
+
+    // 壁の2次元累積和
+    rep(i, N + 1) rep(j, N + 1) {
+        PV[i][j] = 0;
+        PH[i][j] = 0;
+    }
+    rep(i, N) rep(j, N - 1)
+        PV[i + 1][j + 1] = PV[i][j + 1] + PV[i + 1][j] - PV[i][j] + vwall[i][j];
+    rep(i, N - 1) rep(j, N)
+        PH[i + 1][j + 1] = PH[i][j + 1] + PH[i + 1][j] - PH[i][j] + hwall[i][j];
+}
+
+// 長方形 (r,c,h,w) の内部に壁が無ければ true
+bool rectValid(int r, int c, int h, int w) {
+    if (w >= 2) {  // 内部縦壁: 行[r,r+h) × 列[c,c+w-1)
+        int c2 = c + w - 1;
+        if (PV[r + h][c2] - PV[r][c2] - PV[r + h][c] + PV[r][c]) return false;
+    }
+    if (h >= 2) {  // 内部横壁: 行[r,r+h-1) × 列[c,c+w)
+        int r2 = r + h - 1;
+        if (PH[r2][c + w] - PH[r][c + w] - PH[r2][c] + PH[r][c]) return false;
+    }
+    return true;
+}
+
+inline ll sq(int x) { return (ll)x * x; }
+
+// 縦操作(上半分↔下半分)の距離二乗和の変化量
+ll deltaV(int r, int c, int h, int w) {
+    int hh = h / 2;
+    ll dl = 0;
+    rep(x, hh) rep(y, w) {
+        int j = c + y, i1 = r + x, i2 = r + hh + x;
+        int p1 = i1 * N + j, p2 = i2 * N + j;
+        int v1 = b[i1][j], v2 = b[i2][j];
+        dl += sq(dst[p1][v2]) + sq(dst[p2][v1]) - sq(dst[p1][v1]) -
+              sq(dst[p2][v2]);
+    }
+    return dl;
+}
+
+// 横操作(左半分↔右半分)の距離二乗和の変化量
+ll deltaH(int r, int c, int h, int w) {
+    int ww = w / 2;
+    ll dl = 0;
+    rep(x, h) rep(y, ww) {
+        int i = r + x, j1 = c + y, j2 = c + ww + y;
+        int p1 = i * N + j1, p2 = i * N + j2;
+        int v1 = b[i][j1], v2 = b[i][j2];
+        dl += sq(dst[p1][v2]) + sq(dst[p2][v1]) - sq(dst[p1][v1]) -
+              sq(dst[p2][v2]);
+    }
+    return dl;
+}
+
+void applyV(int r, int c, int h, int w) {
+    int hh = h / 2;
+    rep(x, hh) rep(y, w) swap(b[r + x][c + y], b[r + hh + x][c + y]);
+}
+void applyH(int r, int c, int h, int w) {
+    int ww = w / 2;
+    rep(x, h) rep(y, ww) swap(b[r + x][c + y], b[r + x][c + ww + y]);
+}
+
+struct Op {
+    char d;
+    int r, c, h, w;
+};
+
 int main() {
     start = chrono::system_clock::now();
 
     inpt();
+    precompute();
 
-    // TODO: 解法をここに書く
+    vector<Op> ops;
+
+    while ((int)ops.size() < 100000) {
+        current = chrono::system_clock::now();
+        double el =
+            chrono::duration_cast<chrono::milliseconds>(current - start)
+                .count();
+        if (el > TIME_LIMIT) break;  // TLE 回避
+
+        ll bestDelta = 0;  // 厳密改善(<0)のみ採用
+        int bestArea = -1;
+        Op best;
+        bool found = false;
+
+        // 縦: h は偶数
+        rep(r, N) rep(c, N) {
+            for (int h = 2; r + h <= N; h += 2) {
+                bool rowBroke = false;
+                for (int w = 1; c + w <= N; w++) {
+                    if (!rectValid(r, c, h, w)) {
+                        if (w == 1) rowBroke = true;  // 縦にこれ以上伸ばせない
+                        break;
+                    }
+                    ll dl = deltaV(r, c, h, w);
+                    int area = h * w;
+                    if (dl < bestDelta ||
+                        (dl == bestDelta && dl < 0 && area > bestArea)) {
+                        bestDelta = dl;
+                        bestArea = area;
+                        best = {'V', r, c, h, w};
+                        found = true;
+                    }
+                }
+                if (rowBroke) break;
+            }
+        }
+        // 横: w は偶数
+        rep(r, N) rep(c, N) {
+            for (int w = 2; c + w <= N; w += 2) {
+                bool colBroke = false;
+                for (int h = 1; r + h <= N; h++) {
+                    if (!rectValid(r, c, h, w)) {
+                        if (h == 1) colBroke = true;  // 横にこれ以上伸ばせない
+                        break;
+                    }
+                    ll dl = deltaH(r, c, h, w);
+                    int area = h * w;
+                    if (dl < bestDelta ||
+                        (dl == bestDelta && dl < 0 && area > bestArea)) {
+                        bestDelta = dl;
+                        bestArea = area;
+                        best = {'H', r, c, h, w};
+                        found = true;
+                    }
+                }
+                if (colBroke) break;
+            }
+        }
+
+        if (!found) break;  // 局所最適: 何もせず終了
+        if (best.d == 'V')
+            applyV(best.r, best.c, best.h, best.w);
+        else
+            applyH(best.r, best.c, best.h, best.w);
+        ops.push_back(best);
+    }
+
+    // 出力（操作を1行ずつ）
+    string out;
+    for (auto &o : ops) {
+        out += o.d;
+        out += ' ';
+        out += to_string(o.r);
+        out += ' ';
+        out += to_string(o.c);
+        out += ' ';
+        out += to_string(o.h);
+        out += ' ';
+        out += to_string(o.w);
+        out += '\n';
+    }
+    cout << out;
 
     return 0;
 }
