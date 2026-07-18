@@ -171,8 +171,10 @@ int b[20][20];       // 現在の盤面（可変）
 int dst[400][400];   // 壁を考慮した全マス間距離（cell index 間）
 int PV[21][21];      // vwall の2次元累積和
 int PH[21][21];      // hwall の2次元累積和
+int NN;              // N*N
 
 void precompute() {
+    NN = N * N;
     rep(i, N) rep(j, N) b[i][j] = a[i][j];
 
     // 全マス起点 BFS（壁のない辺のみ通行可）
@@ -230,6 +232,9 @@ bool rectValid(int r, int c, int h, int w) {
 }
 
 inline ll sq(int x) { return (ll)x * x; }
+inline ll cube(int x) { return (ll)x * x * x; }
+// 盤面評価に使う 1マスあたりのコスト（現状は距離の1乗＝線形）
+inline ll cost(int d) { return d; }
 
 // 縦操作(上半分↔下半分)の距離二乗和の変化量
 ll deltaV(int r, int c, int h, int w) {
@@ -239,8 +244,8 @@ ll deltaV(int r, int c, int h, int w) {
         int j = c + y, i1 = r + x, i2 = r + hh + x;
         int p1 = i1 * N + j, p2 = i2 * N + j;
         int v1 = b[i1][j], v2 = b[i2][j];
-        dl += sq(dst[p1][v2]) + sq(dst[p2][v1]) - sq(dst[p1][v1]) -
-              sq(dst[p2][v2]);
+        dl += cost(dst[p1][v2]) + cost(dst[p2][v1]) - cost(dst[p1][v1]) -
+              cost(dst[p2][v2]);
     }
     return dl;
 }
@@ -253,8 +258,8 @@ ll deltaH(int r, int c, int h, int w) {
         int i = r + x, j1 = c + y, j2 = c + ww + y;
         int p1 = i * N + j1, p2 = i * N + j2;
         int v1 = b[i][j1], v2 = b[i][j2];
-        dl += sq(dst[p1][v2]) + sq(dst[p2][v1]) - sq(dst[p1][v1]) -
-              sq(dst[p2][v2]);
+        dl += cost(dst[p1][v2]) + cost(dst[p2][v1]) - cost(dst[p1][v1]) -
+              cost(dst[p2][v2]);
     }
     return dl;
 }
@@ -273,6 +278,109 @@ struct Op {
     int r, c, h, w;
 };
 
+// ---- leaf-elimination で E=0 まで仕上げる（隣接互換のみ） ----
+// 現在の盤面 b を完成させ、使った操作を ops に追記する。
+// 総手数が 100000 を超えないよう打ち切る。
+void finish(vector<Op> &ops) {
+    static int where[400];  // where[value] = そのカードの現在セル index
+    rep(i, N) rep(j, N) where[b[i][j]] = i * N + j;
+
+    // 壁のない隣接グラフの全域木を BFS で構築
+    vector<vector<int>> tadj(NN);
+    {
+        vector<int> vis(NN, 0);
+        queue<int> q;
+        q.push(0);
+        vis[0] = 1;
+        auto addEdge = [&](int cur, int nx) {
+            if (!vis[nx]) {
+                vis[nx] = 1;
+                tadj[cur].push_back(nx);
+                tadj[nx].push_back(cur);
+                q.push(nx);
+            }
+        };
+        while (!q.empty()) {
+            int cur = q.front();
+            q.pop();
+            int ci = cur / N, cj = cur % N;
+            if (ci > 0 && !hwall[ci - 1][cj]) addEdge(cur, cur - N);
+            if (ci < N - 1 && !hwall[ci][cj]) addEdge(cur, cur + N);
+            if (cj > 0 && !vwall[ci][cj - 1]) addEdge(cur, cur - 1);
+            if (cj < N - 1 && !vwall[ci][cj]) addEdge(cur, cur + 1);
+        }
+    }
+
+    // 葉から順に確定
+    vector<int> deg(NN), active(NN, 1);
+    rep(p, NN) deg[p] = (int)tadj[p].size();
+    queue<int> leaves;
+    rep(p, NN) if (deg[p] <= 1) leaves.push(p);
+
+    int remaining = NN;
+    vector<int> bpar(NN);  // target を根とする BFS 親
+    while (remaining > 0) {
+        int leaf = -1;
+        while (!leaves.empty()) {
+            int c = leaves.front();
+            leaves.pop();
+            if (active[c] && deg[c] <= 1) {
+                leaf = c;
+                break;
+            }
+        }
+        if (leaf == -1) rep(p, NN) if (active[p]) {
+                leaf = p;
+                break;
+            }
+
+        // カード(値 leaf) をセル leaf まで、残り木の中で運ぶ
+        int target = leaf, pos = where[leaf];
+        if (pos != target) {
+            rep(p, NN) bpar[p] = -2;
+            queue<int> q;
+            q.push(target);
+            bpar[target] = -1;
+            while (!q.empty()) {
+                int cur = q.front();
+                q.pop();
+                for (int nx : tadj[cur])
+                    if (active[nx] && bpar[nx] == -2) {
+                        bpar[nx] = cur;
+                        q.push(nx);
+                    }
+            }
+            // pos から target へ1歩ずつ、カード leaf を移動
+            while (pos != target) {
+                int nxt = bpar[pos];
+                int pi = pos / N, pj = pos % N, ni = nxt / N, nj = nxt % N;
+                Op op;
+                if (pi != ni)
+                    op = {'V', min(pi, ni), pj, 2, 1};
+                else
+                    op = {'H', pi, min(pj, nj), 1, 2};
+                int vpos = b[pi][pj], vnxt = b[ni][nj];
+                swap(b[pi][pj], b[ni][nj]);
+                where[vpos] = nxt;
+                where[vnxt] = pos;
+                ops.push_back(op);
+                pos = nxt;
+                if ((int)ops.size() >= 100000) return;  // 手数上限
+            }
+        }
+
+        // leaf を確定・除去
+        active[leaf] = 0;
+        remaining--;
+        for (int nx : tadj[leaf])
+            if (active[nx]) {
+                deg[nx]--;
+                if (deg[nx] <= 1) leaves.push(nx);
+            }
+        deg[leaf] = 0;
+    }
+}
+
 int main() {
     start = chrono::system_clock::now();
 
@@ -281,12 +389,13 @@ int main() {
 
     vector<Op> ops;
 
+    // 1乗和グリーディ（最良改善、局所最適で停止）
     while ((int)ops.size() < 100000) {
         current = chrono::system_clock::now();
         double el =
             chrono::duration_cast<chrono::milliseconds>(current - start)
                 .count();
-        if (el > TIME_LIMIT) break;  // TLE 回避
+        if (el > TIME_LIMIT) break;
 
         ll bestDelta = 0;  // 厳密改善(<0)のみ採用
         int bestArea = -1;
@@ -299,7 +408,7 @@ int main() {
                 bool rowBroke = false;
                 for (int w = 1; c + w <= N; w++) {
                     if (!rectValid(r, c, h, w)) {
-                        if (w == 1) rowBroke = true;  // 縦にこれ以上伸ばせない
+                        if (w == 1) rowBroke = true;
                         break;
                     }
                     ll dl = deltaV(r, c, h, w);
@@ -321,7 +430,7 @@ int main() {
                 bool colBroke = false;
                 for (int h = 1; r + h <= N; h++) {
                     if (!rectValid(r, c, h, w)) {
-                        if (h == 1) colBroke = true;  // 横にこれ以上伸ばせない
+                        if (h == 1) colBroke = true;
                         break;
                     }
                     ll dl = deltaH(r, c, h, w);
@@ -338,7 +447,7 @@ int main() {
             }
         }
 
-        if (!found) break;  // 局所最適: 何もせず終了
+        if (!found) break;  // 局所最適: グリーディ停止
         if (best.d == 'V')
             applyV(best.r, best.c, best.h, best.w);
         else
@@ -346,7 +455,10 @@ int main() {
         ops.push_back(best);
     }
 
-    // 出力（操作を1行ずつ）
+    // 停滞後: leaf-elimination で E=0 まで仕上げる
+    finish(ops);
+
+    // 出力
     string out;
     for (auto &o : ops) {
         out += o.d;
